@@ -449,18 +449,43 @@ const blackKeys = [
   { note: 'G#', octave: 2 }, { note: 'A#', octave: 2 },
 ];
 
+// Track active midi per input source for legato rolling
+let pianoHeldMidi = null; // the midi currently held via mouse/touch
+
 // White keys
 whiteKeys.forEach(({ note, octave }) => {
   const key = document.createElement('div');
   key.className = 'key white';
   key.dataset.note = note;
   key.dataset.octave = octave;
-  key.dataset.midi = midiFromNote(note, octave);
+  key.dataset.baseMidi = midiFromNote(note, octave);
   piano.appendChild(key);
 
-  key.addEventListener('mousedown', () => { key.classList.add('active'); noteOn(parseInt(key.dataset.midi)); });
-  key.addEventListener('mouseup', () => { key.classList.remove('active'); noteOff(parseInt(key.dataset.midi)); });
-  key.addEventListener('mouseleave', () => { key.classList.remove('active'); noteOff(parseInt(key.dataset.midi)); });
+  key.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const midi = parseInt(key.dataset.baseMidi) + octaveShift * 12;
+    key.dataset.midi = midi;
+    key.classList.add('active');
+    // Legato: if already holding a note, transition smoothly
+    if (pianoHeldMidi !== null && pianoHeldMidi !== midi) noteOff(pianoHeldMidi);
+    pianoHeldMidi = midi;
+    noteOn(midi);
+  });
+  key.addEventListener('mouseup', (e) => {
+    e.preventDefault();
+    const midi = parseInt(key.dataset.midi);
+    key.classList.remove('active');
+    noteOff(midi);
+    pianoHeldMidi = null;
+  });
+  key.addEventListener('mouseleave', (e) => {
+    if (key.classList.contains('active')) {
+      const midi = parseInt(key.dataset.midi);
+      key.classList.remove('active');
+      noteOff(midi);
+      pianoHeldMidi = null;
+    }
+  });
 });
 
 // Black keys — positioned absolutely relative to piano
@@ -495,13 +520,34 @@ blackKeys.forEach(({ note, octave }) => {
   key.className = 'key black';
   key.dataset.note = note;
   key.dataset.octave = octave;
-  key.dataset.midi = midiFromNote(note, octave);
+  key.dataset.baseMidi = midiFromNote(note, octave);
   key.style.left = left + 'px';
   piano.appendChild(key);
 
-  key.addEventListener('mousedown', () => { key.classList.add('active'); noteOn(parseInt(key.dataset.midi)); });
-  key.addEventListener('mouseup', () => { key.classList.remove('active'); noteOff(parseInt(key.dataset.midi)); });
-  key.addEventListener('mouseleave', () => { key.classList.remove('active'); noteOff(parseInt(key.dataset.midi)); });
+  key.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    const midi = parseInt(key.dataset.baseMidi) + octaveShift * 12;
+    key.dataset.midi = midi;
+    key.classList.add('active');
+    if (pianoHeldMidi !== null && pianoHeldMidi !== midi) noteOff(pianoHeldMidi);
+    pianoHeldMidi = midi;
+    noteOn(midi);
+  });
+  key.addEventListener('mouseup', (e) => {
+    e.preventDefault();
+    const midi = parseInt(key.dataset.midi);
+    key.classList.remove('active');
+    noteOff(midi);
+    pianoHeldMidi = null;
+  });
+  key.addEventListener('mouseleave', (e) => {
+    if (key.classList.contains('active')) {
+      const midi = parseInt(key.dataset.midi);
+      key.classList.remove('active');
+      noteOff(midi);
+      pianoHeldMidi = null;
+    }
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -586,18 +632,24 @@ document.getElementById('octave').addEventListener('change', (e) => {
   octaveShift = parseInt(e.target.value);
 });
 
-// Touch support for piano
+// Touch support for piano — uses baseMidi + octaveShift
 document.querySelectorAll('.key').forEach(key => {
   key.addEventListener('touchstart', (e) => {
     e.preventDefault();
+    const midi = parseInt(key.dataset.baseMidi) + octaveShift * 12;
+    key.dataset.midi = midi;
     key.classList.add('active');
-    noteOn(parseInt(key.dataset.midi));
+    if (pianoHeldMidi !== null && pianoHeldMidi !== midi) noteOff(pianoHeldMidi);
+    pianoHeldMidi = midi;
+    noteOn(midi);
   }, { passive: false });
 
   key.addEventListener('touchend', (e) => {
     e.preventDefault();
+    const midi = parseInt(key.dataset.midi);
     key.classList.remove('active');
-    noteOff(parseInt(key.dataset.midi));
+    noteOff(midi);
+    pianoHeldMidi = null;
   }, { passive: false });
 });
 
