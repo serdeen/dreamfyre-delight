@@ -359,7 +359,23 @@ function noteOn(midi) {
   gain.connect(filter);
 
   osc.start();
-  activeNotes.set(midi, { osc, gain });
+  activeNotes.set(midi, { osc, gain, released: false });
+}
+
+// Legato: slide pitch instead of retriggering when same voice overlaps
+function noteOnLegato(midi) {
+  const existing = [...activeNotes.entries()].find(([m, n]) => n.released);
+  if (existing) {
+    const [oldMidi, note] = existing;
+    note.osc.frequency.cancelScheduledValues(getCtx().currentTime);
+    note.osc.frequency.setValueAtTime(note.osc.frequency.value, getCtx().currentTime);
+    note.osc.frequency.linearRampToValueAtTime(freqFromMidi(midi), getCtx().currentTime + 0.05);
+    note.released = false;
+    activeNotes.delete(oldMidi);
+    activeNotes.set(midi, note);
+    return;
+  }
+  noteOn(midi);
 }
 
 function noteOff(midi) {
@@ -374,8 +390,15 @@ function noteOff(midi) {
   note.gain.gain.setValueAtTime(note.gain.gain.value, now);
   note.gain.gain.linearRampToValueAtTime(0, now + r);
 
-  note.osc.stop(now + r + 0.05);
-  activeNotes.delete(midi);
+  note.released = true;
+
+  // Delay stop to allow brief overlap/legato rolling
+  setTimeout(() => {
+    if (activeNotes.get(midi) === note && note.released) {
+      note.osc.stop();
+      activeNotes.delete(midi);
+    }
+  }, Math.max(r * 1000, 60));
 }
 
 // ─────────────────────────────────────────────
@@ -454,13 +477,23 @@ whiteKeys.forEach(({ note, octave }) => {
   const key = document.createElement('div');
   key.className = 'key white';
   key.dataset.note = note;
-  key.dataset.octave = octave;
-  key.dataset.midi = midiFromNote(note, octave);
+  key.dataset.baseOctave = octave;
   piano.appendChild(key);
 
-  key.addEventListener('mousedown', () => { key.classList.add('active'); noteOn(parseInt(key.dataset.midi)); });
-  key.addEventListener('mouseup', () => { key.classList.remove('active'); noteOff(parseInt(key.dataset.midi)); });
-  key.addEventListener('mouseleave', () => { key.classList.remove('active'); noteOff(parseInt(key.dataset.midi)); });
+  key.addEventListener('mousedown', () => {
+    key.classList.add('active');
+    const midi = midiFromNote(note, octave) + octaveShift * 12;
+    key.dataset.midi = midi;
+    noteOnLegato(midi);
+  });
+  key.addEventListener('mouseup', () => {
+    key.classList.remove('active');
+    if (key.dataset.midi) noteOff(parseInt(key.dataset.midi));
+  });
+  key.addEventListener('mouseleave', () => {
+    key.classList.remove('active');
+    if (key.dataset.midi) noteOff(parseInt(key.dataset.midi));
+  });
 });
 
 // Black keys — positioned absolutely relative to piano
@@ -494,14 +527,24 @@ blackKeys.forEach(({ note, octave }) => {
   const key = document.createElement('div');
   key.className = 'key black';
   key.dataset.note = note;
-  key.dataset.octave = octave;
-  key.dataset.midi = midiFromNote(note, octave);
+  key.dataset.baseOctave = octave;
   key.style.left = left + 'px';
   piano.appendChild(key);
 
-  key.addEventListener('mousedown', () => { key.classList.add('active'); noteOn(parseInt(key.dataset.midi)); });
-  key.addEventListener('mouseup', () => { key.classList.remove('active'); noteOff(parseInt(key.dataset.midi)); });
-  key.addEventListener('mouseleave', () => { key.classList.remove('active'); noteOff(parseInt(key.dataset.midi)); });
+  key.addEventListener('mousedown', () => {
+    key.classList.add('active');
+    const midi = midiFromNote(note, octave) + octaveShift * 12;
+    key.dataset.midi = midi;
+    noteOnLegato(midi);
+  });
+  key.addEventListener('mouseup', () => {
+    key.classList.remove('active');
+    if (key.dataset.midi) noteOff(parseInt(key.dataset.midi));
+  });
+  key.addEventListener('mouseleave', () => {
+    key.classList.remove('active');
+    if (key.dataset.midi) noteOff(parseInt(key.dataset.midi));
+  });
 });
 
 // ─────────────────────────────────────────────
@@ -582,6 +625,13 @@ document.getElementById('volume').addEventListener('input', (e) => {
   masterGain.gain.value = parseFloat(e.target.value);
 });
 
+document.getElementById('waveform').addEventListener('change', (e) => {
+  // Update all active oscillators to new waveform
+  activeNotes.forEach(({ osc }) => {
+    osc.type = e.target.value;
+  });
+});
+
 document.getElementById('octave').addEventListener('change', (e) => {
   octaveShift = parseInt(e.target.value);
 });
@@ -591,13 +641,17 @@ document.querySelectorAll('.key').forEach(key => {
   key.addEventListener('touchstart', (e) => {
     e.preventDefault();
     key.classList.add('active');
-    noteOn(parseInt(key.dataset.midi));
+    const note = key.dataset.note;
+    const octave = parseInt(key.dataset.baseOctave);
+    const midi = midiFromNote(note, octave) + octaveShift * 12;
+    key.dataset.midi = midi;
+    noteOnLegato(midi);
   }, { passive: false });
 
   key.addEventListener('touchend', (e) => {
     e.preventDefault();
     key.classList.remove('active');
-    noteOff(parseInt(key.dataset.midi));
+    if (key.dataset.midi) noteOff(parseInt(key.dataset.midi));
   }, { passive: false });
 });
 
