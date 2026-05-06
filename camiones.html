@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Camiones — Flashcards</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;700&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Comfortaa', cursive;
+      background: #1a1a2e;
+      color: #e8e0d5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .title {
+      font-size: 14px;
+      color: #5a5a7a;
+      margin-bottom: 20px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .lang-toggle {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+
+    .lang-toggle button {
+      background: transparent;
+      border: 2px solid #4a4a6a;
+      color: #8888aa;
+      font-family: inherit;
+      font-size: 14px;
+      padding: 6px 18px;
+      border-radius: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .lang-toggle button.active {
+      background: #4a4a6a;
+      color: #e8e0d5;
+      border-color: #6a6aaa;
+    }
+
+    .card {
+      width: min(90vw, 340px);
+      height: min(60vw, 240px);
+      background: #16213e;
+      border-radius: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      border: 2px solid #2a2a4e;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      transition: all 0.4s ease;
+    }
+
+    .card .emoji {
+      font-size: 80px;
+      line-height: 1;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+    }
+
+    .card .word-es {
+      font-size: 32px;
+      font-weight: 700;
+      color: #f0e6d3;
+    }
+
+    .card .word-en {
+      font-size: 18px;
+      color: #888aaa;
+    }
+
+    .card .dot {
+      width: 6px;
+      height: 6px;
+      background: #4a4a6a;
+      border-radius: 50%;
+    }
+
+    .controls {
+      display: flex;
+      gap: 24px;
+      margin-top: 40px;
+    }
+
+    .controls button {
+      background: #2a2a4e;
+      border: none;
+      color: #c8c0b0;
+      font-family: inherit;
+      font-size: 28px;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .controls button:hover { background: #3a3a5e; }
+    .controls button:active { transform: scale(0.95); }
+
+    .counter {
+      font-size: 13px;
+      color: #4a4a6a;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="title">Camiones y Vehiculos</div>
+
+  <div class="lang-toggle">
+    <button class="active" onclick="showLang('es')">Espanol</button>
+    <button onclick="showLang('en')">English</button>
+    <button onclick="showLang('both')">Both</button>
+  </div>
+
+  <div class="card" id="card">
+    <span class="emoji" id="emoji"></span>
+    <span class="word-es" id="word-es"></span>
+    <div class="dot" id="dot" style="display:none"></div>
+    <span class="word-en" id="word-en" style="display:none"></span>
+  </div>
+
+  <div class="controls">
+    <button onclick="prev()">&#8592;</button>
+    <button onclick="next()">&#8594;</button>
+  </div>
+
+  <div class="counter" id="counter"></div>
+
+  <script>
+    const cards = [
+      { emoji: "🚚", es: "Camion", en: "Truck" },
+      { emoji: "🚛", es: "Semiremolque", en: "Semi Truck" },
+      { emoji: "🚗", es: "Carro", en: "Car" },
+      { emoji: "🚌", es: "Autobus", en: "Bus" },
+      { emoji: "🚑", es: "Ambulancia", en: "Ambulance" },
+      { emoji: "🚒", es: "Camion de Bomberos", en: "Fire Truck" },
+      { emoji: "🚓", es: "Carro de Policia", en: "Police Car" },
+      { emoji: "🚜", es: "Tractor", en: "Tractor" },
+      { emoji: "🚂", es: "Locomotora", en: "Train" },
+      { emoji: "✈️", es: "Avion", en: "Airplane" },
+      { emoji: "🚁", es: "Helicoptero", en: "Helicopter" },
+      { emoji: "🚲", es: "Bicicleta", en: "Bicycle" },
+      { emoji: "🏍️", es: "Motocicleta", en: "Motorcycle" },
+      { emoji: "🚕", es: "Taxi", en: "Taxi" },
+      { emoji: "🚐", es: "Van", en: "Van" },
+      { emoji: "🛻", es: "Pickup", en: "Pickup Truck" },
+      { emoji: "🚎", es: "Tranvia", en: "Trolley" },
+      { emoji: "🚖", es: "Limusina", en: "Limo" },
+      { emoji: "🚍", es: "Autobus Escolar", en: "School Bus" },
+      { emoji: "🚤", es: "Bote", en: "Boat" },
+    ];
+
+    let i = 0;
+    let lang = 'es';
+
+    function render() {
+      const c = cards[i];
+      document.getElementById('emoji').textContent = c.emoji;
+      document.getElementById('word-es').textContent = c.es;
+      document.getElementById('word-en').textContent = c.en;
+      document.getElementById('counter').textContent = (i + 1) + ' / ' + cards.length;
+
+      const enEl = document.getElementById('word-en');
+      const dot = document.getElementById('dot');
+      if (lang === 'es') {
+        enEl.style.display = 'none';
+        dot.style.display = 'none';
+      } else if (lang === 'en') {
+        enEl.style.display = '';
+        enEl.style.fontSize = '28px';
+        enEl.style.color = '#f0e6d3';
+        dot.style.display = 'none';
+      } else {
+        enEl.style.display = '';
+        enEl.style.fontSize = '16px';
+        enEl.style.color = '#888aaa';
+        dot.style.display = '';
+      }
+    }
+
+    function showLang(l) {
+      lang = l;
+      document.querySelectorAll('.lang-toggle button').forEach((b, idx) => {
+        b.classList.toggle('active',
+          (l === 'es' && idx === 0) || (l === 'en' && idx === 1) || (l === 'both' && idx === 2));
+      });
+      render();
+    }
+
+    function next() {
+      i = (i + 1) % cards.length;
+      render();
+    }
+
+    function prev() {
+      i = (i - 1 + cards.length) % cards.length;
+      render();
+    }
+
+    render();
+  </script>
+</body>
+</html>
