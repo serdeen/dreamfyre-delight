@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chord Morph — Dreamfyre Delight for Moe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Cormorant+Garamond:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #08080e;
+    --surface: #0e0e18;
+    --border: #1a1a2e;
+    --text: #d8d8f0;
+    --text-dim: #505068;
+    --cyan: #00f5d4;
+    --magenta: #f72585;
+    --gold: #ffd60a;
+    --purple: #9b5de5;
+    --blue: #00bbf9;
+    --scale: #fee440;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 50% 50%, rgba(123,47,247,0.07) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* ── Chord Name ─────────────────────────────────────── */
+  .chord-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 5rem;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    line-height: 1;
+    margin-bottom: 0.2rem;
+    transition: color 0.6s ease, text-shadow 0.6s ease;
+    text-align: center;
+  }
+
+  .chord-type-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  /* ── Orb Canvas ──────────────────────────────────────── */
+  #orbCanvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Ring Visualizer ─────────────────────────────────── */
+  .ring-container {
+    position: relative;
+    width: 260px;
+    height: 260px;
+    margin: 1rem auto;
+  }
+
+  .ring-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 20px var(--glow-color, var(--cyan)));
+    transition: filter 0.6s ease;
+  }
+
+  .ring-bg {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 2;
+  }
+
+  .ring-arc {
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: round;
+    transition: stroke 0.5s ease, stroke-dasharray 0.4s ease;
+  }
+
+  /* ── Keyboard ────────────────────────────────────────── */
+  .keyboard {
+    display: flex;
+    gap: 4px;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 480px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .key {
+    width: 52px;
+    height: 52px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    transition: all 0.15s;
+  }
+
+  .key:hover {
+    border-color: var(--text-dim);
+    background: #16162a;
+  }
+
+  .key.root {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 12px rgba(0,245,212,0.2);
+  }
+
+  .key.active {
+    transform: scale(0.92);
+    background: rgba(255,255,255,0.05);
+  }
+
+  .key.root.active {
+    background: rgba(0,245,212,0.15);
+    box-shadow: 0 0 25px rgba(0,245,212,0.4);
+  }
+
+  .key-name {
+    font-size: 0.75rem;
+    font-weight: 700;
+  }
+
+  .key-interval {
+    font-size: 0.45rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .key.root .key-interval {
+    color: var(--cyan);
+    opacity: 0.7;
+  }
+
+  /* ── Chord Quality Selector ──────────────────────────── */
+  .quality-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 480px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .q-btn {
+    padding: 0.4rem 0.9rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .q-btn:hover {
+    border-color: var(--text-dim);
+    color: var(--text);
+  }
+
+  .q-btn.active {
+    border-color: var(--magenta);
+    color: var(--magenta);
+    background: rgba(247,37,133,0.1);
+    box-shadow: 0 0 12px rgba(247,37,133,0.2);
+  }
+
+  /* ── Note Pills ───────────────────────────────────────── */
+  .notes-display {
+    display: flex;
+    gap: 6px;
+    margin-top: 1.2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .note-pill {
+    padding: 0.3rem 0.7rem;
+    border-radius: 20px;
+    border: 1px solid;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    opacity: 0.85;
+    transition: all 0.3s;
+  }
+
+  /* ── Instructions ─────────────────────────────────────── */
+  .instructions {
+    position: fixed;
+    bottom: 1.5rem;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+    text-align: center;
+    line-height: 1.8;
+    z-index: 1;
+  }
+
+  .instructions kbd {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 0.1rem 0.4rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.5rem;
+  }
+
+  /* ── Octave control ───────────────────────────────────── */
+  .octave-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 1rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  .oct-label {
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+  }
+
+  .oct-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .oct-btn:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+
+  .oct-val {
+    font-size: 0.7rem;
+    color: var(--cyan);
+    min-width: 1.5rem;
+    text-align: center;
+  }
+
+  /* ── Fade in ──────────────────────────────────────────── */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .chord-name, .chord-type-label, .ring-container, .keyboard, .quality-row, .notes-display, .octave-row {
+    animation: fadeIn 0.8s ease both;
+  }
+
+  .chord-type-label { animation-delay: 0.1s; }
+  .ring-container { animation-delay: 0.2s; }
+  .keyboard { animation-delay: 0.3s; }
+  .quality-row { animation-delay: 0.4s; }
+  .notes-display { animation-delay: 0.45s; }
+  .octave-row { animation-delay: 0.5s; }
+</style>
+</head>
+<body>
+
+<canvas id="orbCanvas"></canvas>
+
+<div class="chord-name" id="chordName">C</div>
+<div class="chord-type-label" id="chordType">MAJOR</div>
+
+<div class="ring-container">
+  <svg class="ring-svg" viewBox="0 0 260 260" id="ringSvg">
+    <circle class="ring-bg" cx="130" cy="130" r="110"/>
+    <circle class="ring-arc" id="ringArc" cx="130" cy="130" r="110"
+      stroke="var(--cyan)" stroke-dasharray="0 693" />
+  </svg>
+</div>
+
+<div class="keyboard" id="keyboard"></div>
+
+<div class="quality-row" id="qualityRow"></div>
+
+<div class="notes-display" id="notesDisplay"></div>
+
+<div class="octave-row">
+  <span class="oct-label">OCTAVE</span>
+  <button class="oct-btn" id="octDown">−</button>
+  <span class="oct-val" id="octVal">3</span>
+  <button class="oct-btn" id="octUp">+</button>
+</div>
+
+<div class="instructions">
+  <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd> — play notes &nbsp;|&nbsp; <kbd>↑</kbd><kbd>↓</kbd> — octave &nbsp;|&nbsp; click quality above
+</div>
+
+<script>
+// ─── State ────────────────────────────────────────────────────────────────────
+const NOTES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const QUALITIES = {
+  'MAJOR':     { intervals: [0,4,7],       color: '#00f5d4', name: 'MAJOR',     symbol: '' },
+  'MINOR':     { intervals: [0,3,7],       color: '#9b5de5', name: 'MINOR',     symbol: 'm' },
+  '7':         { intervals: [0,4,7,10],    color: '#00bbf9', name: 'DOM 7',     symbol: '7' },
+  'MAJ7':      { intervals: [0,4,7,11],    color: '#fee440', name: 'MAJ 7',     symbol: 'maj7' },
+  'MINOR7':    { intervals: [0,3,7,10],   color: '#f72585', name: 'MIN 7',     symbol: 'm7' },
+  'DIM':       { intervals: [0,3,6],        color: '#ff6b6b', name: 'DIM',       symbol: 'dim' },
+  'AUG':       { intervals: [0,4,8],        color: '#ffd60a', name: 'AUG',       symbol: 'aug' },
+  'SUS2':      { intervals: [0,2,7],        color: '#4cc9f0', name: 'SUS2',      symbol: 'sus2' },
+  'SUS4':      { intervals: [0,5,7],        color: '#c77dff', name: 'SUS4',      symbol: 'sus4' },
+  'ADD9':      { intervals: [0,4,7,14],    color: '#80ffdb', name: 'ADD9',      symbol: 'add9' },
+  '6':         { intervals: [0,4,7,9],     color: '#f9844a', name: '6TH',       symbol: '6' },
+  'MINOR6':    { intervals: [0,3,7,9],    color: '#e76f51', name: 'MIN 6',     symbol: 'm6' },
+};
+
+const KEYBOARD_MAP = {
+  'a': 0, 'w': 1, 's': 2, 'e': 3, 'd': 4, 'f': 5,
+  't': 6, 'g': 7, 'y': 8, 'h': 9, 'u': 10, 'j': 11,
+  'k': 12, 'o': 13, 'l': 14, 'p': 15, ';': 16
+};
+
+let rootNote = 0;       // 0=C, 1=C#, etc.
+let qualityKey = 'MAJOR';
+let octave = 3;
+let isPlaying = false;
+let activeKeys = new Set();
+
+// ─── Audio Engine ─────────────────────────────────────────────────────────────
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+function resumeCtx() {
+  if (ctx.state === 'suspended') ctx.resume();
+}
+
+function midiToFreq(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function playNote(noteIndex, dur = 1.8) {
+  resumeCtx();
+  const midi = rootNote + noteIndex + (octave + 1) * 12;
+  const freq = midiToFreq(midi);
+
+  const osc1 = ctx.createOscillator();
+  const osc2 = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+
+  osc1.type = 'triangle';
+  osc2.type = 'sine';
+  osc1.frequency.value = freq;
+  osc2.frequency.value = freq * 2;
+
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(2000, ctx.currentTime);
+  filter.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + dur);
+  filter.Q.value = 1;
+
+  gain.gain.setValueAtTime(0, ctx.currentTime);
+  gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+
+  osc1.connect(filter);
+  osc2.connect(filter);
+  filter.connect(gain).connect(ctx.destination);
+
+  osc1.start(ctx.currentTime);
+  osc2.start(ctx.currentTime);
+  osc1.stop(ctx.currentTime + dur);
+  osc2.stop(ctx.currentTime + dur);
+
+  // Glow pulse
+  glowPulse(QUALITIES[qualityKey].color);
+}
+
+function playChord() {
+  resumeCtx();
+  const q = QUALITIES[qualityKey];
+  const now = ctx.currentTime;
+  const dur = 2.2;
+
+  q.intervals.forEach((interval, i) => {
+    const midi = rootNote + interval + (octave + 1) * 12;
+    const freq = midiToFreq(midi);
+
+    const osc1 = ctx.createOscillator();
+    const osc2 = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    osc1.type = i === 0 ? 'sawtooth' : 'triangle';
+    osc2.type = 'sine';
+    osc1.frequency.value = freq;
+    osc2.frequency.value = freq * 2;
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1800 + i * 200, now);
+    filter.frequency.exponentialRampToValueAtTime(300, now + dur);
+    filter.Q.value = 2;
+
+    const vol = i === 0 ? 0.15 : 0.1;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(vol, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(gain).connect(ctx.destination);
+
+    osc1.start(now);
+    osc2.start(now);
+    osc1.stop(now + dur);
+    osc2.stop(now + dur);
+  });
+
+  glowPulse(q.color);
+}
+
+// ─── Orb Visualizer ───────────────────────────────────────────────────────────
+const orbCanvas = document.getElementById('orbCanvas');
+const orbCtx = orbCanvas.getContext('2d');
+let particles = [];
+let glowColor = 'rgba(0,245,212,0.6)';
+let glowTarget = 'rgba(0,245,212,0.6)';
+
+function resizeOrb() {
+  orbCanvas.width = window.innerWidth;
+  orbCanvas.height = window.innerHeight;
+}
+resizeOrb();
+window.addEventListener('resize', resizeOrb);
+
+class Particle {
+  constructor() { this.reset(); }
+  reset() {
+    this.x = orbCanvas.width / 2;
+    this.y = orbCanvas.height / 2;
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 0.5 + Math.random() * 1.5;
+    this.vx = Math.cos(angle) * speed;
+    this.vy = Math.sin(angle) * speed;
+    this.life = 0;
+    this.maxLife = 80 + Math.random() * 60;
+    this.size = 1 + Math.random() * 2.5;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vx *= 0.99;
+    this.vy *= 0.99;
+    this.life++;
+    if (this.life >= this.maxLife) this.reset();
+  }
+  draw() {
+    const alpha = Math.pow(1 - this.life / this.maxLife, 1.5) * 0.6;
+    orbCtx.beginPath();
+    orbCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    orbCtx.fillStyle = glowColor.replace('0.6', String(alpha));
+    orbCtx.fill();
+  }
+}
+
+for (let i = 0; i < 120; i++) particles.push(new Particle());
+
+function animateOrb() {
+  orbCtx.clearRect(0, 0, orbCanvas.width, orbCanvas.height);
+
+  // Center glow
+  const cx = orbCanvas.width / 2;
+  const cy = orbCanvas.height / 2 - 40;
+  const grad = orbCtx.createRadialGradient(cx, cy, 0, cx, cy, 200);
+  grad.addColorStop(0, glowColor.replace('0.6', '0.08'));
+  grad.addColorStop(1, 'transparent');
+  orbCtx.fillStyle = grad;
+  orbCtx.fillRect(0, 0, orbCanvas.width, orbCanvas.height);
+
+  particles.forEach(p => { p.update(); p.draw(); });
+  requestAnimationFrame(animateOrb);
+}
+animateOrb();
+
+function glowPulse(color) {
+  glowTarget = color.includes('rgba') ? color : `${color}99`;
+}
+
+// ─── Ring Visualizer ───────────────────────────────────────────────────────────
+function updateRing() {
+  const q = QUALITIES[qualityKey];
+  const arc = document.getElementById('ringArc');
+  const svg = document.querySelector('.ring-svg');
+  const r = 110;
+  const circumference = 2 * Math.PI * r;
+  const filled = (q.intervals.length / 5) * circumference * 0.6;
+
+  arc.style.stroke = q.color;
+  arc.style.strokeDasharray = `${filled} ${circumference}`;
+
+  // Position arc at top
+  arc.style.transformOrigin = '130px 130px';
+  arc.style.transform = 'rotate(-90deg)';
+  arc.style.transition = 'stroke-dasharray 0.5s ease, stroke 0.6s ease';
+
+  svg.style.filter = `drop-shadow(0 0 18px ${q.color}80)`;
+
+  // Sync orb color
+  glowColor = `${q.color}99`;
+}
+
+// ─── UI Builders ───────────────────────────────────────────────────────────────
+function buildKeyboard() {
+  const kb = document.getElementById('keyboard');
+  kb.innerHTML = '';
+  const names = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  names.forEach((name, i) => {
+    const key = document.createElement('div');
+    key.className = 'key' + (i === rootNote ? ' root' : '');
+    key.dataset.note = i;
+    key.innerHTML = `<span class="key-name">${name}</span><span class="key-interval">${getIntervalName(i - rootNote)}</span>`;
+    key.addEventListener('mousedown', () => playNote(i - rootNote));
+    key.addEventListener('touchstart', (e) => { e.preventDefault(); playNote(i - rootNote); });
+    kb.appendChild(key);
+  });
+}
+
+function getIntervalName(semitones) {
+  const names = ['','','','3m','3M','','4','b5','5','#5','6','b7','7'];
+  return names[(semitones % 12 + 12) % 12] || '';
+}
+
+function buildQualities() {
+  const row = document.getElementById('qualityRow');
+  row.innerHTML = '';
+  Object.keys(QUALITIES).forEach(key => {
+    const btn = document.createElement('button');
+    btn.className = 'q-btn' + (key === qualityKey ? ' active' : '');
+    btn.textContent = key;
+    btn.addEventListener('click', () => {
+      qualityKey = key;
+      document.querySelectorAll('.q-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateDisplay();
+      playChord();
+    });
+    row.appendChild(btn);
+  });
+}
+
+function updateDisplay() {
+  const q = QUALITIES[qualityKey];
+  const noteName = NOTES[rootNote];
+  document.getElementById('chordName').textContent = noteName;
+  document.getElementById('chordName').style.color = q.color;
+  document.getElementById('chordName').style.textShadow = `0 0 40px ${q.color}60, 0 0 80px ${q.color}30`;
+  document.getElementById('chordType').textContent = q.name;
+
+  // Notes pills
+  const notesEl = document.getElementById('notesDisplay');
+  notesEl.innerHTML = '';
+  q.intervals.forEach(interval => {
+    const midi = (rootNote + interval) % 12;
+    const pill = document.createElement('span');
+    pill.className = 'note-pill';
+    pill.textContent = NOTES[midi];
+    pill.style.borderColor = q.color;
+    pill.style.color = q.color;
+    pill.style.boxShadow = `0 0 8px ${q.color}40`;
+    notesEl.appendChild(pill);
+  });
+
+  updateRing();
+
+  // Update keyboard root
+  document.querySelectorAll('.key').forEach((key, i) => {
+    key.classList.toggle('root', i === rootNote);
+  });
+}
+
+// ─── Keyboard Input ────────────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
+  const key = e.key.toLowerCase();
+
+  if (key === 'arrowup') { octave = Math.min(octave + 1, 6); document.getElementById('octVal').textContent = octave; return; }
+  if (key === 'arrowdown') { octave = Math.max(octave - 1, 1); document.getElementById('octVal').textContent = octave; return; }
+
+  if (key in KEYBOARD_MAP) {
+    resumeCtx();
+    const noteOffset = KEYBOARD_MAP[key];
+    const actualNote = (noteOffset - rootNote + 12) % 12;
+    playNote(actualNote);
+
+    const kbEl = document.getElementById('keyboard');
+    const keyEls = kbEl.querySelectorAll('.key');
+    const idx = (noteOffset % 12);
+    if (keyEls[idx]) {
+      keyEls[idx].classList.add('active');
+      setTimeout(() => keyEls[idx].classList.remove('active'), 150);
+    }
+  }
+});
+
+document.querySelectorAll('.key').forEach(keyEl => {
+  keyEl.addEventListener('mousedown', () => keyEl.classList.add('active'));
+  keyEl.addEventListener('mouseup', () => keyEl.classList.remove('active'));
+  keyEl.addEventListener('mouseleave', () => keyEl.classList.remove('active'));
+});
+
+// Octave buttons
+document.getElementById('octUp').addEventListener('click', () => {
+  octave = Math.min(octave + 1, 6);
+  document.getElementById('octVal').textContent = octave;
+});
+document.getElementById('octDown').addEventListener('click', () => {
+  octave = Math.max(octave - 1, 1);
+  document.getElementById('octVal').textContent = octave;
+});
+
+// ─── Click root note in keyboard ──────────────────────────────────────────────
+document.getElementById('keyboard').addEventListener('click', (e) => {
+  const keyEl = e.target.closest('.key');
+  if (keyEl) {
+    rootNote = parseInt(keyEl.dataset.note);
+    updateDisplay();
+    playChord();
+  }
+});
+
+// ─── Init ──────────────────────────────────────────────────────────────────────
+buildQualities();
+buildKeyboard();
+updateDisplay();
+
+// Auto-play a dreamy Cmaj7 on load
+setTimeout(() => {
+  qualityKey = 'MAJ7';
+  document.querySelectorAll('.q-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.q-btn.active') || document.querySelectorAll('.q-btn')[3].classList.add('active');
+  document.querySelectorAll('.q-btn').forEach(b => b.classList.toggle('active', b.textContent === 'MAJ7'));
+  updateDisplay();
+  playChord();
+}, 400);
+</script>
+</body>
+</html>
