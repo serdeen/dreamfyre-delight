@@ -1,0 +1,1156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drum Pattern Studio — Deep House Edition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+
+  :root {
+    --bg: #07070d;
+    --surface: #0d0d16;
+    --surface2: #13131e;
+    --border: #1c1c2a;
+    --kick: #ff3d5a;
+    --hat: #00e5ff;
+    --snare: #ffb300;
+    --clap: #ff00aa;
+    --perc: #00ff88;
+    --text: #e0e0f0;
+    --dim: #252540;
+    --text-dim: #5a5a7a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #090910 0%, var(--bg) 100%);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--hat);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .bpm-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .bpm-ctrl label {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .bpm-ctrl input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--hat);
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 4px 10px;
+    width: 64px;
+    text-align: center;
+    outline: none;
+  }
+
+  .bpm-ctrl input:focus { border-color: var(--hat); }
+
+  .key-hints {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    display: flex;
+    gap: 8px;
+  }
+
+  .key-hints kbd {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--text-dim);
+  }
+
+  /* ─── MAIN LAYOUT ─── */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 57px);
+  }
+
+  /* ─── SEQUENCER ─── */
+  #sequencer {
+    background: var(--bg);
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .seq-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-transform: uppercase;
+    flex: 1;
+  }
+
+  /* Style selector */
+  .style-scroll {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .style-scroll::-webkit-scrollbar { display: none; }
+
+  .style-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .style-btn:hover {
+    border-color: var(--hat);
+    color: var(--hat);
+    background: rgba(0, 229, 255, 0.06);
+  }
+
+  .style-btn.active {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--hat);
+    color: var(--hat);
+    box-shadow: 0 0 14px rgba(0, 229, 255, 0.2);
+  }
+
+  /* Step numbers */
+  .step-number-row {
+    display: flex;
+    gap: 3px;
+    padding-left: 52px;
+    margin-bottom: 2px;
+  }
+
+  .step-num {
+    width: 36px;
+    text-align: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    flex-shrink: 0;
+  }
+
+  .step-num.beat { color: var(--text-dim); font-weight: 700; }
+
+  /* Track rows */
+  .track-row {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+
+  .track-label {
+    width: 48px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    text-align: right;
+    padding-right: 8px;
+    flex-shrink: 0;
+    letter-spacing: 0.08em;
+  }
+
+  .track-label.kick { color: var(--kick); }
+  .track-label.snare { color: var(--snare); }
+  .track-label.hihat { color: var(--hat); }
+  .track-label.ohat { color: var(--perc); }
+  .track-label.clap { color: var(--clap); }
+  .track-label.perc { color: var(--perc); }
+
+  .steps-row {
+    display: flex;
+    gap: 3px;
+    flex: 1;
+  }
+
+  .step-cell {
+    width: 36px;
+    height: 36px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    transition: all 0.08s;
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .step-cell.beat-start { border-left: 2px solid rgba(255,255,255,0.08); }
+
+  .step-cell.kick.active {
+    background: rgba(255, 61, 90, 0.3);
+    border-color: var(--kick);
+    box-shadow: 0 0 10px rgba(255, 61, 90, 0.25);
+  }
+
+  .step-cell.snare.active {
+    background: rgba(255, 184, 0, 0.28);
+    border-color: var(--snare);
+    box-shadow: 0 0 10px rgba(255, 184, 0, 0.25);
+  }
+
+  .step-cell.hihat.active {
+    background: rgba(0, 229, 255, 0.22);
+    border-color: var(--hat);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.22);
+  }
+
+  .step-cell.ohat.active {
+    background: rgba(0, 255, 136, 0.2);
+    border-color: var(--perc);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+  }
+
+  .step-cell.clap.active {
+    background: rgba(255, 0, 170, 0.22);
+    border-color: var(--clap);
+    box-shadow: 0 0 10px rgba(255, 0, 170, 0.22);
+  }
+
+  .step-cell.perc.active {
+    background: rgba(0, 255, 136, 0.15);
+    border-color: var(--perc);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.15);
+  }
+
+  .step-cell.current {
+    box-shadow: 0 0 0 2px #fff, 0 0 12px rgba(255,255,255,0.2) !important;
+  }
+
+  /* Velocity dots inside active cells */
+  .step-cell.active::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.6;
+  }
+
+  /* Playhead */
+  .playhead-row {
+    display: flex;
+    gap: 3px;
+    padding-left: 52px;
+    height: 4px;
+    margin-top: 2px;
+  }
+
+  .playhead-cell {
+    width: 36px;
+    height: 4px;
+    border-radius: 2px;
+    background: transparent;
+    flex-shrink: 0;
+    transition: background 0.05s;
+  }
+
+  .playhead-cell.active { background: rgba(255,255,255,0.3); }
+
+  /* Transport */
+  .transport-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+  }
+
+  .transport-btn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .transport-btn .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dim);
+    transition: all 0.15s;
+  }
+
+  .transport-btn:hover { border-color: var(--hat); color: var(--hat); }
+  .transport-btn:hover .dot { background: var(--hat); }
+
+  .transport-btn.playing {
+    border-color: var(--kick);
+    color: var(--kick);
+    background: rgba(255, 61, 90, 0.08);
+    box-shadow: 0 0 14px rgba(255, 61, 90, 0.2);
+  }
+
+  .transport-btn.playing .dot {
+    background: var(--kick);
+    box-shadow: 0 0 8px var(--kick);
+    animation: blinkAnim 0.5s ease-in-out infinite alternate;
+  }
+
+  @keyframes blinkAnim {
+    from { opacity: 1; }
+    to { opacity: 0.2; }
+  }
+
+  /* Pattern name */
+  .pattern-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    margin-left: auto;
+  }
+
+  /* ─── RIGHT PANEL ─── */
+  #right-panel {
+    background: var(--surface);
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    overflow-y: auto;
+  }
+
+  .panel-section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* Prompt input */
+  .prompt-area {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .prompt-area textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    height: 72px;
+  }
+
+  .prompt-area textarea::placeholder { color: var(--dim); }
+
+  .generate-btn {
+    width: 100%;
+    margin-top: 8px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .generate-btn:hover {
+    border-color: var(--hat);
+    color: var(--hat);
+    background: rgba(0, 229, 255, 0.06);
+    box-shadow: 0 0 14px rgba(0, 229, 255, 0.15);
+  }
+
+  .generate-btn.loading {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  .generate-btn .spinner {
+    width: 12px;
+    height: 12px;
+    border: 2px solid var(--dim);
+    border-top-color: var(--hat);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .ai-note {
+    font-size: 10px;
+    color: var(--dim);
+    margin-top: 6px;
+    line-height: 1.5;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* Prompt suggestions */
+  .prompt-suggestions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .suggestion-chip {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.12s;
+    line-height: 1.4;
+  }
+
+  .suggestion-chip:hover {
+    border-color: var(--hat);
+    color: var(--hat);
+    background: rgba(0, 229, 255, 0.05);
+  }
+
+  /* Style details */
+  .style-detail {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+  }
+
+  .style-detail .style-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--hat);
+    margin-bottom: 6px;
+  }
+
+  .style-detail .style-desc {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* Status */
+  .status-bar {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--perc);
+    letter-spacing: 0.1em;
+    min-height: 14px;
+  }
+
+  /* Canvas viz */
+  canvas#viz {
+    width: 100%;
+    height: 50px;
+    display: block;
+    border-radius: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">DRUM PATTERN STUDIO</div>
+  <div class="header-right">
+    <div class="key-hints">
+      <span><kbd>Space</kbd> play/stop</span>
+      <span><kbd>R</kbd> randomize</span>
+    </div>
+    <div class="bpm-ctrl">
+      <label>BPM</label>
+      <input type="number" id="bpmInput" value="124" min="80" max="160" />
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- SEQUENCER -->
+  <div id="sequencer">
+    <!-- Style scroll -->
+    <div class="seq-header">
+      <div class="section-title">Pattern Library</div>
+    </div>
+    <div class="style-scroll" id="styleScroll"></div>
+
+    <!-- Step numbers -->
+    <div class="step-number-row" id="stepNumbers"></div>
+
+    <!-- Tracks -->
+    <div id="trackRows"></div>
+
+    <!-- Playhead -->
+    <div class="playhead-row" id="playheadRow"></div>
+
+    <!-- Transport -->
+    <div class="transport-row">
+      <button class="transport-btn" id="btnPlay">
+        <span class="dot"></span> Play
+      </button>
+      <button class="transport-btn" id="btnStop">Stop</button>
+      <button class="transport-btn" id="btnRandom">⟳ Random</button>
+      <button class="transport-btn" id="btnClear">Clear</button>
+      <div class="pattern-name" id="patternName">Deep House</div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div>
+      <div class="panel-section-title">AI Pattern Generator</div>
+      <div class="prompt-area">
+        <textarea id="promptInput" placeholder="Describe a groove... e.g. &quot;sparse deep house kick, swinging hats, punchy snare on 2 and 4&quot;"></textarea>
+        <button class="generate-btn" id="btnGenerate">
+          <span class="spinner" id="spinner" style="display:none;"></span>
+          <span id="genLabel">✨ Generate Pattern</span>
+        </button>
+      </div>
+      <div class="ai-note">
+        Uses local AI (llama3.1:8b on Mac Mini) — pattern generation is free.
+      </div>
+    </div>
+
+    <div>
+      <div class="panel-section-title">Try These</div>
+      <div class="prompt-suggestions">
+        <div class="suggestion-chip" data-prompt="Sparse deep house kick pattern with hats on every eighth note and snare hitting on beats 2 and 4">
+          Sparse deep house — kick + hats + snare
+        </div>
+        <div class="suggestion-chip" data-prompt="Minimal techno groove with a four-on-the-floor kick, tight closed hats on sixteenth notes, and sparse shaker accents">
+          Minimal techno — four-on-floor + tight hats
+        </div>
+        <div class="suggestion-chip" data-prompt="UK garage swing pattern with kick on every beat, syncopated hat pattern, snares on 2 and 4, and rolling percussion">
+          UK garage — swing + rolling percs
+        </div>
+        <div class="suggestion-chip" data-prompt="Afrobeat-influenced house with clave-style kick patterns, open hi-hats on the ands, and clap ghost notes">
+          Afrobeat house — clave patterns + open hats
+        </div>
+        <div class="suggestion-chip" data-prompt="R&B loop feel with kick on 1 and the and-of-3, soft snare on 2 and 4, shuffle hi-hat pattern, and clap accents">
+          R&B pocket — shuffle + soft claps
+        </div>
+      </div>
+    </div>
+
+    <!-- Current style -->
+    <div>
+      <div class="panel-section-title">Current Style</div>
+      <div class="style-detail" id="styleDetail">
+        <div class="style-name" id="styleDetailName">Deep House</div>
+        <div class="style-desc" id="styleDetailDesc">Classic four-on-the-floor inspired pattern with swung hi-hats and snare on beats 2 and 4. Smooth, groovy, and minimal.</div>
+      </div>
+    </div>
+
+    <canvas id="viz"></canvas>
+
+    <div class="status-bar" id="statusBar"></div>
+  </div>
+</main>
+
+<script>
+'use strict';
+
+// ─── PATTERN LIBRARY ───────────────────────────────────────────
+const STYLES = [
+  {
+    name: 'Deep House',
+    desc: 'Classic four-on-the-floor inspired pattern with swung hi-hats and snare on beats 2 and 4. Smooth, groovy, and minimal.',
+    bpm: 124,
+    pattern: {
+      kick:   [1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0],
+      snare:  [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+      hihat:  [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
+      ohat:   [0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0],
+      clap:   [0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0],
+      perc:   [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    }
+  },
+  {
+    name: 'Minimal Techno',
+    desc: 'Four-on-the-floor kick, tight sixteenth-note hats, sparse snare/clap on the backbeat. Hypnotic and driving.',
+    bpm: 130,
+    pattern: {
+      kick:   [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+      snare:  [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+      hihat:  [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+      ohat:   [0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0],
+      clap:   [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+      perc:   [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    }
+  },
+  {
+    name: 'UK Garage',
+    desc: 'Skipping kick pattern, swung hats, snares on 2 and 4 with ghost notes. Bright, bouncy, and energetic.',
+    bpm: 130,
+    pattern: {
+      kick:   [1,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0],
+      snare:  [0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1],
+      hihat:  [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+      ohat:   [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],
+      clap:   [0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1],
+      perc:   [0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0],
+    }
+  },
+  {
+    name: 'Afro House',
+    desc: 'Clave-influenced kick patterns, open hi-hats, sparse shakers. Rhythmic complexity with breathing room.',
+    bpm: 122,
+    pattern: {
+      kick:   [1,0,0,1,0,0,0,0,0,0,1,0,0,1,0,0],
+      snare:  [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+      hihat:  [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
+      ohat:   [1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0],
+      clap:   [0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0],
+      perc:   [1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0],
+    }
+  },
+  {
+    name: 'R&B Pocket',
+    desc: 'Pocket kick with hats on ands, snare ghosts, and clap accents. Laid back, groove-heavy, vocal-ready.',
+    bpm: 100,
+    pattern: {
+      kick:   [1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0],
+      snare:  [0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1],
+      hihat:  [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0],
+      ohat:   [0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0],
+      clap:   [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0],
+      perc:   [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    }
+  },
+  {
+    name: 'Jackin House',
+    desc: 'Classic house feel — accented kick on 2, chopped hats, vocal chop-style claps. High energy, data-driven.',
+    bpm: 126,
+    pattern: {
+      kick:   [1,0,0,0,1,0,0,1,0,0,0,1,0,0,0,0],
+      snare:  [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+      hihat:  [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+      ohat:   [0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0],
+      clap:   [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0],
+      perc:   [0,0,1,0,0,0,1,0,0,0,1,0,0,0,0,0],
+    }
+  },
+  {
+    name: 'Minimal House',
+    desc: 'Ultra-sparse — kick only, rare hats, no snare. Every hit matters. Maximum space.',
+    bpm: 122,
+    pattern: {
+      kick:   [1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0],
+      snare:  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      hihat:  [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+      ohat:   [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      clap:   [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+      perc:   [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+    }
+  },
+  {
+    name: 'Broken Beat',
+    desc: 'Asymmetrical kick, displaced snare, polyrhythmic hats. Complex and experimental.',
+    bpm: 120,
+    pattern: {
+      kick:   [1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0],
+      snare:  [0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,0],
+      hihat:  [1,0,1,0,0,1,0,1,0,1,0,0,1,0,1,0],
+      ohat:   [0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0],
+      clap:   [0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1],
+      perc:   [0,0,1,0,0,0,1,0,0,1,0,0,0,0,0,0],
+    }
+  },
+];
+
+const TRACKS = [
+  { name: 'KICK',  key: 'kick',   color: 'kick' },
+  { name: 'SNARE', key: 'snare',  color: 'snare' },
+  { name: 'HH CL', key: 'hihat',  color: 'hihat' },
+  { name: 'HH OP', key: 'ohat',   color: 'ohat' },
+  { name: 'CLAP',  key: 'clap',   color: 'clap' },
+  { name: 'PERC',  key: 'perc',  color: 'perc' },
+];
+
+const STEPS = 16;
+let currentStyleIdx = 0;
+let patterns = JSON.parse(JSON.stringify(STYLES[0].pattern));
+let isPlaying = false;
+let currentStep = 0;
+let stepInterval = null;
+let audioCtx = null;
+let masterGain = null;
+let analyser = null;
+
+// ─── AUDIO ENGINE ──────────────────────────────────────────────
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.7;
+  masterGain.connect(audioCtx.destination);
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  masterGain.connect(analyser);
+  drawViz();
+}
+
+function getBpm() { return parseInt(document.getElementById('bpmInput').value) || 124; }
+function getStepMs() { return (60 / getBpm()) / 4 * 1000; }
+
+function playKick(time) {
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.connect(g); g.connect(masterGain);
+  osc.frequency.setValueAtTime(150, time);
+  osc.frequency.exponentialRampToValueAtTime(40, time + 0.1);
+  osc.frequency.exponentialRampToValueAtTime(1, time + 0.5);
+  g.gain.setValueAtTime(1.1, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time + 0.5);
+  osc.start(time); osc.stop(time + 0.55);
+}
+
+function playSnare(time) {
+  const bufSize = audioCtx.sampleRate * 0.15;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buf;
+  const filt = audioCtx.createBiquadFilter();
+  filt.type = 'highpass'; filt.frequency.value = 1200;
+  const g = audioCtx.createGain();
+  noise.connect(filt); filt.connect(g); g.connect(masterGain);
+  g.gain.setValueAtTime(0.7, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+  noise.start(time); noise.stop(time + 0.2);
+  const osc = audioCtx.createOscillator();
+  const og = audioCtx.createGain();
+  osc.frequency.value = 180; osc.type = 'triangle';
+  osc.connect(og); og.connect(masterGain);
+  og.gain.setValueAtTime(0.5, time);
+  og.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+  osc.start(time); osc.stop(time + 0.1);
+}
+
+function playHihat(time, open = false) {
+  const bufSize = audioCtx.sampleRate * (open ? 0.28 : 0.055);
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buf;
+  const filt = audioCtx.createBiquadFilter();
+  filt.type = 'highpass'; filt.frequency.value = open ? 7000 : 9000;
+  const g = audioCtx.createGain();
+  noise.connect(filt); filt.connect(g); g.connect(masterGain);
+  g.gain.setValueAtTime(0.3, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time + (open ? 0.26 : 0.05));
+  noise.start(time); noise.stop(time + (open ? 0.3 : 0.07));
+}
+
+function playClap(time) {
+  for (let hit = 0; hit < 3; hit++) {
+    const t = time + hit * 0.012;
+    const bufSize = audioCtx.sampleRate * 0.05;
+    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buf;
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'bandpass'; filt.frequency.value = 2000; filt.Q.value = 0.5;
+    const g = audioCtx.createGain();
+    noise.connect(filt); filt.connect(g); g.connect(masterGain);
+    g.gain.setValueAtTime(0.5, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    noise.start(t); noise.stop(t + 0.06);
+  }
+}
+
+function playPerc(time) {
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.frequency.value = 800; osc.type = 'square';
+  osc.connect(g); g.connect(masterGain);
+  g.gain.setValueAtTime(0.15, time);
+  g.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+  osc.start(time); osc.stop(time + 0.05);
+}
+
+function triggerDrum(track, time) {
+  if (!audioCtx) initAudio();
+  const t = time !== undefined ? time : audioCtx.currentTime + 0.01;
+  if (track === 'kick') playKick(t);
+  else if (track === 'snare') playSnare(t);
+  else if (track === 'hihat') playHihat(t, false);
+  else if (track === 'ohat') playHihat(t, true);
+  else if (track === 'clap') playClap(t);
+  else if (track === 'perc') playPerc(t);
+}
+
+// ─── SEQUENCER ─────────────────────────────────────────────────
+function loadStyle(idx) {
+  currentStyleIdx = idx;
+  const style = STYLES[idx];
+  patterns = JSON.parse(JSON.stringify(style.pattern));
+  document.getElementById('bpmInput').value = style.bpm;
+  document.getElementById('patternName').textContent = style.name;
+  document.getElementById('styleDetailName').textContent = style.name;
+  document.getElementById('styleDetailDesc').textContent = style.desc;
+  document.querySelectorAll('.style-btn').forEach((b, i) => b.classList.toggle('active', i === idx));
+  renderGrid();
+  setStatus(`Loaded: ${style.name}`);
+}
+
+function renderGrid() {
+  const container = document.getElementById('trackRows');
+  container.innerHTML = '';
+  const stepNumRow = document.getElementById('stepNumbers');
+  stepNumRow.innerHTML = '';
+  const playheadRow = document.getElementById('playheadRow');
+  playheadRow.innerHTML = '';
+
+  for (let i = 0; i < STEPS; i++) {
+    const sn = document.createElement('div');
+    sn.className = 'step-num' + (i % 4 === 0 ? ' beat' : '');
+    sn.textContent = i % 4 === 0 ? (Math.floor(i / 4) + 1) : '';
+    stepNumRow.appendChild(sn);
+
+    const ph = document.createElement('div');
+    ph.className = 'playhead-cell';
+    playheadRow.appendChild(ph);
+  }
+
+  TRACKS.forEach(track => {
+    const row = document.createElement('div');
+    row.className = 'track-row';
+
+    const label = document.createElement('div');
+    label.className = 'track-label ' + track.color;
+    label.textContent = track.name;
+    row.appendChild(label);
+
+    const stepsRow = document.createElement('div');
+    stepsRow.className = 'steps-row';
+
+    for (let i = 0; i < STEPS; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'step-cell ' + track.color + (i % 4 === 0 ? ' beat-start' : '');
+      if (patterns[track.key][i]) cell.classList.add('active');
+      cell.dataset.step = i;
+      cell.dataset.track = track.key;
+      cell.addEventListener('click', () => toggleStep(track.key, i));
+      stepsRow.appendChild(cell);
+    }
+
+    row.appendChild(stepsRow);
+    container.appendChild(row);
+  });
+}
+
+function toggleStep(track, step) {
+  patterns[track][step] = 1 - patterns[track][step];
+  const cell = document.querySelector(`.step-cell[data-track="${track}"][data-step="${step}"]`);
+  cell.classList.toggle('active');
+  if (patterns[track][step]) triggerDrum(track);
+}
+
+function startSequencer() {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  isPlaying = true;
+  currentStep = 0;
+  document.getElementById('btnPlay').classList.add('playing');
+  scheduleStep(currentStep);
+  scheduleNext();
+}
+
+function scheduleStep(step) {
+  const t = audioCtx.currentTime + 0.01;
+  TRACKS.forEach(track => {
+    if (patterns[track.key][step]) triggerDrum(track.key, t);
+  });
+  document.querySelectorAll('.playhead-cell').forEach((c, i) => c.classList.toggle('active', i === step));
+  document.querySelectorAll('.step-cell.current').forEach(c => c.classList.remove('current'));
+  document.querySelectorAll(`.step-cell[data-step="${step}"]`).forEach(c => c.classList.add('current'));
+}
+
+function scheduleNext() {
+  if (!isPlaying) return;
+  stepInterval = setTimeout(() => {
+    currentStep = (currentStep + 1) % STEPS;
+    scheduleStep(currentStep);
+    scheduleNext();
+  }, getStepMs());
+}
+
+function stopSequencer() {
+  isPlaying = false;
+  clearTimeout(stepInterval);
+  currentStep = 0;
+  document.getElementById('btnPlay').classList.remove('playing');
+  document.querySelectorAll('.playhead-cell').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.step-cell.current').forEach(c => c.classList.remove('current'));
+}
+
+function randomize() {
+  stopSequencer();
+  TRACKS.forEach(track => {
+    patterns[track.key] = Array(STEPS).fill(0);
+  });
+  // Smart randomization per track
+  // Kick: beats 0, 8 always; add 1-3 more
+  patterns.kick[0] = 1; patterns.kick[8] = 1;
+  [4, 6, 10, 12, 14].forEach(p => { if (Math.random() > 0.4) patterns.kick[p] = 1; });
+  // Snare: 4 and 12 usually
+  patterns.snare[4] = 1; patterns.snare[12] = 1;
+  if (Math.random() > 0.3) patterns.snare[Math.random() > 0.5 ? 2 : 10] = 1;
+  // Hats: every 2 or every 4
+  for (let i = 0; i < STEPS; i += (Math.random() > 0.5 ? 2 : 4)) patterns.hihat[i] = 1;
+  // Ohat: sparse
+  [3, 7, 11, 15].forEach(p => { if (Math.random() > 0.6) patterns.ohat[p] = 1; });
+  // Clap: near snare
+  [4, 6, 12, 14].forEach(p => { if (Math.random() > 0.55) patterns.clap[p] = 1; });
+  renderGrid();
+  setStatus('Randomized!');
+}
+
+function clearAll() {
+  stopSequencer();
+  TRACKS.forEach(track => { patterns[track.key] = Array(STEPS).fill(0); });
+  renderGrid();
+}
+
+// ─── AI PATTERN GENERATION ─────────────────────────────────────
+async function generatePattern(prompt) {
+  const spinner = document.getElementById('spinner');
+  const genLabel = document.getElementById('genLabel');
+  const btn = document.getElementById('btnGenerate');
+  btn.classList.add('loading');
+  spinner.style.display = 'block';
+  genLabel.textContent = 'Generating...';
+
+  try {
+    const response = await fetch('http://192.168.1.184:11434/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama3.1:8b',
+        messages: [{
+          role: 'user',
+          content: `You are a drum pattern generator. Given a groove description, output a JSON object with a 16-step drum pattern for these 6 tracks: kick, snare, hihat, ohat, clap, perc. Each track is an array of 16 zeros and ones (1=hit, 0=no hit). Rules: kick hits should be on beats 0-15 aligned to the beat, snare on 4 and 12 typical, hihat follows the groove description. Output ONLY valid JSON like: {"kick":[1,0,...],"snare":[0,0,...],...}. Description: "${prompt}"`
+        }],
+        max_tokens: 200,
+        temperature: 0.9,
+      }),
+    });
+
+    if (!response.ok) throw new Error('Ollama not available');
+    const data = await response.json();
+    const text = data.choices[0].message.content;
+
+    // Extract JSON
+    const match = text.match(/\{[\s\S]*?"kick"[\s\S]*?\}/);
+    if (!match) throw new Error('No pattern found in response');
+
+    const genPattern = JSON.parse(match[0]);
+    // Validate keys
+    const validKeys = ['kick','snare','hihat','ohat','clap','perc'];
+    validKeys.forEach(k => {
+      if (genPattern[k] && Array.isArray(genPattern[k]) && genPattern[k].length === 16) {
+        patterns[k] = genPattern[k].map(v => v ? 1 : 0);
+      }
+    });
+
+    renderGrid();
+    setStatus('AI pattern loaded!');
+  } catch (err) {
+    setStatus('AI unavailable — using smart random');
+    randomize();
+  } finally {
+    btn.classList.remove('loading');
+    spinner.style.display = 'none';
+    genLabel.textContent = '✨ Generate Pattern';
+  }
+}
+
+// ─── VISUALIZER ────────────────────────────────────────────────
+function drawViz() {
+  const canvas = document.getElementById('viz');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth * 2;
+  const H = canvas.offsetHeight * 2;
+  canvas.width = W;
+  canvas.height = H;
+
+  function draw() {
+    requestAnimationFrame(draw);
+    if (!analyser) return;
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(buf);
+    ctx.clearRect(0, 0, W, H);
+    const barW = W / 64;
+    for (let i = 0; i < 64; i++) {
+      const v = buf[i] / 255;
+      const h = v * H * 0.9;
+      const hue = 190 + i * 1.5;
+      ctx.fillStyle = `hsla(${hue}, 80%, 60%, ${0.3 + v * 0.7})`;
+      ctx.fillRect(i * barW + 1, H - h, barW - 2, h);
+    }
+  }
+  draw();
+}
+
+// ─── STATUS ────────────────────────────────────────────────────
+function setStatus(msg) {
+  const el = document.getElementById('statusBar');
+  el.textContent = msg;
+  if (msg) setTimeout(() => { el.textContent = ''; }, 2500);
+}
+
+// ─── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Build style buttons
+  const scroll = document.getElementById('styleScroll');
+  STYLES.forEach((style, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'style-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = style.name;
+    btn.addEventListener('click', () => loadStyle(i));
+    scroll.appendChild(btn);
+  });
+
+  renderGrid();
+
+  // Transport
+  document.getElementById('btnPlay').addEventListener('click', () => {
+    isPlaying ? stopSequencer() : startSequencer();
+  });
+  document.getElementById('btnStop').addEventListener('click', stopSequencer);
+  document.getElementById('btnRandom').addEventListener('click', () => { stopSequencer(); randomize(); });
+  document.getElementById('btnClear').addEventListener('click', clearAll);
+
+  // BPM change
+  document.getElementById('bpmInput').addEventListener('change', () => {
+    if (isPlaying) { stopSequencer(); startSequencer(); }
+  });
+
+  // Generate
+  document.getElementById('btnGenerate').addEventListener('click', () => {
+    const prompt = document.getElementById('promptInput').value.trim();
+    if (!prompt) { setStatus('Enter a groove description first'); return; }
+    stopSequencer();
+    generatePattern(prompt);
+  });
+
+  // Suggestions
+  document.querySelectorAll('.suggestion-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.getElementById('promptInput').value = chip.dataset.prompt;
+    });
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.code === 'Space') { e.preventDefault(); isPlaying ? stopSequencer() : startSequencer(); }
+    if (e.key.toLowerCase() === 'r') { stopSequencer(); randomize(); }
+  });
+
+  window.addEventListener('resize', () => drawViz());
+});
+</script>
+</body>
+</html>
