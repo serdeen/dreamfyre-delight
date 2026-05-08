@@ -1,41 +1,48 @@
-# Build Spec: Tape Stop
+# Build Spec: Pitch Shifter
 
 ## Concept & Vision
-A simple single-function audio effect tool: load any audio file (wav/mp3), then trigger a "tape stop" effect — the playback speed ramps down exponentially from 1x to 0x over a configurable duration (0.2s–2s), creating the classic tape-spooling-down sound. There's also a "rewind" button that plays backward at increasing speed.
+A live pitch-shifting audio player. Load any audio file, then use a large vertical pitch fader to shift playback speed up or down by up to ±12 semitones in real time. Visual feedback shows current shift amount in semitones and cents. Essentially a pitch-shifter/slow-downer for music practice.
 
 ## Parameters to Test
-- **Temperature** — 0.75 (medium-creative for clean code)
-- **Token limit** — 1600 (compact build)
-- **Model** — llama3.1:8b via Ollama with automated validation + 1 retry on failure
-- **Enforcement** — new validate_and_fix loop: attempt 1 fails → feedback → attempt 2 → pass or fail → attempt 3
+- **Temperature** — 0.7
+- **Token limit** — 1800
+- **Model** — llama3.1:8b via Ollama with enhanced validator (6 checks + 10 wiring patterns + auto-regeneration)
+- **Goal** — minimal manual cleanup after generation
 
 ## Design
-- Dark background `#0a0a0f`, warm amber accent `#f4a261`
+- Dark background `#0a0a0f`, electric blue accent `#00b4d8`
 - Fonts: Space Mono + Inter
-- Centered layout: file drop zone, playback controls (play/pause/stop), tape-stop button, rewind button, speed/duration sliders
-- Tape stop progress shown as a visual sweep line moving across waveform
+- Centered layout: file drop zone → waveform → transport → large vertical pitch slider → semitone readout
 
 ## Features
 - [ ] Drag-and-drop audio load (wav/mp3)
-- [ ] Play/pause toggle button
-- [ ] "TAPE STOP" button: triggers playbackRate ramp from 1 → 0 exponentially over set duration
-- [ ] "REWIND" button: plays audio backward at accelerating rate (like tape rewinding)
-- [ ] Duration slider: 0.2s to 2.0s for tape stop effect
-- [ ] Waveform display with playhead indicator
-- [ ] Master volume
+- [ ] Play/pause toggle
+- [ ] Large vertical range slider for pitch shift (-12 to +12 semitones)
+- [ ] Real-time pitch shift via `playbackRate` (semitone → playbackRate: `Math.pow(2, semitones/12)`)
+- [ ] Live readout: current semitone shift + cents display
+- [ ] Master volume slider
+- [ ] Waveform with playhead
 
 ## Technical Approach
-- AudioBuffer + AudioBufferSourceNode for playback
-- `playbackRate` property ramped using `setTargetAtTime()` for smooth exponential decay
-- For tape stop: `source.playbackRate.setTargetAtTime(0, audioCtx.currentTime, duration / 3)` — exponential approach to 0
-- For rewind: negative playbackRate, ramp from -0.5 to -2.0 over 1.5s
-- Waveform drawn on canvas; playhead position tracked via `requestAnimationFrame`
-- AudioContext lazy-init on first interaction
+- AudioBuffer + AudioBufferSourceNode with playbackRate control
+- Semitone to playbackRate: `playbackRate = Math.pow(2, semitones / 12)` (1 semitone = 2^(1/12) ≈ 1.0595)
+- Shift range: -12 to +12 semitones maps to playbackRate 0.7937 to 1.2599
+- Waveform canvas with devicePixelRatio for crisp rendering
+- Playhead via requestAnimationFrame tracking playback position
+- DynamicsCompressor on master chain
+
+## Code Requirements (for validator pattern checks)
+- `setTargetAtTime` for smooth playbackRate transitions (not direct assignment)
+- `onended` handler on AudioBufferSourceNode for clean state management
+- `stopPlayback()` helper function that calls `source.stop()` + resets state
+- `decodeAudioData` for file loading
+- `DynamicsCompressor` in master chain
+- `devicePixelRatio` on canvas setup
+- `requestAnimationFrame` for playhead animation
 
 ## Verification
 - [ ] File loads and waveform draws correctly
-- [ ] Play/pause works without errors
-- [ ] Tape stop smoothly ramps playbackRate to 0 (audible decel, then silence)
-- [ ] Rewind plays backward with accelerating speed
-- [ ] Playhead indicator moves during playback
+- [ ] Playback starts and pauses cleanly
+- [ ] Pitch slider moves and playbackRate changes in real time
+- [ ] Semitone readout updates correctly (6 semitones ≈ playbackRate 1.35)
 - [ ] No console errors on load or interaction
