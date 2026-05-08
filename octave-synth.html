@@ -253,6 +253,7 @@ const BLACK_KEYS = [
 ];
 
 let audioCtx = null;
+let masterGain = null;
 let selectedOctave = 0;
 let selectedRoot = 'C';
 let selectedScale = 'major';
@@ -261,7 +262,12 @@ let activeNotes = {};
 let touchKeyMap = {};  // touchId -> {note, octave}
 
 function getAudioCtx() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.7;
+    masterGain.connect(audioCtx.destination);
+  }
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
@@ -289,14 +295,15 @@ function playNote(note, octave) {
   osc.frequency.value = freq;
 
   // Smooth envelope — no clipping, natural decay
+  // Keep per-note gain low enough that even many overlapping notes won't clip through master
   const now = ctx.currentTime;
   gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(0.3, now + 0.015);    // fast attack
-  gain.gain.setValueAtTime(0.3, now + 0.3);              // sustain
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2); // smooth release
+  gain.gain.linearRampToValueAtTime(0.2, now + 0.015);    // fast attack
+  gain.gain.setValueAtTime(0.2, now + 0.3);               // sustain
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5); // smooth long release
 
   osc.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(masterGain);
 
   osc.start(now);
   osc.stop(now + 1.2);
@@ -314,13 +321,17 @@ function stopNote(note, octave) {
   const keyId = note + octave;
   if (activeNotes[keyId]) {
     const { osc, gain } = activeNotes[keyId];
-    try {
-      gain.gain.cancelScheduledValues(audioCtx.currentTime);
-      gain.gain.setValueAtTime(gain.gain.value, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
-      osc.stop(audioCtx.currentTime + 0.1);
-    } catch(e) {}
     delete activeNotes[keyId];
+    try {
+      const now = audioCtx.currentTime;
+      // Smooth release: cancel any future envelope changes, then ramp down naturally
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(gain.gain.value, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+      osc.stop(now + 0.2);
+    } catch(e) {
+      try { osc.stop(); } catch(e2) {}
+    }
   }
 }
 
