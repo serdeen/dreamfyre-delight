@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocal Chopper Pro</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+
+  :root {
+    --bg: #08080e;
+    --surface: #0f0f18;
+    --surface2: #14141f;
+    --border: #1e1e30;
+    --magenta: #ff00aa;
+    --cyan: #00e5ff;
+    --amber: #ffb300;
+    --text: #e0e0f0;
+    --dim: #2e2e48;
+    --text-dim: #6a6a8a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #0a0a14 0%, var(--bg) 100%);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--magenta);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .bpm-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .bpm-ctrl label {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .bpm-ctrl input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--amber);
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 4px 10px;
+    width: 64px;
+    text-align: center;
+    outline: none;
+  }
+
+  .bpm-ctrl input:focus { border-color: var(--amber); }
+
+  .key-hints {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    display: flex;
+    gap: 10px;
+  }
+
+  .key-hints kbd {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--text-dim);
+  }
+
+  /* ─── MAIN ─── */
+  main {
+    padding: 20px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* ─── DROP ZONE ─── */
+  .drop-zone {
+    border: 2px dashed var(--dim);
+    border-radius: 14px;
+    padding: 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    background: var(--surface);
+  }
+
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--magenta);
+    background: rgba(255, 0, 170, 0.04);
+  }
+
+  .drop-zone.has-file {
+    border-color: var(--magenta);
+    border-style: solid;
+    border-radius: 14px;
+    padding: 20px;
+  }
+
+  .drop-zone input[type="file"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+
+  .drop-zone .dz-label {
+    font-size: 14px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .drop-zone .dz-label strong {
+    color: var(--magenta);
+    font-size: 16px;
+  }
+
+  .drop-zone .file-info {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--magenta);
+    margin-top: 6px;
+  }
+
+  .drop-zone .duration {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    margin-top: 4px;
+  }
+
+  /* ─── CONTROLS ─── */
+  .controls-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .ctrl-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .ctrl-btn:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0, 229, 255, 0.06);
+  }
+
+  .ctrl-btn.active {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0, 229, 255, 0.1);
+    box-shadow: 0 0 12px rgba(0, 229, 255, 0.2);
+  }
+
+  .ctrl-btn.magenta:hover {
+    border-color: var(--magenta);
+    color: var(--magenta);
+    background: rgba(255, 0, 170, 0.06);
+  }
+
+  .ctrl-btn.magenta.active {
+    border-color: var(--magenta);
+    color: var(--magenta);
+    background: rgba(255, 0, 170, 0.1);
+    box-shadow: 0 0 12px rgba(255, 0, 170, 0.2);
+  }
+
+  .slice-count-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    margin-left: auto;
+  }
+
+  .slice-count-ctrl input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 4px 10px;
+    width: 44px;
+    text-align: center;
+    outline: none;
+  }
+
+  .slice-count-ctrl input:focus { border-color: var(--magenta); }
+
+  /* ─── WAVEFORM ─── */
+  .waveform-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    position: relative;
+  }
+
+  canvas#waveCanvas {
+    width: 100%;
+    height: 160px;
+    display: block;
+    cursor: crosshair;
+    border-radius: 8px;
+  }
+
+  .slice-labels {
+    display: flex;
+    position: relative;
+    margin-top: 6px;
+  }
+
+  .slice-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    text-align: center;
+    flex: 1;
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── SLICE BUTTONS ─── */
+  .slice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 8px;
+  }
+
+  .slice-btn {
+    aspect-ratio: 1;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    transition: all 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .slice-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.3) 100%);
+    pointer-events: none;
+  }
+
+  .slice-btn:hover {
+    border-color: var(--magenta);
+    background: rgba(255, 0, 170, 0.08);
+    transform: scale(1.04);
+  }
+
+  .slice-btn:active, .slice-btn.active {
+    border-color: var(--magenta);
+    background: rgba(255, 0, 170, 0.22);
+    box-shadow: 0 0 20px rgba(255, 0, 170, 0.4);
+    transform: scale(0.97);
+  }
+
+  .slice-btn .slice-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--magenta);
+    position: relative;
+    z-index: 1;
+  }
+
+  .slice-btn .slice-key {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: var(--dim);
+    position: relative;
+    z-index: 1;
+    letter-spacing: 0.05em;
+  }
+
+  .slice-btn.reversed {
+    border-color: var(--cyan);
+  }
+
+  .slice-btn.reversed .slice-num { color: var(--cyan); }
+
+  .slice-btn.reversed:hover, .slice-btn.reversed.active {
+    border-color: var(--cyan);
+    background: rgba(0, 229, 255, 0.15);
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.35);
+  }
+
+  /* ─── TRANSPORT ─── */
+  .transport-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .play-all-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .play-all-btn .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dim);
+    transition: all 0.15s;
+  }
+
+  .play-all-btn:hover {
+    border-color: var(--magenta);
+    color: var(--magenta);
+    background: rgba(255, 0, 170, 0.06);
+  }
+
+  .play-all-btn.playing {
+    border-color: var(--magenta);
+    color: var(--magenta);
+    background: rgba(255, 0, 170, 0.1);
+    box-shadow: 0 0 16px rgba(255, 0, 170, 0.25);
+  }
+
+  .play-all-btn.playing .dot {
+    background: var(--magenta);
+    box-shadow: 0 0 8px var(--magenta);
+    animation: pulse 0.6s ease-in-out infinite alternate;
+  }
+
+  @keyframes pulse {
+    from { opacity: 1; }
+    to { opacity: 0.3; }
+  }
+
+  .status-bar {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 0.1em;
+    min-height: 14px;
+  }
+
+  /* ─── KEYBOARD MAP HINT ─── */
+  .keyboard-map {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+
+  .key-map-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+  }
+
+  .key-map-item kbd {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 2px 6px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    min-width: 20px;
+    text-align: center;
+  }
+
+  .key-map-item .key-action { color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">VOCAL CHOPPER PRO</div>
+  <div class="header-right">
+    <div class="key-hints">
+      <span><kbd>Space</kbd> play/stop</span>
+      <span><kbd>R</kbd> reverse</span>
+      <span><kbd>1-8</kbd> trigger slice</span>
+    </div>
+    <div class="bpm-ctrl">
+      <label>BPM</label>
+      <input type="number" id="bpmInput" value="124" min="80" max="200" />
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Drop Zone -->
+  <div class="drop-zone" id="dropZone">
+    <input type="file" accept="audio/*" id="fileInput" />
+    <div class="dz-label">
+      <strong>Drop a vocal sample</strong><br>WAV, MP3, OGG, M4A
+    </div>
+    <div class="file-info" id="fileName" style="display:none;"></div>
+    <div class="duration" id="fileDuration" style="display:none;"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls-row">
+    <button class="ctrl-btn" id="btnAutoSlice">Auto-Slice</button>
+    <button class="ctrl-btn" id="btnReverse">◀ Reverse All</button>
+    <button class="ctrl-btn magenta" id="btnPlayAll">
+      <span class="dot"></span> ▶ Loop All
+    </button>
+    <button class="ctrl-btn" id="btnStopAll">■ Stop</button>
+    <button class="ctrl-btn" id="btnClear">Clear</button>
+    <div class="slice-count-ctrl">
+      <label>Slices</label>
+      <input type="number" id="sliceCountInput" value="8" min="2" max="32" />
+    </div>
+  </div>
+
+  <!-- Waveform -->
+  <div class="waveform-container" id="waveformContainer" style="display:none;">
+    <canvas id="waveCanvas"></canvas>
+    <div class="slice-labels" id="sliceLabels"></div>
+  </div>
+
+  <!-- Slice Grid -->
+  <div class="slice-grid" id="sliceGrid"></div>
+
+  <!-- Keyboard map -->
+  <div class="keyboard-map">
+    <div class="key-map-item"><kbd>1-8</kbd><span class="key-action">trigger slices</span></div>
+    <div class="key-map-item"><kbd>Q W E R T Y U I</kbd><span class="key-action">extra slices</span></div>
+    <div class="key-map-item"><kbd>Space</kbd><span class="key-action">play/stop all</span></div>
+    <div class="key-map-item"><kbd>R</kbd><span class="key-action">reverse slice</span></div>
+    <div class="key-map-item"><kbd>A</kbd><span class="key-action">reverse last</span></div>
+  </div>
+
+  <div class="status-bar" id="statusBar"></div>
+</main>
+
+<script>
+'use strict';
+
+// ─── STATE ────────────────────────────────────────────────────
+let audioCtx = null;
+let masterGain = null;
+let audioBuffer = null;
+let isPlaying = false;
+let isReversed = false;
+let numSlices = 8;
+let activeSliceCount = 8;
+let sliceBuffers = [];
+let reversedSlices = new Set();
+let activeSources = [];
+let currentSliceIdx = 0;
+let loopInterval = null;
+let bpm = 124;
+let lastTriggeredSlice = null;
+
+const KEY_MAP = '12345678qweasdzxc'.split('');
+
+// ─── AUDIO INIT ────────────────────────────────────────────────
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.85;
+  masterGain.connect(audioCtx.destination);
+}
+
+function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+
+// ─── FILE LOAD ─────────────────────────────────────────────────
+async function loadAudioFile(file) {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const arrayBuffer = await file.arrayBuffer();
+  audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+  isReversed = false;
+  reversedSlices.clear();
+
+  const dz = document.getElementById('dropZone');
+  dz.classList.add('has-file');
+  document.getElementById('fileName').textContent = file.name;
+  document.getElementById('fileName').style.display = 'block';
+  document.getElementById('fileDuration').textContent = formatTime(audioBuffer.duration);
+  document.getElementById('fileDuration').style.display = 'block';
+  document.getElementById('waveformContainer').style.display = 'block';
+
+  setStatus(`Loaded: ${file.name} (${formatTime(audioBuffer.duration)})`);
+  buildSlices();
+  drawWaveform();
+}
+
+function formatTime(secs) {
+  const m = Math.floor(secs / 60);
+  const s = Math.floor(secs % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// ─── SLICE BUILDER ─────────────────────────────────────────────
+function buildSlices() {
+  if (!audioBuffer) return;
+  const total = audioBuffer.length;
+  const count = activeSliceCount;
+  sliceBuffers = [];
+  reversedSlices.clear();
+
+  for (let i = 0; i < count; i++) {
+    const start = Math.floor((i / count) * total);
+    const end = Math.floor(((i + 1) / count) * total);
+    const len = Math.max(end - start, 1);
+    const buf = audioCtx.createBuffer(
+      audioBuffer.numberOfChannels,
+      len,
+      audioBuffer.sampleRate
+    );
+    for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
+      buf.getChannelData(c).set(audioBuffer.getChannelData(c).subarray(start, end));
+    }
+    sliceBuffers.push(buf);
+  }
+
+  buildSliceGrid();
+  drawWaveform();
+}
+
+function getSliceBuffer(idx) {
+  if (idx < 0 || idx >= sliceBuffers.length) return null;
+  let buf = sliceBuffers[idx];
+  if (reversedSlices.has(idx)) {
+    buf = reverseBuffer(buf);
+  }
+  return buf;
+}
+
+function reverseBuffer(buf) {
+  const rev = audioCtx.createBuffer(buf.numberOfChannels, buf.length, buf.sampleRate);
+  for (let c = 0; c < buf.numberOfChannels; c++) {
+    rev.getChannelData(c).set(buf.getChannelData(c).reverse());
+  }
+  return rev;
+}
+
+// ─── SLICE GRID UI ─────────────────────────────────────────────
+function buildSliceGrid() {
+  const grid = document.getElementById('sliceGrid');
+  grid.innerHTML = '';
+  const count = Math.min(sliceBuffers.length, 32);
+
+  for (let i = 0; i < count; i++) {
+    const btn = document.createElement('button');
+    btn.className = 'slice-btn';
+    btn.dataset.slice = i;
+    updateSliceBtn(btn, i);
+
+    btn.addEventListener('click', () => triggerSlice(i));
+    btn.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      toggleReverse(i);
+    });
+
+    grid.appendChild(btn);
+  }
+}
+
+function updateSliceBtn(btn, idx) {
+  const isRev = reversedSlices.has(idx);
+  btn.classList.toggle('reversed', isRev);
+  btn.innerHTML = `
+    <span class="slice-num">${idx + 1}</span>
+    <span class="slice-key">${KEY_MAP[idx] || ''} ${isRev ? '◀' : ''}</span>
+  `;
+}
+
+function toggleReverse(idx) {
+  if (reversedSlices.has(idx)) reversedSlices.delete(idx);
+  else reversedSlices.add(idx);
+  const btn = document.querySelector(`.slice-btn[data-slice="${idx}"]`);
+  if (btn) updateSliceBtn(btn, idx);
+  setStatus(`Slice ${idx + 1} ${reversedSlices.has(idx) ? 'reversed' : 'normal'}`);
+}
+
+// ─── SLICE TRIGGER ─────────────────────────────────────────────
+function triggerSlice(idx) {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (idx >= sliceBuffers.length) return;
+
+  const src = audioCtx.createBufferSource();
+  src.buffer = getSliceBuffer(idx);
+  src.connect(masterGain);
+  src.start();
+
+  lastTriggeredSlice = idx;
+  const btns = document.querySelectorAll('.slice-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  btns[idx]?.classList.add('active');
+  setTimeout(() => btns[idx]?.classList.remove('active'), 300);
+}
+
+function triggerSliceLoop(idx) {
+  triggerSlice(idx);
+  // Schedule next based on BPM
+  const beatDuration = 60 / bpm;
+  const interval = beatDuration * 1000 / (sliceBuffers.length > 8 ? 2 : 1);
+  setTimeout(() => {
+    if (isPlaying) triggerSliceLoop((idx + 1) % sliceBuffers.length);
+  }, interval);
+}
+
+// ─── PLAY / STOP ALL ───────────────────────────────────────────
+function startLoopAll() {
+  if (sliceBuffers.length === 0) return;
+  isPlaying = true;
+  document.getElementById('btnPlayAll').classList.add('playing');
+  currentSliceIdx = 0;
+  triggerSliceLoop(0);
+}
+
+function stopAll() {
+  isPlaying = false;
+  clearTimeout(loopInterval);
+  activeSources.forEach(s => { try { s.stop(); } catch(e){} });
+  activeSources = [];
+  document.getElementById('btnPlayAll').classList.remove('playing');
+  document.querySelectorAll('.slice-btn').forEach(b => b.classList.remove('active'));
+}
+
+// ─── WAVEFORM DRAWING ──────────────────────────────────────────
+function drawWaveform() {
+  const canvas = document.getElementById('waveCanvas');
+  if (!canvas || !audioBuffer) return;
+
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth * 2;
+  const H = canvas.offsetHeight * 2;
+  canvas.width = W;
+  canvas.height = H;
+
+  const data = audioBuffer.getChannelData(0);
+  const step = Math.ceil(data.length / W);
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background grid lines
+  ctx.strokeStyle = 'rgba(30,30,48,0.8)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += W / 16) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+
+  // Waveform
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(255, 0, 170, 0.7)';
+  ctx.lineWidth = 1.5;
+
+  const mid = H / 2;
+  const amp = H * 0.42;
+
+  for (let x = 0; x < W; x++) {
+    let min = 1, max = -1;
+    for (let j = 0; j < step; j++) {
+      const v = data[x * step + j] || 0;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    const yMin = mid + min * amp;
+    const yMax = mid + max * amp;
+    ctx.moveTo(x, yMin);
+    ctx.lineTo(x, yMax);
+  }
+  ctx.stroke();
+
+  // Center line
+  ctx.strokeStyle = 'rgba(255,0,170,0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, mid);
+  ctx.lineTo(W, mid);
+  ctx.stroke();
+
+  // Slice dividers
+  const sliceW = W / activeSliceCount;
+  ctx.strokeStyle = 'rgba(0, 229, 255, 0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  for (let i = 1; i < activeSliceCount; i++) {
+    const x = i * sliceW;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Slice labels
+  const labelRow = document.getElementById('sliceLabels');
+  labelRow.innerHTML = '';
+  for (let i = 0; i < activeSliceCount; i++) {
+    const lbl = document.createElement('div');
+    lbl.className = 'slice-label';
+    lbl.textContent = `${i + 1}`;
+    labelRow.appendChild(lbl);
+  }
+}
+
+// ─── STATUS ────────────────────────────────────────────────────
+function setStatus(msg) {
+  const el = document.getElementById('statusBar');
+  el.textContent = msg;
+  if (msg) setTimeout(() => { el.textContent = ''; }, 2500);
+}
+
+// ─── EVENT LISTENERS ───────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) loadAudioFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) loadAudioFile(fileInput.files[0]);
+  });
+
+  document.getElementById('btnAutoSlice').addEventListener('click', () => {
+    if (!audioBuffer) return;
+    activeSliceCount = parseInt(document.getElementById('sliceCountInput').value) || 8;
+    activeSliceCount = Math.max(2, Math.min(32, activeSliceCount));
+    buildSlices();
+    setStatus(`Auto-sliced into ${activeSliceCount} parts`);
+  });
+
+  document.getElementById('btnReverse').addEventListener('click', () => {
+    if (!audioBuffer) return;
+    isReversed = !isReversed;
+    document.getElementById('btnReverse').classList.toggle('active', isReversed);
+    // Rebuild with reversed
+    if (isReversed) {
+      const revBuf = reverseBuffer(audioBuffer);
+      const orig = audioBuffer;
+      audioBuffer = revBuf;
+      buildSlices();
+      audioBuffer = orig; // keep orig for proper reverse
+    } else {
+      buildSlices();
+    }
+    setStatus(isReversed ? 'Reversed' : 'Normal order');
+  });
+
+  document.getElementById('btnPlayAll').addEventListener('click', () => {
+    if (!audioCtx) initAudio();
+    isPlaying ? stopAll() : startLoopAll();
+  });
+
+  document.getElementById('btnStopAll').addEventListener('click', stopAll);
+
+  document.getElementById('btnClear').addEventListener('click', () => {
+    stopAll();
+    audioBuffer = null;
+    sliceBuffers = [];
+    document.getElementById('dropZone').classList.remove('has-file');
+    document.getElementById('fileName').style.display = 'none';
+    document.getElementById('fileDuration').style.display = 'none';
+    document.getElementById('waveformContainer').style.display = 'none';
+    document.getElementById('sliceGrid').innerHTML = '';
+    setStatus('Cleared');
+  });
+
+  document.getElementById('bpmInput').addEventListener('change', () => {
+    bpm = parseInt(document.getElementById('bpmInput').value) || 124;
+    document.getElementById('bpmInput').value = bpm;
+    if (isPlaying) { stopAll(); startLoopAll(); }
+  });
+
+  document.getElementById('sliceCountInput').addEventListener('change', () => {
+    if (audioBuffer) {
+      activeSliceCount = parseInt(document.getElementById('sliceCountInput').value) || 8;
+      activeSliceCount = Math.max(2, Math.min(32, activeSliceCount));
+      buildSlices();
+    }
+  });
+
+  // Canvas click to add slice point
+  const waveCanvas = document.getElementById('waveCanvas');
+  if (waveCanvas) {
+    waveCanvas.addEventListener('click', (e) => {
+      if (!audioBuffer) return;
+      const rect = waveCanvas.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const sliceIdx = Math.floor(x * activeSliceCount);
+      triggerSlice(sliceIdx);
+    });
+  }
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (!audioCtx) initAudio();
+      isPlaying ? stopAll() : startLoopAll();
+      return;
+    }
+
+    if (e.key.toLowerCase() === 'r' && lastTriggeredSlice !== null) {
+      toggleReverse(lastTriggeredSlice);
+      return;
+    }
+
+    if (e.key.toLowerCase() === 'a' && lastTriggeredSlice !== null) {
+      toggleReverse(lastTriggeredSlice);
+      return;
+    }
+
+    const keyIdx = KEY_MAP.indexOf(e.key.toLowerCase());
+    if (keyIdx >= 0 && keyIdx < sliceBuffers.length) {
+      triggerSlice(keyIdx);
+    }
+
+    // Number keys 1-8
+    const num = parseInt(e.key);
+    if (num >= 1 && num <= 8 && num <= sliceBuffers.length) {
+      triggerSlice(num - 1);
+    }
+  });
+
+  window.addEventListener('resize', () => { if (audioBuffer) drawWaveform(); });
+});
+</script>
+</body>
+</html>
