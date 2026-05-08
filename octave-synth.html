@@ -15,6 +15,9 @@
     --magenta: #f72585;
     --text: #e0e0e0;
     --text-dim: #666680;
+    --white-key: #e8e8e8;
+    --white-key-hover: #ffffff;
+    --black-key: #1a1a1a;
   }
   body {
     background: var(--bg);
@@ -83,6 +86,7 @@
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s ease;
+    user-select: none;
   }
   .btn:hover {
     border-color: var(--cyan);
@@ -107,7 +111,7 @@
   .note-btn.sharp.active {
     background: var(--magenta);
     border-color: var(--magenta);
-    box-shadow: 0 0 12px rgba(247,37,133,0.4);
+    color: #fff;
   }
   .scale-btn {
     padding: 0.5rem 1rem;
@@ -120,79 +124,100 @@
   }
 
   /* Piano keyboard */
-  .keyboard {
-    display: flex;
+  .piano-wrap {
     position: relative;
-    height: 200px;
     margin-top: 1rem;
   }
+
+  .white-keys {
+    display: flex;
+    gap: 2px;
+  }
   .white-key {
-    width: 44px;
-    height: 100%;
-    background: linear-gradient(180deg, #e8e8e8 0%, #d4d4d4 100%);
-    border: 1px solid #999;
-    border-radius: 0 0 4px 4px;
+    width: 48px;
+    height: 180px;
+    background: linear-gradient(180deg, var(--white-key) 0%, #c8c8c8 100%);
+    border: 1px solid #888;
+    border-radius: 0 0 6px 6px;
     cursor: pointer;
     position: relative;
     z-index: 1;
     display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 8px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 10px;
     font-family: 'Space Mono', monospace;
-    font-size: 0.65rem;
-    color: #333;
-    transition: all 0.08s ease;
+    font-size: 0.6rem;
+    color: #555;
+    transition: transform 0.06s ease, background 0.06s ease, box-shadow 0.06s ease;
+    transform-origin: top center;
+    user-select: none;
   }
   .white-key:hover {
-    background: linear-gradient(180deg, #fff 0%, #e8e8e8 100%);
+    background: linear-gradient(180deg, var(--white-key-hover) 0%, #e0e0e0 100%);
   }
   .white-key.in-scale {
-    background: linear-gradient(180deg, #d0f0f0 0%, #a8e0e0 100%);
+    background: linear-gradient(180deg, #b8e8e0 0%, #90d0c8 100%);
     border-color: var(--cyan);
   }
   .white-key.in-scale:hover {
-    background: linear-gradient(180deg, #c0f0f0 0%, #90e0e0 100%);
+    background: linear-gradient(180deg, #a0e0d8 0%, #80c8c0 100%);
   }
   .white-key.pressed {
-    background: linear-gradient(180deg, var(--cyan) 0%, #00c8a8 100%);
-    box-shadow: 0 0 20px rgba(0,245,212,0.6);
+    transform: translateY(4px);
+    background: linear-gradient(180deg, var(--cyan) 0%, #00c8a8 100%) !important;
+    box-shadow: 0 0 24px rgba(0,245,212,0.7);
+  }
+
+  .black-keys {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 115px;
+    z-index: 2;
+    pointer-events: none;
   }
   .black-key {
-    width: 28px;
-    height: 130px;
-    background: linear-gradient(180deg, #333 0%, #111 100%);
-    border: 1px solid #000;
-    border-radius: 0 0 3px 3px;
     position: absolute;
-    z-index: 2;
+    width: 30px;
+    height: 115px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #0a0a0a 100%);
+    border: 1px solid #000;
+    border-radius: 0 0 4px 4px;
     cursor: pointer;
     display: flex;
-    align-items: flex-end;
-    justify-content: center;
-    padding-bottom: 6px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 8px;
     font-family: 'Space Mono', monospace;
     font-size: 0.5rem;
-    color: #666;
-    transition: all 0.08s ease;
+    color: #555;
+    transition: transform 0.06s ease, background 0.06s ease, box-shadow 0.06s ease;
+    transform-origin: top center;
+    pointer-events: auto;
+    user-select: none;
   }
   .black-key:hover {
-    background: linear-gradient(180deg, #444 0%, #222 100%);
+    background: linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 100%);
   }
   .black-key.in-scale {
-    background: linear-gradient(180deg, #3a2a50 0%, #1a1030 100%);
+    background: linear-gradient(180deg, #3a2850 0%, #1a0830 100%);
     border-color: var(--magenta);
   }
   .black-key.in-scale:hover {
-    background: linear-gradient(180deg, #4a3a60 0%, #2a2040 100%);
+    background: linear-gradient(180deg, #4a3860 0%, #2a1840 100%);
   }
   .black-key.pressed {
-    background: linear-gradient(180deg, var(--magenta) 0%, #a01050 100%);
-    box-shadow: 0 0 16px rgba(247,37,133,0.6);
+    transform: translateY(3px);
+    background: linear-gradient(180deg, var(--magenta) 0%, #a01050 100%) !important;
+    box-shadow: 0 0 20px rgba(247,37,133,0.7);
   }
-  .black-key.dimmed,
-  .white-key.dimmed {
-    opacity: 0.25;
+
+  .dimmed {
+    opacity: 0.2 !important;
     pointer-events: none;
   }
 </style>
@@ -236,7 +261,10 @@
   </div>
 </div>
 
-<div class="keyboard" id="keyboard"></div>
+<div class="piano-wrap">
+  <div class="white-keys" id="whiteKeys"></div>
+  <div class="black-keys" id="blackKeys"></div>
+</div>
 
 <script>
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -247,56 +275,70 @@ const SCALES = {
   blues:      [0, 3, 5, 6, 7, 10],
 };
 
-// 2-octave layout: C4 to B5
-const KEY_LAYOUT = [
-  { note: 'C',  isWhite: true,  octave: 4 },
-  { note: 'C#', isWhite: false, octave: 4 },
-  { note: 'D',  isWhite: true,  octave: 4 },
-  { note: 'D#', isWhite: false, octave: 4 },
-  { note: 'E',  isWhite: true,  octave: 4 },
-  { note: 'F',  isWhite: true,  octave: 4 },
-  { note: 'F#', isWhite: false, octave: 4 },
-  { note: 'G',  isWhite: true,  octave: 4 },
-  { note: 'G#', isWhite: false, octave: 4 },
-  { note: 'A',  isWhite: true,  octave: 4 },
-  { note: 'A#', isWhite: false, octave: 4 },
-  { note: 'B',  isWhite: true,  octave: 4 },
-  { note: 'C',  isWhite: true,  octave: 5 },
-  { note: 'C#', isWhite: false, octave: 5 },
-  { note: 'D',  isWhite: true,  octave: 5 },
-  { note: 'D#', isWhite: false, octave: 5 },
-  { note: 'E',  isWhite: true,  octave: 5 },
-  { note: 'F',  isWhite: true,  octave: 5 },
-  { note: 'F#', isWhite: false, octave: 5 },
-  { note: 'G',  isWhite: true,  octave: 5 },
-  { note: 'G#', isWhite: false, octave: 5 },
-  { note: 'A',  isWhite: true,  octave: 5 },
-  { note: 'A#', isWhite: false, octave: 5 },
-  { note: 'B',  isWhite: true,  octave: 5 },
+// 2 octaves: C4 to B5
+const WHITE_KEYS_LAYOUT = [
+  { note: 'C',  octave: 4 },
+  { note: 'D',  octave: 4 },
+  { note: 'E',  octave: 4 },
+  { note: 'F',  octave: 4 },
+  { note: 'G',  octave: 4 },
+  { note: 'A',  octave: 4 },
+  { note: 'B',  octave: 4 },
+  { note: 'C',  octave: 5 },
+  { note: 'D',  octave: 5 },
+  { note: 'E',  octave: 5 },
+  { note: 'F',  octave: 5 },
+  { note: 'G',  octave: 5 },
+  { note: 'A',  octave: 5 },
+  { note: 'B',  octave: 5 },
 ];
 
-// Black key pixel positions (left edge relative to keyboard start)
-const BLACK_KEY_X = {
-  'C#': 30,  'D#': 118, 'F#': 175, 'G#': 263, 'A#': 322,
-  'C#_5': 318, 'D#_5': 406, 'F#_5': 463, 'G#_5': 551, 'A#_5': 610,
+const BLACK_KEYS_LAYOUT = [
+  { note: 'C#', octave: 4, whiteIdx: 0 },
+  { note: 'D#', octave: 4, whiteIdx: 1 },
+  { note: 'F#', octave: 4, whiteIdx: 3 },
+  { note: 'G#', octave: 4, whiteIdx: 4 },
+  { note: 'A#', octave: 4, whiteIdx: 5 },
+  { note: 'C#', octave: 5, whiteIdx: 7 },
+  { note: 'D#', octave: 5, whiteIdx: 8 },
+  { note: 'F#', octave: 5, whiteIdx: 10 },
+  { note: 'G#', octave: 5, whiteIdx: 11 },
+  { note: 'A#', octave: 5, whiteIdx: 12 },
+];
+
+// Pixel positions for black keys (left edge, each white key = 50px with 2px gap)
+const KEY_SPACING = 50;
+const BLACK_KEY_LEFT = {
+  0: 34,  // C# over C (white key 0, 48px wide centered at 24, black key 30px centered at 15 → 24-15=9... actually simpler: just center it)
+  // Let's use: white key center = whiteIdx * 50 + 24, black key center = white key center - 15, so left = whiteIdx * 50 + 9
+  1: 59,  // D# over D
+  3: 159, // F# over F
+  4: 209, // G# over G
+  5: 259, // A# over A
+  7: 359, // C# over C (octave 5)
+  8: 409, // D# over D
+  10: 509, // F# over F
+  11: 559, // G# over G
+  12: 609, // A# over A
 };
 
 let audioCtx = null;
 let selectedOctave = 0;
 let selectedRoot = 'C';
 let selectedScale = 'major';
-let activeOscillators = {};
+let activeNotes = {};
 
-function getAudioContext() {
+function getAudioCtx() {
   if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
 
-function noteToFreq(note, octave) {
-  const semitone = NOTES.indexOf(note);
-  const offset = semitone - 9 + (octave - 4) * 12;
-  return 440 * Math.pow(2, offset / 12);
+// Calculate frequency for a note and octave
+// A4 = 440Hz, each semitone = *2^(1/12)
+function calcFreq(note, octave) {
+  const semitonesFromA4 = NOTES.indexOf(note) - 9 + (octave - 4) * 12;
+  return 440 * Math.pow(2, semitonesFromA4 / 12);
 }
 
 function getScaleNotes(root, scale) {
@@ -308,84 +350,116 @@ function getScaleNotes(root, scale) {
 }
 
 function playNote(note, octave) {
-  const ctx = getAudioContext();
-  const keyId = `${note}${octave}`;
+  const ctx = getAudioCtx();
+  const keyId = note + octave;
 
-  if (activeOscillators[keyId]) return;
+  // Stop existing note at this key
+  if (activeNotes[keyId]) {
+    try { activeNotes[keyId].osc.stop(); } catch(e) {}
+    delete activeNotes[keyId];
+  }
 
-  const freq = noteToFreq(note, octave + selectedOctave);
+  const freq = calcFreq(note, octave + selectedOctave);
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
 
   osc.type = 'sine';
   osc.frequency.value = freq;
 
+  // Envelope: quick attack, sustain, release
   const now = ctx.currentTime;
   gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(0.4, now + 0.02);
-  gain.gain.linearRampToValueAtTime(0.3, now + 0.1);
-  gain.gain.linearRampToValueAtTime(0, now + 0.8);
+  gain.gain.linearRampToValueAtTime(0.35, now + 0.01);
+  gain.gain.setValueAtTime(0.35, now + 0.5);
+  gain.gain.linearRampToValueAtTime(0, now + 0.9);
 
   osc.connect(gain);
   gain.connect(ctx.destination);
 
   osc.start(now);
-  osc.stop(now + 0.8);
+  osc.stop(now + 0.9);
 
-  activeOscillators[keyId] = { osc, gain };
-  setTimeout(() => delete activeOscillators[keyId], 800);
+  activeNotes[keyId] = { osc, gain };
 
   // Visual feedback
-  const keyEl = document.querySelector(`[data-key="${note}${octave}"]`);
-  if (keyEl) {
-    keyEl.classList.add('pressed');
-    setTimeout(() => keyEl.classList.remove('pressed'), 300);
+  const el = document.querySelector(`[data-key="${note}${octave}"]`);
+  if (el) {
+    el.classList.add('pressed');
+    setTimeout(() => el.classList.remove('pressed'), 250);
+  }
+}
+
+function stopNote(note, octave) {
+  const keyId = note + octave;
+  if (activeNotes[keyId]) {
+    try { activeNotes[keyId].osc.stop(); } catch(e) {}
+    delete activeNotes[keyId];
   }
 }
 
 function buildKeyboard() {
-  const kb = document.getElementById('keyboard');
-  kb.innerHTML = '';
+  const whiteContainer = document.getElementById('whiteKeys');
+  const blackContainer = document.getElementById('blackKeys');
+  whiteContainer.innerHTML = '';
+  blackContainer.innerHTML = '';
 
   const scaleNotes = getScaleNotes(selectedRoot, selectedScale);
-  const whiteKeys = KEY_LAYOUT.filter(k => k.isWhite);
-  const blackKeys = KEY_LAYOUT.filter(k => !k.isWhite);
 
-  // Build white keys first
-  whiteKeys.forEach((key) => {
+  // White keys
+  WHITE_KEYS_LAYOUT.forEach((key, i) => {
     const div = document.createElement('div');
     div.className = 'white-key';
-    div.dataset.key = `${key.note}${key.octave}`;
+    div.dataset.key = key.note + key.octave;
     div.dataset.note = key.note;
     div.dataset.octave = key.octave;
     div.textContent = key.note + key.octave;
+
     if (!scaleNotes.includes(key.note)) {
       div.classList.add('dimmed');
     } else {
       div.classList.add('in-scale');
     }
-    div.addEventListener('mousedown', () => playNote(key.note, key.octave));
-    kb.appendChild(div);
+
+    // Mouse events
+    div.addEventListener('mousedown', e => { e.preventDefault(); playNote(key.note, key.octave); });
+    div.addEventListener('mouseup', () => stopNote(key.note, key.octave));
+    div.addEventListener('mouseleave', () => stopNote(key.note, key.octave));
+
+    // Touch events
+    div.addEventListener('touchstart', e => { e.preventDefault(); playNote(key.note, key.octave); }, { passive: false });
+    div.addEventListener('touchend', e => { e.preventDefault(); stopNote(key.note, key.octave); }, { passive: false });
+
+    whiteContainer.appendChild(div);
   });
 
-  // Build black keys (positioned absolutely over white keys)
-  blackKeys.forEach((key) => {
+  // Black keys
+  BLACK_KEYS_LAYOUT.forEach(key => {
     const div = document.createElement('div');
     div.className = 'black-key';
-    div.dataset.key = `${key.note}${key.octave}`;
+    div.dataset.key = key.note + key.octave;
     div.dataset.note = key.note;
     div.dataset.octave = key.octave;
+    div.textContent = key.note;
 
-    const xKey = key.octave === 4 ? key.note : `${key.note}_${key.octave}`;
-    div.style.left = BLACK_KEY_X[xKey] + 'px';
+    const left = key.whiteIdx * KEY_SPACING + 9;
+    div.style.left = left + 'px';
 
     if (!scaleNotes.includes(key.note)) {
       div.classList.add('dimmed');
     } else {
       div.classList.add('in-scale');
     }
-    div.addEventListener('mousedown', () => playNote(key.note, key.octave));
-    kb.appendChild(div);
+
+    // Mouse events
+    div.addEventListener('mousedown', e => { e.preventDefault(); playNote(key.note, key.octave); });
+    div.addEventListener('mouseup', () => stopNote(key.note, key.octave));
+    div.addEventListener('mouseleave', () => stopNote(key.note, key.octave));
+
+    // Touch events
+    div.addEventListener('touchstart', e => { e.preventDefault(); playNote(key.note, key.octave); }, { passive: false });
+    div.addEventListener('touchend', e => { e.preventDefault(); stopNote(key.note, key.octave); }, { passive: false });
+
+    blackContainer.appendChild(div);
   });
 }
 
@@ -418,15 +492,7 @@ document.querySelectorAll('.scale-btn').forEach(btn => {
   });
 });
 
-// Cleanup on mouseup
-document.addEventListener('mouseup', () => {
-  Object.values(activeOscillators).forEach(({ osc }) => {
-    try { osc.stop(); } catch(e) {}
-  });
-  activeOscillators = {};
-});
-
-// Prevent context menu on long press (mobile)
+// Prevent context menu on long press
 document.addEventListener('contextmenu', e => e.preventDefault());
 
 buildKeyboard();
