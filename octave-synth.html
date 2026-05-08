@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Octave Synth — Dreamfyre Delight</title>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
@@ -16,15 +16,21 @@
     --text: #e0e0e0;
     --text-dim: #666680;
   }
-  body {
+  html, body {
     background: var(--bg);
     color: var(--text);
     font-family: 'Inter', sans-serif;
     min-height: 100vh;
+    min-height: 100dvh;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+  body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1.5rem 1rem;
+    padding: 1rem 0.5rem;
+    transition: padding 0.3s ease;
   }
   body::before {
     content: '';
@@ -36,78 +42,119 @@
     pointer-events: none;
     z-index: -1;
   }
+
+  /* Landscape: controls inline, piano full width */
+  @media (orientation: landscape) {
+    body {
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 0.5rem 1rem;
+      gap: 0.5rem;
+    }
+    .controls {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: flex-start;
+      max-width: 180px;
+      margin-bottom: 0;
+      gap: 0.5rem;
+    }
+    .controls .control-row {
+      gap: 0.3rem;
+    }
+    .piano-wrap {
+      flex: 1;
+      max-width: none !important;
+    }
+    .piano {
+      width: 100%;
+    }
+  }
+
   h1 {
     font-family: 'Space Mono', monospace;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     letter-spacing: 0.15em;
     color: var(--cyan);
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
     text-transform: uppercase;
   }
+
   .controls {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.8rem;
-    margin-bottom: 1.5rem;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
     width: 100%;
-    max-width: 700px;
   }
   .control-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
     flex-wrap: wrap;
     justify-content: center;
   }
   .control-label {
     font-family: 'Space Mono', monospace;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     color: var(--text-dim);
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    min-width: 50px;
+    min-width: 44px;
   }
-  .octave-btns { display: flex; gap: 0.4rem; }
+  .octave-btns { display: flex; gap: 0.3rem; }
   .btn {
     font-family: 'Space Mono', monospace;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    padding: 0.5rem 0.8rem;
+    padding: 0.4rem 0.65rem;
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--text);
-    border-radius: 6px;
+    border-radius: 5px;
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition: all 0.1s ease;
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
-  .btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .btn:hover, .btn:active { border-color: var(--cyan); color: var(--cyan); }
   .btn.active {
     background: var(--cyan);
     color: var(--bg);
     border-color: var(--cyan);
-    box-shadow: 0 0 14px rgba(0,245,212,0.4);
+    box-shadow: 0 0 12px rgba(0,245,212,0.4);
   }
   .note-btn {
-    width: 36px;
-    height: 36px;
-    font-size: 0.7rem;
+    width: 32px;
+    height: 32px;
+    font-size: 0.65rem;
     padding: 0;
   }
   .note-btn.sharp { background: var(--surface); border-color: var(--border); }
   .note-btn.sharp.active { background: var(--magenta); border-color: var(--magenta); color: #fff; }
-  .scale-btn { padding: 0.4rem 0.8rem; font-size: 0.7rem; }
+  .scale-btn { padding: 0.35rem 0.65rem; font-size: 0.65rem; }
   .scale-btn.active { background: var(--magenta); color: #fff; border-color: var(--magenta); }
 
-  /* Piano — real piano look */
+  /* Piano */
+  .piano-wrap {
+    width: 100%;
+    max-width: 680px;
+    padding: 0 0.25rem;
+  }
+
   .piano {
     position: relative;
-    display: flex;
-    height: 160px;
-    margin-top: 0.5rem;
+    display: block;
+    width: 100%;
+    height: 140px;
   }
+
   .white-key {
+    position: absolute;
+    bottom: 0;
     width: 46px;
     height: 100%;
     background: linear-gradient(180deg, #fefefe 0%, #f0f0f0 80%, #d8d8d8 100%);
@@ -115,34 +162,34 @@
     border-top: none;
     border-radius: 0 0 4px 4px;
     cursor: pointer;
-    position: relative;
     z-index: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
-    padding-bottom: 8px;
+    padding-bottom: 7px;
     font-family: 'Space Mono', monospace;
-    font-size: 0.55rem;
-    color: #888;
+    font-size: 0.5rem;
+    color: #999;
     transition: background 0.06s ease, box-shadow 0.06s ease;
     user-select: none;
-    box-shadow: inset 0 -4px 6px rgba(0,0,0,0.1), 0 2px 3px rgba(0,0,0,0.2);
+    -webkit-tap-highlight-color: transparent;
+    box-shadow: inset 0 -4px 6px rgba(0,0,0,0.08), 0 2px 3px rgba(0,0,0,0.18);
   }
   .white-key:hover { background: linear-gradient(180deg, #fff 0%, #f8f8f8 80%, #e8e8e8 100%); }
-  .white-key.in-scale { background: linear-gradient(180deg, #d0f0e8 0%, #b8e0d8 80%, #98d0c8 100%); border-color: var(--cyan); }
-  .white-key.in-scale:hover { background: linear-gradient(180deg, #c0e8e0 0%, #a8d8d0 80%, #88d0c8 100%); }
+  .white-key.in-scale { background: linear-gradient(180deg, #c8eee6 0%, #b0e0d8 80%, #90d0c8 100%); border-color: var(--cyan); }
+  .white-key.in-scale:hover { background: linear-gradient(180deg, #b8e8e0 0%, #a0d8d0 80%, #88d0c8 100%); }
   .white-key.pressed {
-    background: linear-gradient(180deg, var(--cyan) 0%, #00d8b0 100%) !important;
-    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.2), 0 0 20px rgba(0,245,212,0.5);
+    background: linear-gradient(180deg, var(--cyan) 0%, #00d0a8 100%) !important;
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.15), 0 0 18px rgba(0,245,212,0.5);
   }
 
   .black-key {
     position: absolute;
     top: 0;
     width: 28px;
-    height: 62%;  /* Real pianos: black keys are about 60% the height of white keys */
-    background: linear-gradient(180deg, #2c2c2c 0%, #111 60%, #333 100%);
+    height: 62%;
+    background: linear-gradient(180deg, #2c2c2c 0%, #111 60%, #2e2e2e 100%);
     border: 1px solid #000;
     border-top: none;
     border-radius: 0 0 3px 3px;
@@ -152,23 +199,24 @@
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
-    padding-bottom: 6px;
+    padding-bottom: 5px;
     font-family: 'Space Mono', monospace;
-    font-size: 0.45rem;
+    font-size: 0.4rem;
     color: #666;
     transition: background 0.06s ease, box-shadow 0.06s ease;
     user-select: none;
+    -webkit-tap-highlight-color: transparent;
     box-shadow: inset 0 -3px 5px rgba(0,0,0,0.5), 0 3px 4px rgba(0,0,0,0.4);
   }
   .black-key:hover { background: linear-gradient(180deg, #3a3a3a 0%, #1a1a1a 60%, #2a2a2a 100%); }
-  .black-key.in-scale { background: linear-gradient(180deg, #382840 0%, #18102a 60%, #2a1838 100%); border-color: var(--magenta); }
-  .black-key.in-scale:hover { background: linear-gradient(180deg, #483050 0%, #281830 60%, #3a2848 100%); }
+  .black-key.in-scale { background: linear-gradient(180deg, #362440 0%, #16082a 60%, #28183a 100%); border-color: var(--magenta); }
+  .black-key.in-scale:hover { background: linear-gradient(180deg, #462850 0%, #26183a 60%, #382848 100%); }
   .black-key.pressed {
-    background: linear-gradient(180deg, var(--magenta) 0%, #900840 100%) !important;
-    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 0 18px rgba(247,37,133,0.5);
+    background: linear-gradient(180deg, var(--magenta) 0%, #880038 100%) !important;
+    box-shadow: inset 0 -2px 4px rgba(0,0,0,0.3), 0 0 16px rgba(247,37,133,0.5);
   }
 
-  .dimmed { opacity: 0.18 !important; pointer-events: none; }
+  .dimmed { opacity: 0.15 !important; pointer-events: none; }
 </style>
 </head>
 <body>
@@ -210,7 +258,9 @@
   </div>
 </div>
 
-<div class="piano" id="piano"></div>
+<div class="piano-wrap">
+  <div class="piano" id="piano"></div>
+</div>
 
 <script>
 const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -221,7 +271,7 @@ const SCALES = {
   blues:      [0, 3, 5, 6, 7, 10],
 };
 
-// C4 to B5 — 14 white keys, 10 black keys
+// 2 octaves C4-B5
 const WHITE_KEYS = [
   { note:'C',  octave:4 },
   { note:'D',  octave:4 },
@@ -238,36 +288,50 @@ const WHITE_KEYS = [
   { note:'A',  octave:5 },
   { note:'B',  octave:5 },
 ];
-// black key positions: [whiteKeyIndexBeforeIt, leftOffset]
+
 const BLACK_KEYS = [
-  { note:'C#', octave:4, whiteIdx:0, left:30 },
-  { note:'D#', octave:4, whiteIdx:1, left:78 },
-  { note:'F#', octave:4, whiteIdx:3, left:174 },
-  { note:'G#', octave:4, whiteIdx:4, left:222 },
-  { note:'A#', octave:4, whiteIdx:5, left:270 },
-  { note:'C#', octave:5, whiteIdx:7, left:372 },
-  { note:'D#', octave:5, whiteIdx:8, left:420 },
-  { note:'F#', octave:5, whiteIdx:10, left:516 },
-  { note:'G#', octave:5, whiteIdx:11, left:564 },
-  { note:'A#', octave:5, whiteIdx:12, left:612 },
+  { note:'C#', octave:4, left:34 },
+  { note:'D#', octave:4, left:82 },
+  { note:'F#', octave:4, left:178 },
+  { note:'G#', octave:4, left:226 },
+  { note:'A#', octave:4, left:274 },
+  { note:'C#', octave:5, left:376 },
+  { note:'D#', octave:5, left:424 },
+  { note:'F#', octave:5, left:520 },
+  { note:'G#', octave:5, left:568 },
+  { note:'A#', octave:5, left:616 },
 ];
 
 let audioCtx = null;
 let masterGain = null;
+let compressor = null;
 let selectedOctave = 0;
 let selectedRoot = 'C';
 let selectedScale = 'major';
 let activeNotes = {};
-// Track active touch identifiers for swipe roll
-let touchKeyMap = {};  // touchId -> {note, octave}
+let touchKeyMap = {};
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Compressor for phone speakers — prevents clipping when multiple notes play
+  compressor = audioCtx.createDynamicsCompressor();
+  compressor.threshold.value = -6;
+  compressor.knee.value = 6;
+  compressor.ratio.value = 4;
+  compressor.attack.value = 0.003;
+  compressor.release.value = 0.1;
+  compressor.connect(audioCtx.destination);
+
+  // Master gain at 0.55 — conservative for small phone speakers
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.55;
+  masterGain.connect(compressor);
+}
 
 function getAudioCtx() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    masterGain = audioCtx.createGain();
-    masterGain.gain.value = 0.7;
-    masterGain.connect(audioCtx.destination);
-  }
+  initAudio();
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 }
@@ -294,26 +358,25 @@ function playNote(note, octave) {
   osc.type = 'sine';
   osc.frequency.value = freq;
 
-  // Smooth envelope — no clipping, natural decay
-  // Keep per-note gain low enough that even many overlapping notes won't clip through master
+  // Gentle envelope — safe for phone speakers, no clipping
   const now = ctx.currentTime;
   gain.gain.setValueAtTime(0, now);
-  gain.gain.linearRampToValueAtTime(0.2, now + 0.015);    // fast attack
-  gain.gain.setValueAtTime(0.2, now + 0.3);               // sustain
-  gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.5); // smooth long release
+  gain.gain.linearRampToValueAtTime(0.15, now + 0.012);    // soft attack
+  gain.gain.setValueAtTime(0.15, now + 0.4);               // sustain
+  gain.gain.exponentialRampToValueAtTime(0.0001, now + 1.0); // natural fade
 
   osc.connect(gain);
   gain.connect(masterGain);
 
   osc.start(now);
-  osc.stop(now + 1.2);
+  osc.stop(now + 1.0);
 
   activeNotes[keyId] = { osc, gain };
 
   const el = document.querySelector(`[data-key="${note}${octave}"]`);
   if (el) {
     el.classList.add('pressed');
-    setTimeout(() => el.classList.remove('pressed'), 300);
+    setTimeout(() => el.classList.remove('pressed'), 250);
   }
 }
 
@@ -324,11 +387,10 @@ function stopNote(note, octave) {
     delete activeNotes[keyId];
     try {
       const now = audioCtx.currentTime;
-      // Smooth release: cancel any future envelope changes, then ramp down naturally
       gain.gain.cancelScheduledValues(now);
       gain.gain.setValueAtTime(gain.gain.value, now);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-      osc.stop(now + 0.2);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+      osc.stop(now + 0.12);
     } catch(e) {
       try { osc.stop(); } catch(e2) {}
     }
@@ -340,23 +402,24 @@ function buildPiano() {
   piano.innerHTML = '';
   const scaleNotes = getScaleNotes(selectedRoot, selectedScale);
 
-  // White keys
+  const pianoW = piano.offsetWidth || 680;
+  const kw = Math.max(32, Math.floor((pianoW - 14) / 14)); // 14 white keys
+
   WHITE_KEYS.forEach((key, i) => {
     const div = document.createElement('div');
     div.className = 'white-key';
     div.dataset.key = key.note + key.octave;
     div.dataset.note = key.note;
     div.dataset.octave = key.octave;
+    div.style.left = (i * kw) + 'px';
+    div.style.width = kw + 'px';
     div.textContent = key.note + key.octave;
-
     if (!scaleNotes.includes(key.note)) div.classList.add('dimmed');
     else div.classList.add('in-scale');
-
     attachEvents(div, key.note, key.octave);
     piano.appendChild(div);
   });
 
-  // Black keys
   BLACK_KEYS.forEach(key => {
     const div = document.createElement('div');
     div.className = 'black-key';
@@ -365,22 +428,23 @@ function buildPiano() {
     div.dataset.octave = key.octave;
     div.textContent = key.note;
 
-    div.style.left = key.left + 'px';
+    // Black key centers over the gap between white keys (after whiteIdx 0,1,3,4,5)
+    const blackLefts = [0, 1, 3, 4, 5, 7, 8, 10, 11, 12];
+    const bi = blackLefts.indexOf(WHITE_KEYS.findIndex(w => w.note === key.note && w.octave === key.octave));
+    div.style.left = (bi * kw + kw - 14) + 'px';
+
     if (!scaleNotes.includes(key.note)) div.classList.add('dimmed');
     else div.classList.add('in-scale');
-
     attachEvents(div, key.note, key.octave);
     piano.appendChild(div);
   });
 }
 
 function attachEvents(el, note, octave) {
-  // Mouse
   el.addEventListener('mousedown', e => { e.preventDefault(); playNote(note, octave); });
   el.addEventListener('mouseup', () => stopNote(note, octave));
   el.addEventListener('mouseleave', () => stopNote(note, octave));
 
-  // Touch — swipe/roll support
   el.addEventListener('touchstart', e => {
     e.preventDefault();
     for (const t of e.changedTouches) {
@@ -397,8 +461,8 @@ function attachEvents(el, note, octave) {
         const n = target.dataset.note;
         const o = parseInt(target.dataset.octave);
         const prev = touchKeyMap[t.identifier];
-        if (prev && (prev.note !== n || prev.octave !== o)) {
-          stopNote(prev.note, prev.octave);
+        if (!prev || prev.note !== n || prev.octave !== o) {
+          if (prev) stopNote(prev.note, prev.octave);
           touchKeyMap[t.identifier] = { note: n, octave: o };
           playNote(n, o);
         }
@@ -410,25 +474,19 @@ function attachEvents(el, note, octave) {
     e.preventDefault();
     for (const t of e.changedTouches) {
       const info = touchKeyMap[t.identifier];
-      if (info) {
-        stopNote(info.note, info.octave);
-        delete touchKeyMap[t.identifier];
-      }
+      if (info) { stopNote(info.note, info.octave); delete touchKeyMap[t.identifier]; }
     }
   }, { passive: false });
 
   el.addEventListener('touchcancel', e => {
     for (const t of e.changedTouches) {
       const info = touchKeyMap[t.identifier];
-      if (info) {
-        stopNote(info.note, info.octave);
-        delete touchKeyMap[t.identifier];
-      }
+      if (info) { stopNote(info.note, info.octave); delete touchKeyMap[t.identifier]; }
     }
   });
 }
 
-// Button events
+// Controls
 document.querySelectorAll('.octave-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.octave-btn').forEach(b => b.classList.remove('active'));
@@ -436,7 +494,6 @@ document.querySelectorAll('.octave-btn').forEach(btn => {
     selectedOctave = parseInt(btn.dataset.octave);
   });
 });
-
 document.querySelectorAll('.note-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.note-btn').forEach(b => b.classList.remove('active'));
@@ -445,7 +502,6 @@ document.querySelectorAll('.note-btn').forEach(btn => {
     buildPiano();
   });
 });
-
 document.querySelectorAll('.scale-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('active'));
@@ -457,7 +513,15 @@ document.querySelectorAll('.scale-btn').forEach(btn => {
 
 document.addEventListener('contextmenu', e => e.preventDefault());
 
+// Build on load and on resize (keys reflow in landscape)
 buildPiano();
+window.addEventListener('resize', () => {
+  clearTimeout(window._resizeTimer);
+  window._resizeTimer = setTimeout(buildPiano, 120);
+});
+window.addEventListener('orientationchange', () => {
+  setTimeout(buildPiano, 150);
+});
 </script>
 </body>
 </html>
