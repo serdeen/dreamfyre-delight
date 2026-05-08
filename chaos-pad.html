@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chaos Pad — Dreamfyre Delight</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --violet: #9b5de5;
+    --violet-dim: rgba(155,93,229,0.15);
+    --text: #e0e0e0;
+    --text-dim: #666680;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 50% 10%, rgba(155,93,229,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 50% 90%, rgba(155,93,229,0.05) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+  }
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.6rem;
+    letter-spacing: 0.2em;
+    color: var(--violet);
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+
+  /* Start overlay */
+  #start-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,15,0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    gap: 1rem;
+  }
+  #start-overlay p {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+  }
+  #start-btn {
+    background: transparent;
+    border: 2px solid var(--violet);
+    border-radius: 12px;
+    color: var(--violet);
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    padding: 0.8rem 2rem;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+    transition: background 0.2s;
+  }
+  #start-btn:hover { background: var(--violet-dim); }
+
+  /* Oscillator rows */
+  .osc-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .osc-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--violet);
+    letter-spacing: 0.1em;
+  }
+  .osc-header span { color: var(--text-dim); font-size: 0.7rem; }
+
+  .osc-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .ctrl-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: center;
+  }
+  .ctrl-group label {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .ctrl-group input[type=range] {
+    width: 100px;
+    accent-color: var(--violet);
+  }
+  .ctrl-group .val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--violet);
+    min-width: 45px;
+    text-align: center;
+  }
+
+  /* Waveform buttons */
+  .wave-btns {
+    display: flex;
+    gap: 4px;
+  }
+  .wave-btn {
+    background: var(--border);
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+  .wave-btn:hover { border-color: var(--violet); color: var(--text); }
+  .wave-btn.active {
+    background: var(--violet-dim);
+    border-color: var(--violet);
+    color: var(--violet);
+  }
+
+  /* Chaos button */
+  #chaos-btn {
+    background: var(--surface);
+    border: 2px solid var(--violet);
+    border-radius: 12px;
+    color: var(--violet);
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 1rem;
+    cursor: pointer;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    transition: background 0.15s, box-shadow 0.15s;
+    margin-top: 0.5rem;
+  }
+  #chaos-btn:hover {
+    background: var(--violet-dim);
+    box-shadow: 0 0 20px rgba(155,93,229,0.3);
+  }
+  #chaos-btn.shaking {
+    animation: shake 0.5s ease-in-out;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0) rotate(0); }
+    20% { transform: translateX(-6px) rotate(-2deg); }
+    40% { transform: translateX(6px) rotate(2deg); }
+    60% { transform: translateX(-4px) rotate(-1deg); }
+    80% { transform: translateX(4px) rotate(1deg); }
+  }
+
+  /* Drift row */
+  .drift-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.8rem 1.2rem;
+  }
+  .drift-row label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--violet);
+    letter-spacing: 0.1em;
+  }
+  #drift-toggle {
+    accent-color: var(--violet);
+    width: 18px;
+    height: 18px;
+  }
+  .drift-speed-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+  }
+  .drift-speed-group label { color: var(--text-dim); }
+  .drift-speed-group input[type=range] {
+    width: 120px;
+    accent-color: var(--violet);
+  }
+
+  /* Master vol */
+  .master-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 0.5rem;
+  }
+  .master-row label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    min-width: 60px;
+  }
+  .master-row input[type=range] {
+    flex: 1;
+    accent-color: var(--violet);
+  }
+</style>
+</head>
+<body>
+
+<div id="start-overlay">
+  <h1 style="margin-bottom:0.5rem">CHAOS PAD</h1>
+  <p>AMBIENT OSCILLATOR GENERATOR</p>
+  <button id="start-btn">INITIALIZE AUDIO</button>
+</div>
+
+<div class="container">
+
+  <div id="osc-container">
+    <!-- OSC 0 -->
+    <div class="osc-row" data-osc="0">
+      <div class="osc-header">OSC 1 <span>440Hz base</span></div>
+      <div class="osc-controls">
+        <div class="ctrl-group">
+          <label>Freq</label>
+          <input type="range" id="freq-0" min="80" max="1200" value="440" step="1">
+          <span class="val" id="freq-val-0">440 Hz</span>
+        </div>
+        <div class="ctrl-group">
+          <label>Gain</label>
+          <input type="range" id="gain-0" min="0" max="1" value="0.5" step="0.01">
+          <span class="val" id="gain-val-0">0.50</span>
+        </div>
+        <div class="wave-btns">
+          <button class="wave-btn active" data-osc="0" data-wave="sine">SIN</button>
+          <button class="wave-btn" data-osc="0" data-wave="triangle">TRI</button>
+          <button class="wave-btn" data-osc="0" data-wave="sawtooth">SAW</button>
+          <button class="wave-btn" data-osc="0" data-wave="square">SQR</button>
+        </div>
+        <div class="ctrl-group">
+          <label>LFO Rate</label>
+          <input type="range" id="lfo-rate-0" min="0.1" max="5" value="1" step="0.1">
+          <span class="val" id="lfo-rate-val-0">1.0 Hz</span>
+        </div>
+        <div class="ctrl-group">
+          <label>LFO Depth</label>
+          <input type="range" id="lfo-depth-0" min="0" max="1" value="0.5" step="0.01">
+          <span class="val" id="lfo-depth-val-0">0.50</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- OSC 1 -->
+    <div class="osc-row" data-osc="1">
+      <div class="osc-header">OSC 2 <span>440Hz base</span></div>
+      <div class="osc-controls">
+        <div class="ctrl-group">
+          <label>Freq</label>
+          <input type="range" id="freq-1" min="80" max="1200" value="440" step="1">
+          <span class="val" id="freq-val-1">440 Hz</span>
+        </div>
+        <div class="ctrl-group">
+          <label>Gain</label>
+          <input type="range" id="gain-1" min="0" max="1" value="0.5" step="0.01">
+          <span class="val" id="gain-val-1">0.50</span>
+        </div>
+        <div class="wave-btns">
+          <button class="wave-btn" data-osc="1" data-wave="sine">SIN</button>
+          <button class="wave-btn active" data-osc="1" data-wave="triangle">TRI</button>
+          <button class="wave-btn" data-osc="1" data-wave="sawtooth">SAW</button>
+          <button class="wave-btn" data-osc="1" data-wave="square">SQR</button>
+        </div>
+        <div class="ctrl-group">
+          <label>LFO Rate</label>
+          <input type="range" id="lfo-rate-1" min="0.1" max="5" value="1" step="0.1">
+          <span class="val" id="lfo-rate-val-1">1.0 Hz</span>
+        </div>
+        <div class="ctrl-group">
+          <label>LFO Depth</label>
+          <input type="range" id="lfo-depth-1" min="0" max="1" value="0.5" step="0.01">
+          <span class="val" id="lfo-depth-val-1">0.50</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- OSC 2 -->
+    <div class="osc-row" data-osc="2">
+      <div class="osc-header">OSC 3 <span>440Hz base</span></div>
+      <div class="osc-controls">
+        <div class="ctrl-group">
+          <label>Freq</label>
+          <input type="range" id="freq-2" min="80" max="1200" value="440" step="1">
+          <span class="val" id="freq-val-2">440 Hz</span>
+        </div>
+        <div class="ctrl-group">
+          <label>Gain</label>
+          <input type="range" id="gain-2" min="0" max="1" value="0.5" step="0.01">
+          <span class="val" id="gain-val-2">0.50</span>
+        </div>
+        <div class="wave-btns">
+          <button class="wave-btn" data-osc="2" data-wave="sine">SIN</button>
+          <button class="wave-btn" data-osc="2" data-wave="triangle">TRI</button>
+          <button class="wave-btn active" data-osc="2" data-wave="sawtooth">SAW</button>
+          <button class="wave-btn" data-osc="2" data-wave="square">SQR</button>
+        </div>
+        <div class="ctrl-group">
+          <label>LFO Rate</label>
+          <input type="range" id="lfo-rate-2" min="0.1" max="5" value="1" step="0.1">
+          <span class="val" id="lfo-rate-val-2">1.0 Hz</span>
+        </div>
+        <div class="ctrl-group">
+          <label>LFO Depth</label>
+          <input type="range" id="lfo-depth-2" min="0" max="1" value="0.5" step="0.01">
+          <span class="val" id="lfo-depth-val-2">0.50</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- OSC 3 -->
+    <div class="osc-row" data-osc="3">
+      <div class="osc-header">OSC 4 <span>440Hz base</span></div>
+      <div class="osc-controls">
+        <div class="ctrl-group">
+          <label>Freq</label>
+          <input type="range" id="freq-3" min="80" max="1200" value="440" step="1">
+          <span class="val" id="freq-val-3">440 Hz</span>
+        </div>
+        <div class="ctrl-group">
+          <label>Gain</label>
+          <input type="range" id="gain-3" min="0" max="1" value="0.5" step="0.01">
+          <span class="val" id="gain-val-3">0.50</span>
+        </div>
+        <div class="wave-btns">
+          <button class="wave-btn" data-osc="3" data-wave="sine">SIN</button>
+          <button class="wave-btn" data-osc="3" data-wave="triangle">TRI</button>
+          <button class="wave-btn" data-osc="3" data-wave="sawtooth">SAW</button>
+          <button class="wave-btn active" data-osc="3" data-wave="square">SQR</button>
+        </div>
+        <div class="ctrl-group">
+          <label>LFO Rate</label>
+          <input type="range" id="lfo-rate-3" min="0.1" max="5" value="1" step="0.1">
+          <span class="val" id="lfo-rate-val-3">1.0 Hz</span>
+        </div>
+        <div class="ctrl-group">
+          <label>LFO Depth</label>
+          <input type="range" id="lfo-depth-3" min="0" max="1" value="0.5" step="0.01">
+          <span class="val" id="lfo-depth-val-3">0.50</span>
+        </div>
+      </div>
+    </div>
+  </div><!-- /osc-container -->
+
+  <button id="chaos-btn">✨ CHAOS</button>
+
+  <div class="drift-row">
+    <label for="drift-toggle">DRIFT</label>
+    <input type="checkbox" id="drift-toggle">
+    <div class="drift-speed-group">
+      <label for="drift-speed">Speed</label>
+      <input type="range" id="drift-speed" min="1" max="20" value="8" step="1">
+      <span id="drift-speed-val" style="font-family:'Space Mono',monospace;font-size:0.75rem;color:var(--violet)">8s</span>
+    </div>
+  </div>
+
+  <div class="master-row">
+    <label>Master</label>
+    <input type="range" id="master-vol" min="0" max="1" value="0.6" step="0.01">
+  </div>
+
+</div>
+
+<script>
+(function() {
+  let audioCtx = null;
+  let masterGain = null;
+  let compressor = null;
+  let driftInterval = null;
+  let driftPhase = [0, 0, 0, 0];
+  let driftPhaseInc = [0, 0, 0, 0];
+  let oscBaseFreqs = [440, 440, 440, 440];
+
+  // Per-oscillator state: {osc, gain, lfo, lfoGain, lfoDepth}
+  const oscs = [{}, {}, {}, {}];
+
+  function init() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Compressor for speaker safety
+    compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.value = -6;
+    compressor.ratio.value = 4;
+    compressor.connect(audioCtx.destination);
+
+    // Master gain
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.6;
+    masterGain.connect(compressor);
+
+    // Build 4 oscillator layers
+    for (let i = 0; i < 4; i++) {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+
+      // Randomize starting frequencies slightly for chorus effect
+      const baseFreq = 440 + (Math.random() - 0.5) * 10;
+      oscBaseFreqs[i] = baseFreq;
+      osc.frequency.value = baseFreq;
+      osc.type = ['sine', 'triangle', 'sawtooth', 'square'][i];
+
+      gain.gain.value = 0.5;
+
+      // LFO: modulates main osc frequency
+      lfo.type = 'sine';
+      lfo.frequency.value = 1;
+      lfoGain.gain.value = 10; // depth in Hz
+
+      // Connections
+      lfo.connect(lfoGain);
+      lfoGain.connect(osc.frequency); // LFO → freq modulation
+
+      osc.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start();
+
+      oscs[i] = { osc, gain, lfo, lfoGain, lfoDepth: lfoGain.gain.value };
+    }
+
+    // Wire up all controls
+    wireControls();
+
+    // Hide start overlay
+    document.getElementById('start-overlay').style.display = 'none';
+  }
+
+  function wireControls() {
+    for (let i = 0; i < 4; i++) {
+      const freqSlider = document.getElementById('freq-' + i);
+      const gainSlider = document.getElementById('gain-' + i);
+      const lfoRateSlider = document.getElementById('lfo-rate-' + i);
+      const lfoDepthSlider = document.getElementById('lfo-depth-' + i);
+      const freqVal = document.getElementById('freq-val-' + i);
+      const gainVal = document.getElementById('gain-val-' + i);
+      const lfoRateVal = document.getElementById('lfo-rate-val-' + i);
+      const lfoDepthVal = document.getElementById('lfo-depth-val-' + i);
+
+      freqSlider.addEventListener('input', () => {
+        const v = +freqSlider.value;
+        oscBaseFreqs[i] = v;
+        oscs[i].osc.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.1);
+        freqVal.textContent = v + ' Hz';
+      });
+
+      gainSlider.addEventListener('input', () => {
+        const v = +gainSlider.value;
+        oscs[i].gain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.1);
+        gainVal.textContent = v.toFixed(2);
+      });
+
+      lfoRateSlider.addEventListener('input', () => {
+        const v = +lfoRateSlider.value;
+        oscs[i].lfo.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.1);
+        lfoRateVal.textContent = v.toFixed(1) + ' Hz';
+      });
+
+      lfoDepthSlider.addEventListener('input', () => {
+        const v = +lfoDepthSlider.value;
+        // depth in Hz (how much LFO modulates frequency)
+        oscs[i].lfoGain.gain.setTargetAtTime(v * 40, audioCtx.currentTime, 0.1);
+        lfoDepthVal.textContent = v.toFixed(2);
+      });
+
+      // Waveform buttons
+      document.querySelectorAll('.wave-btn[data-osc="' + i + '"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.wave-btn[data-osc="' + i + '"]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          oscs[i].osc.type = btn.dataset.wave;
+        });
+      });
+    }
+
+    // Master volume
+    document.getElementById('master-vol').addEventListener('input', (e) => {
+      masterGain.gain.setTargetAtTime(+e.target.value, audioCtx.currentTime, 0.1);
+    });
+
+    // Chaos button
+    document.getElementById('chaos-btn').addEventListener('click', () => {
+      const btn = document.getElementById('chaos-btn');
+      btn.classList.remove('shaking');
+      void btn.offsetWidth;
+      btn.classList.add('shaking');
+      setTimeout(() => btn.classList.remove('shaking'), 600);
+
+      for (let i = 0; i < 4; i++) {
+        const newFreq = 80 + Math.random() * 1120;
+        const newGain = 0.1 + Math.random() * 0.8;
+        const newLfoRate = 0.1 + Math.random() * 4.9;
+        const newLfoDepth = Math.random();
+        const waveforms = ['sine', 'triangle', 'sawtooth', 'square'];
+        const newWave = waveforms[Math.floor(Math.random() * 4)];
+
+        oscBaseFreqs[i] = newFreq;
+        oscs[i].osc.frequency.setTargetAtTime(newFreq, audioCtx.currentTime, 0.3);
+        oscs[i].gain.gain.setTargetAtTime(newGain, audioCtx.currentTime, 0.3);
+        oscs[i].lfo.frequency.setTargetAtTime(newLfoRate, audioCtx.currentTime, 0.3);
+        oscs[i].lfoGain.gain.setTargetAtTime(newLfoDepth * 40, audioCtx.currentTime, 0.3);
+        oscs[i].osc.type = newWave;
+
+        // Update UI sliders to match
+        document.getElementById('freq-' + i).value = newFreq;
+        document.getElementById('freq-val-' + i).textContent = newFreq.toFixed(0) + ' Hz';
+        document.getElementById('gain-' + i).value = newGain;
+        document.getElementById('gain-val-' + i).textContent = newGain.toFixed(2);
+        document.getElementById('lfo-rate-' + i).value = newLfoRate;
+        document.getElementById('lfo-rate-val-' + i).textContent = newLfoRate.toFixed(1) + ' Hz';
+        document.getElementById('lfo-depth-' + i).value = newLfoDepth;
+        document.getElementById('lfo-depth-val-' + i).textContent = newLfoDepth.toFixed(2);
+
+        // Update waveform button active states
+        document.querySelectorAll('.wave-btn[data-osc="' + i + '"]').forEach(b => b.classList.remove('active'));
+        const activeBtn = document.querySelector('.wave-btn[data-osc="' + i + '"][data-wave="' + newWave + '"]');
+        if (activeBtn) activeBtn.classList.add('active');
+      }
+    });
+
+    // Drift toggle
+    document.getElementById('drift-toggle').addEventListener('change', (e) => {
+      if (e.target.checked) {
+        startDrift();
+      } else {
+        stopDrift();
+      }
+    });
+
+    // Drift speed
+    document.getElementById('drift-speed').addEventListener('input', (e) => {
+      const period = +e.target.value;
+      document.getElementById('drift-speed-val').textContent = period + 's';
+      if (driftInterval) {
+        stopDrift();
+        startDrift();
+      }
+    });
+  }
+
+  function startDrift() {
+    const period = +document.getElementById('drift-speed').value;
+    // Set phase increments so each osc drifts at a different rate
+    for (let i = 0; i < 4; i++) {
+      driftPhaseInc[i] = (2 * Math.PI) / (period * 1000 / 50); // 50ms update
+    }
+    driftPhase = [0, Math.PI * 0.5, Math.PI, Math.PI * 1.5]; // offset phases
+
+    driftInterval = setInterval(() => {
+      for (let i = 0; i < 4; i++) {
+        driftPhase[i] += driftPhaseInc[i];
+        const drift = Math.sin(driftPhase[i]) * 20; // ±20Hz
+        oscs[i].osc.frequency.setTargetAtTime(oscBaseFreqs[i] + drift, audioCtx.currentTime, 0.2);
+      }
+    }, 50);
+  }
+
+  function stopDrift() {
+    if (driftInterval) {
+      clearInterval(driftInterval);
+      driftInterval = null;
+    }
+    // Restore base frequencies
+    for (let i = 0; i < 4; i++) {
+      oscs[i].osc.frequency.setTargetAtTime(oscBaseFreqs[i], audioCtx.currentTime, 0.3);
+    }
+  }
+
+  // Start button
+  document.getElementById('start-btn').addEventListener('click', init);
+
+  // Clean stop on page hide
+  window.addEventListener('beforeunload', () => {
+    if (masterGain) {
+      masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.5);
+      setTimeout(() => { if (audioCtx) audioCtx.close(); }, 600);
+    }
+  });
+})();
+</script>
+</body>
+</html>
