@@ -1,42 +1,41 @@
-# Build Spec: Chaos Pad
+# Build Spec: Tape Stop
 
 ## Concept & Vision
-A generative ambient soundscape pad — 4 layered oscillators (sine, triangle, saw, square) each with their own pitch, volume, and LFO modulation. Hit "Chaos" and it randomizes all params at once. "Drift" slowly modulates parameters over time. The result is a self-playing ambient texture generator, like having a tiny modular synth in the browser.
+A simple single-function audio effect tool: load any audio file (wav/mp3), then trigger a "tape stop" effect — the playback speed ramps down exponentially from 1x to 0x over a configurable duration (0.2s–2s), creating the classic tape-spooling-down sound. There's also a "rewind" button that plays backward at increasing speed.
 
 ## Parameters to Test
-- **Temperature** — 0.7 (slightly lower, want clean oscillator code)
-- **Token limit** — 1800 (compact but needs oscillator layering + LFO math)
-- **Build speed** — local M4 Pro via Ollama
-- **Model** — llama3.1:8b with new strict constraints (no PHP, no backticks, must start `<!DOCTYPE`)
+- **Temperature** — 0.75 (medium-creative for clean code)
+- **Token limit** — 1600 (compact build)
+- **Model** — llama3.1:8b via Ollama with automated validation + 1 retry on failure
+- **Enforcement** — new validate_and_fix loop: attempt 1 fails → feedback → attempt 2 → pass or fail → attempt 3
 
 ## Design
-- Dark background `#0a0a0f` with soft violet accent `#9b5de5`
+- Dark background `#0a0a0f`, warm amber accent `#f4a261`
 - Fonts: Space Mono + Inter
-- Centered single-column layout; large "Chaos" button as focal point
-- 4 oscillator rows stacked vertically, each with frequency knob, gain, waveform selector, LFO rate, LFO depth
-- "Drift" toggle and speed control below the oscillators
-- Minimal — no piano keys, no sequencer
+- Centered layout: file drop zone, playback controls (play/pause/stop), tape-stop button, rewind button, speed/duration sliders
+- Tape stop progress shown as a visual sweep line moving across waveform
 
 ## Features
-- [ ] 4 oscillator layers, each: frequency slider (80Hz–1200Hz), gain slider (0–1), waveform buttons (sin/tri/saw/sqr), LFO rate slider (0.1–5Hz), LFO depth slider (0–1)
-- [ ] Master gain (~0.6) with dynamics compressor for speaker safety
-- [ ] "Chaos" button: randomizes all 4 oscillators' params simultaneously with smooth ramp to new values
-- [ ] "Drift" toggle: a slow LFO on each oscillator's frequency (sine wave, period 8–20s) for evolving texture
-- [ ] All oscillators start at A4=440Hz base, detune slightly via LFO for beating/ chorus effect
-- [ ] AudioContext lazy-init on first interaction
-- [ ] Clean stop: gain ramp to 0 over 0.5s on page hide / AudioContext close
+- [ ] Drag-and-drop audio load (wav/mp3)
+- [ ] Play/pause toggle button
+- [ ] "TAPE STOP" button: triggers playbackRate ramp from 1 → 0 exponentially over set duration
+- [ ] "REWIND" button: plays audio backward at accelerating rate (like tape rewinding)
+- [ ] Duration slider: 0.2s to 2.0s for tape stop effect
+- [ ] Waveform display with playhead indicator
+- [ ] Master volume
 
 ## Technical Approach
-- Web Audio API: OscillatorNode per layer (4 total), GainNode per layer, LFO OscillatorNode modulating frequency via GainNode
-- LFO chain: LFO osc → LFO gain node → connect to main osc.frequency (additive modulation)
-- Each oscillator has its own audio chain: osc → layerGain → masterGain → compressor → destination
-- Chaos: `Math.random()` all params, use `setTargetAtTime()` for smooth transitions (time constant ~0.3s)
-- Drift: separate slow LFO (period 8–20s) per oscillator, modulates base frequency ±20Hz
+- AudioBuffer + AudioBufferSourceNode for playback
+- `playbackRate` property ramped using `setTargetAtTime()` for smooth exponential decay
+- For tape stop: `source.playbackRate.setTargetAtTime(0, audioCtx.currentTime, duration / 3)` — exponential approach to 0
+- For rewind: negative playbackRate, ramp from -0.5 to -2.0 over 1.5s
+- Waveform drawn on canvas; playhead position tracked via `requestAnimationFrame`
+- AudioContext lazy-init on first interaction
 
 ## Verification
-- [ ] All 4 oscillators produce sound simultaneously without clipping
-- [ ] Waveform switch changes timbre correctly per oscillator
-- [ ] LFO rate slider visibly warbles the pitch (test at 2Hz)
-- [ ] Chaos button randomizes everything and audio transitions smoothly
-- [ ] Drift mode slowly evolves pitch over time (audible within 10s)
+- [ ] File loads and waveform draws correctly
+- [ ] Play/pause works without errors
+- [ ] Tape stop smoothly ramps playbackRate to 0 (audible decel, then silence)
+- [ ] Rewind plays backward with accelerating speed
+- [ ] Playhead indicator moves during playback
 - [ ] No console errors on load or interaction
