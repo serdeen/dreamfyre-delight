@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tuner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+<body style="background-color: #0a0a0f;">
+    <header style="color: #00f5d4; font-family: Inter, sans-serif; text-align: center;">
+        <h1>Tuner</h1>
+    </header>
+    <div id="note-display" style="margin-top: 50px; margin-bottom: 20px; display: flex; justify-content: space-around; align-items: center;">
+        <p id="note-name"></p>
+        <p id="frequency">0.0 Hz</p>
+        <p id="cents-deviation"></p>
+    </div>
+    <canvas id="tuner-canvas" width="400" height="20"></canvas>
+    <footer style="color: #f72585; font-family: Space Mono, monospace; text-align: center;">
+        <button id="start-mic-btn">🎤 Start Mic</button>
+        <p id="mic-status">Click to start</p>
+    </footer>
+
+    <script>
+        let audioContext;
+        let mediaStreamSource;
+        let analyserNode;
+        let compressor;
+        let micStream;
+
+        const noteNames = ["A0", "A#0/Bb0", "B0", "C1", "C#1/Db1", "D1", "D#1/Eb1", "E1", "F1", "F#1/Gb1", "G1", "G#1/Ab1", "A1", "A#1/Bb1", "B1"];
+        const noteIndex = 9;
+
+        document.getElementById("start-mic-btn").addEventListener("click", async () => {
+            if (!micStream) {
+                try {
+                    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    document.getElementById("mic-status").textContent = "Listening...";
+                    initAudio();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        });
+
+        function initAudio() {
+            audioContext = new AudioContext();
+
+            mediaStreamSource = audioContext.createMediaStreamSource(micStream);
+            analyserNode = audioContext.createAnalyser();
+            analyserNode.fftSize = 4096;
+
+            compressor = audioContext.createDynamicsCompressor();
+            compressor.threshold.value = -6;
+            compressor.ratio..setTargetAtTime(value, audioCtx.currentTime, 0.05)4;
+
+            mediaStreamSource.connect(analyserNode);
+            analyserNode.connect(compressor);
+            compressor.connect(audioContext.destination);
+
+            updateDisplay();
+        }
+
+        function detectPitch() {
+            const data = new Float32Array(analyserNode.fftSize);
+            analyserNode.getFloatTimeDomainData(data);
+
+            let maxCorrelation = 0;
+            let timeOfMaxCorrelation = 0;
+
+            for (let i = 0; i < data.length - 1; i++) {
+                const correlation = autocorrelate(data, i + 1);
+                if (correlation > maxCorrelation) {
+                    maxCorrelation = correlation;
+                    timeOfMaxCorrelation = i;
+                }
+            }
+
+            if (maxCorrelation > 0.5) {
+                return audioContext.sampleRate * timeOfMaxCorrelation / analyserNode.fftSize;
+            } else {
+                return 0;
+            }
+        }
+
+        function autocorrelate(data, shift) {
+            const sum = data.reduce((acc, current, index) => acc + (index >= shift ? current * data[index - shift] : 0), 0);
+            return Math.abs(sum / data.length);
+        }
+
+        function updateDisplay() {
+            const frequency = detectPitch();
+
+            if (frequency > 0) {
+                const noteName = findNearestNote(frequency);
+                document.getElementById("note-name").textContent = noteName;
+                document.getElementById("frequency").textContent = `${(frequency).toFixed(1)} Hz`;
+                document.getElementById("cents-deviation").textContent = `+${((frequency - noteFrequency(noteNames[noteIndex])) * 100).toFixed(0)}¢`;
+
+                const canvas = document.getElementById("tuner-canvas");
+                const ctx = canvas.getContext("2d");
+const dpr = window.devicePixelRatio || 1;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "green";
+                ctx.fillRect(canvas.width / 2 - 10, 5, (canvas.width / 2) * ((frequency - noteFrequency(noteNames[noteIndex])) * 100 < 5 ? (frequency - noteFrequency(noteNames[noteIndex])) * 100 : Math.min((frequency - noteFrequency(noteNames[noteIndex])) * 100 + 5, 100)) / 100, 10);
+
+                requestAnimationFrame(updateDisplay);
+            } else {
+                document.getElementById("note-name").textContent = "No signal";
+                document.getElementById("frequency").textContent = "0.0 Hz";
+                document.getElementById("cents-deviation").textContent = "";
+            }
+        }
+
+        function findNearestNote(frequency) {
+            let nearestIndex = noteIndex;
+            let minDiff = Math.abs(frequency - noteFrequency(noteNames[noteIndex]));
+
+            for (let i = 0; i < noteNames.length; i++) {
+                const diff = Math.abs(frequency - noteFrequency(noteNames[i]));
+                if (diff < minDiff) {
+                    nearestIndex = i;
+                    minDiff = diff;
+                }
+            }
+
+            return noteNames[nearestIndex];
+        }
+
+        function noteFrequency(noteName) {
+            let frequency = 440;
+
+            const octave = parseInt(noteName.slice(-1));
+            const semitone = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#"].indexOf(noteName.slice(0, -1));
+
+            return frequency * Math.pow(2, (semitone + octave));
+        }
+    </script>
+</body>
+</html>
