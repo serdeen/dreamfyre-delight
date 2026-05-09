@@ -1,38 +1,35 @@
-# SPEC.md — Loop Station
+# SPEC.md — Signal Lab
 
 ## Concept & Vision
-A browser-based sampler looper with a visual waveform display. Load audio files, set loop start/end points with draggable markers, and trigger one-shots or looped playback. Tempo indicator shows BPM of loaded sample. Designed for quick sound-checking and layering short phrases.
+Browser-based multi-waveform signal generator with live oscilloscope visualization. Toggle between sine, square, sawtooth, triangle waves. Adjust frequency (20Hz–2000Hz) and gain. Visual scope shows real-time waveform using AnalyserNode + requestAnimationFrame. Master chain includes DynamicsCompressor for speaker protection.
 
 ## Parameters to Test
-- **Temperature:** 0.8 (higher creativity for UI variation)
-- **Token limit:** 2000 (more room for waveform + looper logic)
-- **Goal:** Test 5-pattern auto-patcher (no model self-correction loop for these)
+- **Temperature:** 0.75 (moderate creativity)
+- **Token limit:** 1800
+- **Goal:** Exercise auto-patcher on all 5 patterns in a single build
 
 ## Design Language
 - Dark background `#0a0a0f`, neon cyan `#00f5d4`, neon magenta `#f72585`
 - Space Mono (headings) + Inter (body) from Google Fonts
-- Atmospheric radial gradients as page background
 - Single self-contained HTML file
 
 ## Features
-1. **Audio file loader** — `<input type="file">` accepts audio files, decodes with `decodeAudioData`
-2. **Waveform display** — canvas draws audio buffer data; uses `devicePixelRatio` for crisp rendering
-3. **Loop markers** — two vertical lines (start/end) draggable via mousedown/mousemove; calls `stopPlayback()` on reposition
-4. **Transport** — Play/Stop buttons; loop mode toggle; play uses `setTargetAtTime` for gain fade-in
-5. **One-shot / loop mode** — one-shot triggers at marker region then stops; loop mode schedules `source.onended` re-trigger
-6. **Visual playhead** — animated with `requestAnimationFrame`; position synced to `audioCtx.currentTime`
-7. **Master chain** — master gain → `DynamicsCompressor` → destination
-8. **Tempo display** — rough BPM estimate from sample duration / detected peak interval
+1. **Waveform selector** — 4 buttons: Sine, Square, Sawtooth, Triangle; creates new OscillatorNode on selection
+2. **Frequency control** — range slider 20–2000Hz, displays current Hz value
+3. **Gain control** — range slider 0–1, uses `setTargetAtTime` for smooth transitions
+4. **Oscilloscope canvas** — AnalyserNode with `getByteTimeDomainData`, draws waveform with `requestAnimationFrame`; uses `devicePixelRatio` for crisp rendering
+5. **Master chain** — OscillatorNode → GainNode → DynamicsCompressor → destination
+6. **On/off toggle** — Play/Stop button; stop calls `oscillator.stop()` properly
 
 ## Code Requirements
-- Required functions: `initAudio`, `loadFile`, `drawWaveform`, `animate`, `playLoop`, `stopPlayback`
-- All Web Audio params use `setTargetAtTime` (not direct `.value` assignment)
-- `source.onended` handler resets `isPlaying = false` and clears `currentSource`
-- Canvas uses `devicePixelRatio` scaling
-- Master chain: `masterGain → DynamicsCompressor → destination`
+- Required functions: `initAudio`, `setFrequency`, `setGain`, `drawScope`, `startOsc`, `stopOsc`
+- All param changes use `setTargetAtTime`
+- Canvas uses `devicePixelRatio`
+- Animation uses `requestAnimationFrame` recursively in `drawScope`
+- Master chain includes `DynamicsCompressor`
 
 ## Layout
-- Full-width waveform canvas (~200px height) with draggable start/end markers
-- Below: transport row (Play, Stop, Loop toggle), tempo readout
-- Above: file input for audio loading
-- Responsive: waveform resizes with window via `resize` event
+- Top: `<h1>Signal Lab</h1>`
+- Middle: oscilloscope canvas (full width, ~180px tall)
+- Bottom: waveform buttons (Sine/Square/Saw/Tri) + frequency slider + gain slider + Play/Stop
+- Responsive: canvas resizes with window
