@@ -1,48 +1,50 @@
-# Build Spec: Pitch Shifter
+# Build Spec: Echo Lab
 
 ## Concept & Vision
-A live pitch-shifting audio player. Load any audio file, then use a large vertical pitch fader to shift playback speed up or down by up to ±12 semitones in real time. Visual feedback shows current shift amount in semitones and cents. Essentially a pitch-shifter/slow-downer for music practice.
+A browser-based audio delay/echo effect. Load any audio file, set delay time (50ms–1000ms), feedback amount (0–90%), and mix level. Hit "ECHO" to hear the effect in real time. Visual readout shows current delay time in ms and a simple feedback meter.
 
 ## Parameters to Test
-- **Temperature** — 0.7
+- **Temperature** — 0.75
 - **Token limit** — 1800
-- **Model** — llama3.1:8b via Ollama with enhanced validator (6 checks + 10 wiring patterns + auto-regeneration)
-- **Goal** — minimal manual cleanup after generation
+- **Model** — llama3.1:8b via Ollama with retry-patch hints (concrete code snippets for recurring failures)
+- **Goal** — minimal manual cleanup; test if concrete patch hints fix the 3 recurring issues (setTargetAtTime, requestAnimationFrame, onended)
 
 ## Design
-- Dark background `#0a0a0f`, electric blue accent `#00b4d8`
+- Dark background `#0a0a0f`, coral accent `#e76f51`
 - Fonts: Space Mono + Inter
-- Centered layout: file drop zone → waveform → transport → large vertical pitch slider → semitone readout
+- Centered: file drop → waveform → transport → delay slider → feedback slider → mix slider → ECHO button
+- Feedback meter (visual bar showing feedback amount)
 
 ## Features
 - [ ] Drag-and-drop audio load (wav/mp3)
 - [ ] Play/pause toggle
-- [ ] Large vertical range slider for pitch shift (-12 to +12 semitones)
-- [ ] Real-time pitch shift via `playbackRate` (semitone → playbackRate: `Math.pow(2, semitones/12)`)
-- [ ] Live readout: current semitone shift + cents display
-- [ ] Master volume slider
+- [ ] Delay time slider: 50ms to 1000ms (step 10ms)
+- [ ] Feedback slider: 0% to 90% (controls feedback gain, must stay <1 to avoid infinite loop)
+- [ ] Mix slider: dry/wet (0 = fully dry, 1 = fully wet)
+- [ ] "ECHO" toggle button — activates/deactivates the delay effect
+- [ ] Real-time parameter changes via setTargetAtTime
 - [ ] Waveform with playhead
+- [ ] Master gain + dynamics compressor
 
 ## Technical Approach
-- AudioBuffer + AudioBufferSourceNode with playbackRate control
-- Semitone to playbackRate: `playbackRate = Math.pow(2, semitones / 12)` (1 semitone = 2^(1/12) ≈ 1.0595)
-- Shift range: -12 to +12 semitones maps to playbackRate 0.7937 to 1.2599
-- Waveform canvas with devicePixelRatio for crisp rendering
-- Playhead via requestAnimationFrame tracking playback position
-- DynamicsCompressor on master chain
+- Web Audio delay effect: source → DelayNode → feedback loop (feedbackGain) → dry/wet mix via two GainNodes → masterGain → compressor → destination
+- Feedback gain must be < 1 (e.g., 0.6 for 60% feedback), computed from slider as `feedbackGain = sliderValue / 100`
+- Dry path: source → dryGain (1 - mix) → masterGain
+- Wet path: source → delay → wetGain (mix) → masterGain
+- DelayNode.delayTime.setTargetAtTime(newDelay, audioCtx.currentTime, 0.05) for smooth changes
+- All gain changes: setTargetAtTime, never direct .value assignment
+- Playhead: requestAnimationFrame inside animate() function with onended handler
+- DynamicsCompressor in master chain (threshold -6dB, ratio 4:1)
 
-## Code Requirements (for validator pattern checks)
-- `setTargetAtTime` for smooth playbackRate transitions (not direct assignment)
-- `onended` handler on AudioBufferSourceNode for clean state management
-- `stopPlayback()` helper function that calls `source.stop()` + resets state
-- `decodeAudioData` for file loading
-- `DynamicsCompressor` in master chain
-- `devicePixelRatio` on canvas setup
-- `requestAnimationFrame` for playhead animation
+## Code Requirements (validated — these are the 6 high-failure patterns):
+- setTargetAtTime: ALL param changes must use it — delayTime, gain values, playbackRate
+- requestAnimationFrame: playhead must use recursive animate() pattern
+- onended: AudioBufferSourceNode must have source.onended = () => { isPlaying = false; currentSource = null; }
+- stopPlayback: helper function that calls source.stop() + cancels raf + resets state
+- devicePixelRatio: canvas setup for crisp rendering
+- DynamicsCompressor: master chain must include it
 
-## Verification
-- [ ] File loads and waveform draws correctly
-- [ ] Playback starts and pauses cleanly
-- [ ] Pitch slider moves and playbackRate changes in real time
-- [ ] Semitone readout updates correctly (6 semitones ≈ playbackRate 1.35)
-- [ ] No console errors on load or interaction
+## Required function names (must be defined in script):
+`ensureAudioContext`, `loadFile`, `playAudio`, `stopPlayback`, `drawWaveform`, `startPlayhead`, `applyEcho`
+
+Generate ONLY the HTML. Start directly with <!DOCTYPE html>.
