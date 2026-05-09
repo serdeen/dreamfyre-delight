@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pan-sphere</title>
+    <style>
+        body {
+            background-color: #0a0a0f;
+            font-family: 'Space Mono', monospace;
+            max-width: 400px;
+            margin: auto;
+            text-align: center;
+        }
+        
+        h1 {
+            color: #00f5d4;
+            font-size: 1.4rem;
+            letter-spacing: 0.15em;
+            margin: 1.5rem 0;
+            text-transform: uppercase;
+        }
+        
+        #panCanvas {
+            border-radius: 50%;
+            background: radial-gradient(circle, #1a1a2e 0%, #0a0a0f 70%);
+            cursor: grab;
+            touch-action: none;
+            border: 2px solid #f72585;
+            box-shadow: 0 0 30px rgba(247, 37, 133, 0.3);
+        }
+        
+        #panCanvas:active { cursor: grabbing; }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
+            margin: 1.5rem 0;
+        }
+        
+        button {
+            background: #13131a;
+            color: #00f5d4;
+            border: 1px solid #1e1e2e;
+            padding: 0.6rem 1.2rem;
+            font-family: 'Space Mono', monospace;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+        
+        button:hover {
+            border-color: #00f5d4;
+            box-shadow: 0 0 10px rgba(0, 245, 212, 0.3);
+        }
+        
+        button.active {
+            background: #00f5d4;
+            color: #0a0a0f;
+        }
+        
+        .pan-display {
+            font-size: 1.2rem;
+            color: #e0e0e0;
+            margin: 1rem 0;
+            font-family: 'Space Mono', monospace;
+        }
+        
+        .instructions {
+            color: #666680;
+            font-size: 0.75rem;
+            margin-top: 1rem;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <h1>pan-sphere</h1>
+    <canvas id="panCanvas" width="260" height="260"></canvas>
+    <div class="controls">
+        <button id="leftBtn">L</button>
+        <button id="toggleBtn">Start Drone</button>
+        <button id="rightBtn">R</button>
+    </div>
+    <div class="pan-display" id="panDisplay">CENTER</div>
+    <p class="instructions">drag the orb or tap L/R to pan</p>
+    <script>
+        const canvas = document.getElementById('panCanvas');
+        const ctx = canvas.getContext('2d');
+        const toggleBtn = document.getElementById('toggleBtn');
+        const leftBtn = document.getElementById('leftBtn');
+        const rightBtn = document.getElementById('rightBtn');
+        const panDisplay = document.getElementById('panDisplay');
+        
+        let audioCtx;
+        let droneOsc;
+        let droneGain;
+        let panNode;
+        let masterGain;
+        let compressor;
+        let isPlaying = false;
+        let panValue = 0;
+        
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                droneOsc = audioCtx.createOscillator();
+                droneGain = audioCtx.createGain();
+                panNode = audioCtx.createStereoPanner();
+                masterGain = audioCtx.createGain();
+                compressor = audioCtx.createDynamicsCompressor();
+                
+                droneOsc.type = 'sine';
+                droneOsc.frequency.setValueAtTime(110, audioCtx.currentTime);
+                droneGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                masterGain.gain.setValueAtTime(0.55, audioCtx.currentTime);
+                compressor.threshold.setValueAtTime(-6, audioCtx.currentTime);
+                compressor.ratio.setValueAtTime(4, audioCtx.currentTime);
+                
+                droneOsc.connect(droneGain);
+                droneGain.connect(panNode);
+                panNode.connect(masterGain);
+                masterGain.connect(compressor);
+                compressor.connect(audioCtx.destination);
+            }
+        }
+        
+        function startDrone() {
+            initAudio();
+            droneOsc.start();
+            droneGain.gain.setTargetAtTime(0.8, audioCtx.currentTime, 0.05);
+            isPlaying = true;
+            toggleBtn.textContent = 'Stop Drone';
+            toggleBtn.classList.add('active');
+            animate();
+        }
+        
+        function stopPlayback() {
+            if (droneGain && audioCtx) {
+                droneGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+                setTimeout(() => {
+                    try { droneOsc.stop(); } catch(e) {}
+                    droneOsc = null;
+                    isPlaying = false;
+                }, 300);
+            }
+            isPlaying = false;
+            toggleBtn.textContent = 'Start Drone';
+            toggleBtn.classList.remove('active');
+        }
+        
+        toggleBtn.addEventListener('click', () => {
+            if (!isPlaying) startDrone();
+            else stopPlayback();
+        });
+        
+        leftBtn.addEventListener('click', () => {
+            initAudio();
+            panValue = Math.max(-1, panValue - 0.1);
+            panNode.pan.setTargetAtTime(panValue, audioCtx.currentTime, 0.05);
+            updateDisplay();
+        });
+        
+        rightBtn.addEventListener('click', () => {
+            initAudio();
+            panValue = Math.min(1, panValue + 0.1);
+            panNode.pan.setTargetAtTime(panValue, audioCtx.currentTime, 0.05);
+            updateDisplay();
+        });
+        
+        function updateDisplay() {
+            const abs = Math.abs(panValue);
+            if (abs < 0.05) panDisplay.textContent = 'CENTER';
+            else if (panValue < 0) panDisplay.textContent = `L${Math.round(abs * 100)}`;
+            else panDisplay.textContent = `R${Math.round(abs * 100)}`;
+        }
+        
+        // Orb animation
+        let rafId;
+        let pulsePhase = 0;
+        
+        function drawOrb() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const cx = w / 2 + panValue * (w / 2 - 30);
+            const cy = h / 2;
+            const baseRadius = 30;
+            const radius = baseRadius + Math.sin(pulsePhase) * 4;
+            
+            ctx.clearRect(0, 0, w, h);
+            
+            // Outer ring (magenta)
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius + 8, 0, Math.PI * 2);
+            ctx.strokeStyle = '#f72585';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // Orb glow
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius + 15);
+            grd.addColorStop(0, 'rgba(0, 245, 212, 0.9)');
+            grd.addColorStop(0.5, 'rgba(0, 245, 212, 0.4)');
+            grd.addColorStop(1, 'rgba(0, 245, 212, 0)');
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius + 15, 0, Math.PI * 2);
+            ctx.fillStyle = grd;
+            ctx.fill();
+            
+            // Core
+            ctx.beginPath();
+            ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#00f5d4';
+            ctx.fill();
+            
+            // Highlight
+            ctx.beginPath();
+            ctx.arc(cx - radius * 0.3, cy - radius * 0.3, radius * 0.3, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            ctx.fill();
+            
+            // Pan track line
+            ctx.beginPath();
+            ctx.moveTo(30, cy);
+            ctx.lineTo(w - 30, cy);
+            ctx.strokeStyle = '#1e1e2e';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            
+            // Tick marks
+            ctx.fillStyle = '#666680';
+            ctx.font = '10px Space Mono';
+            ctx.textAlign = 'center';
+            ctx.fillText('L', 30, cy + 15);
+            ctx.fillText('R', w - 30, cy + 15);
+        }
+        
+        function animate() {
+            if (!isPlaying && !audioCtx) {
+                // Still animate orb position even when stopped
+            }
+            pulsePhase += 0.08;
+            drawOrb();
+            if (isPlaying) rafId = requestAnimationFrame(animate);
+        }
+        
+        // Drag support
+        let isDragging = false;
+        
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            handleDrag(e);
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) handleDrag(e);
+        });
+        
+        canvas.addEventListener('mouseup', () => { isDragging = false; });
+        canvas.addEventListener('mouseleave', () => { isDragging = false; });
+        
+        function handleDrag(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const normalized = (x - 30) / (rect.width - 60);
+            panValue = Math.max(-1, Math.min(1, normalized * 2 - 1));
+            if (audioCtx && panNode) panNode.pan.setTargetAtTime(panValue, audioCtx.currentTime, 0.05);
+            updateDisplay();
+            if (!isPlaying) {
+                initAudio();
+                startDrone();
+            }
+        }
+        
+        // Touch support
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handleDrag(e.touches[0]);
+        });
+        
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            handleDrag(e.touches[0]);
+        });
+        
+        // Init canvas with DPR
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        ctx.scale(dpr, dpr);
+        
+        // Set CSS size
+        canvas.style.width = '260px';
+        canvas.style.height = '260px';
+        
+        // Draw initial state
+        drawOrb();
+    </script>
+</body>
+</html>
