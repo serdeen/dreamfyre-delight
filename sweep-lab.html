@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sweep Lab — Filter Sweep Generator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,700;1,300&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+  --bg: #060c0c;
+  --surface: #0b1414;
+  --surface2: #0f1e1e;
+  --border: #153030;
+  --teal: #00e5c8;
+  --coral: #ff6b47;
+  --gold: #ffd070;
+  --dim: #1a3330;
+  --text: #c8e0dc;
+  --text-dim: #4a6860;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ─── HEADER ─── */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #080f0f 0%, var(--bg) 100%);
+}
+
+.logo {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--teal);
+  letter-spacing: -0.02em;
+}
+
+.logo em {
+  font-style: italic;
+  font-weight: 300;
+  color: var(--coral);
+}
+
+.tagline {
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: 'Space Mono', monospace;
+}
+
+/* ─── MAIN ─── */
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ─── WAVEFORM DISPLAY ─── */
+.display-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.display-wrap::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(0,229,200,0.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.scope-container {
+  position: relative;
+}
+
+.scope-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+canvas#scope {
+  width: 100%;
+  height: 120px;
+  display: block;
+  border-radius: 10px;
+  background: #040a0a;
+  border: 1px solid var(--border);
+}
+
+/* ─── RESPONSE CURVE ─── */
+canvas#response {
+  width: 100%;
+  height: 90px;
+  display: block;
+  border-radius: 10px;
+  background: #040a0a;
+  border: 1px solid var(--border);
+  margin-top: 10px;
+}
+
+/* ─── CONTROL CARDS ─── */
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  transition: border-color 0.2s;
+}
+
+.card:hover {
+  border-color: var(--dim);
+}
+
+.card-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-label::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  opacity: 0.6;
+}
+
+/* ─── FILTER TYPE SELECTOR ─── */
+.filter-types {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.ft-btn {
+  padding: 9px 6px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.14s;
+  text-align: center;
+}
+
+.ft-btn:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: rgba(0,229,200,0.05);
+}
+
+.ft-btn.active {
+  border-color: var(--teal);
+  color: var(--bg);
+  background: var(--teal);
+  box-shadow: 0 0 16px rgba(0,229,200,0.3);
+}
+
+/* ─── SLIDERS ─── */
+.param {
+  margin-bottom: 14px;
+}
+
+.param:last-child { margin-bottom: 0; }
+
+.param-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 7px;
+}
+
+.param-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.03em;
+}
+
+.param-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--teal);
+  min-width: 60px;
+  text-align: right;
+}
+
+input[type=range] {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--surface2);
+  outline: none;
+  cursor: pointer;
+  position: relative;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--teal);
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0,229,200,0.4);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+input[type=range]:hover::-webkit-slider-thumb,
+input[type=range]:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+  box-shadow: 0 0 20px rgba(0,229,200,0.6);
+}
+
+input[type=range]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--teal);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 10px rgba(0,229,200,0.4);
+}
+
+/* Slider fill track */
+input[type=range].teal-fill {
+  background: linear-gradient(to right, var(--teal) var(--pct, 0%), var(--surface2) var(--pct, 0%));
+}
+
+input[type=range].coral-fill {
+  background: linear-gradient(to right, var(--coral) var(--pct, 0%), var(--surface2) var(--pct, 0%));
+}
+
+input[type=range].gold-fill {
+  background: linear-gradient(to right, var(--gold) var(--pct, 0%), var(--surface2) var(--pct, 0%));
+}
+
+/* ─── PLAY / SWEEP BUTTONS ─── */
+.transport {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.play-btn {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.14s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.play-btn:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: rgba(0,229,200,0.06);
+  box-shadow: 0 0 20px rgba(0,229,200,0.12);
+}
+
+.play-btn:active {
+  transform: scale(0.97);
+}
+
+.play-btn.playing {
+  border-color: var(--teal);
+  color: var(--bg);
+  background: var(--teal);
+  box-shadow: 0 0 28px rgba(0,229,200,0.35);
+}
+
+.sweep-btn {
+  flex: 1;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.14s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.sweep-btn:hover {
+  border-color: var(--coral);
+  color: var(--coral);
+  background: rgba(255,107,71,0.06);
+  box-shadow: 0 0 20px rgba(255,107,71,0.12);
+}
+
+.sweep-btn:active {
+  transform: scale(0.97);
+}
+
+.sweep-btn.sweeping {
+  border-color: var(--coral);
+  color: var(--bg);
+  background: var(--coral);
+  box-shadow: 0 0 28px rgba(255,107,71,0.35);
+}
+
+.stop-btn {
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.14s;
+}
+
+.stop-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.stop-btn:active { transform: scale(0.97); }
+
+/* ─── PRESETS ─── */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preset-chip {
+  padding: 8px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-dim);
+  transition: all 0.12s;
+  letter-spacing: 0.04em;
+}
+
+.preset-chip:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: rgba(0,229,200,0.05);
+}
+
+.preset-chip.active {
+  border-color: var(--gold);
+  color: var(--bg);
+  background: var(--gold);
+}
+
+/* ─── FREQUENCY READOUT ─── */
+.freq-bar-wrap {
+  margin-top: 10px;
+}
+
+.freq-bar-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.freq-bar-track {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  position: relative;
+}
+
+.freq-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(to right, var(--teal), var(--coral));
+  transition: width 0.05s linear;
+  width: 0%;
+}
+
+/* ─── SWEEP DIRECTION TOGGLE ─── */
+.sweep-dir {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dir-btn {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.12s;
+  text-align: center;
+}
+
+.dir-btn:hover { border-color: var(--dim); color: var(--text); }
+
+.dir-btn.active {
+  border-color: var(--coral);
+  color: var(--coral);
+  background: rgba(255,107,71,0.08);
+}
+
+/* ─── SCOPE LEGEND ─── */
+.scope-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 6px;
+}
+
+.legend-item {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* ─── ABOUT CARD ─── */
+.about {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 20px;
+}
+
+.about-title {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.about-text {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-dim);
+}
+
+.about-text strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ─── STATUS ─── */
+.status {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--teal);
+  letter-spacing: 0.1em;
+  text-align: center;
+  min-height: 14px;
+}
+
+@media (max-width: 600px) {
+  .row { grid-template-columns: 1fr; }
+  .filter-types { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Sweep<em>Lab</em></div>
+  <div class="tagline">Filter Sweep Generator · Web Audio API</div>
+</header>
+
+<main>
+
+  <!-- Oscilloscope -->
+  <div class="display-wrap">
+    <div class="scope-label">Oscilloscope — Audio Waveform</div>
+    <canvas id="scope"></canvas>
+    <div class="scope-legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background: var(--teal);"></div>
+        Input signal
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background: var(--coral);"></div>
+        Filtered output
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Response -->
+  <div class="display-wrap">
+    <div class="scope-label">Filter Frequency Response</div>
+    <canvas id="response"></canvas>
+  </div>
+
+  <!-- Controls Row -->
+  <div class="row">
+
+    <!-- Filter Engine -->
+    <div class="card">
+      <div class="card-label">Filter Type</div>
+      <div class="filter-types" id="filterTypes">
+        <button class="ft-btn active" data-type="lowpass">LP</button>
+        <button class="ft-btn" data-type="highpass">HP</button>
+        <button class="ft-btn" data-type="bandpass">BP</button>
+        <button class="ft-btn" data-type="notch">NT</button>
+      </div>
+
+      <div class="param">
+        <div class="param-header">
+          <span class="param-name">Cutoff Frequency</span>
+          <span class="param-value" id="cutoffVal">2.0 kHz</span>
+        </div>
+        <input type="range" id="cutoff" class="teal-fill" min="20" max="18000" value="2000" step="1">
+      </div>
+
+      <div class="param">
+        <div class="param-header">
+          <span class="param-name">Resonance (Q)</span>
+          <span class="param-value" id="resVal">1.0</span>
+        </div>
+        <input type="range" id="resonance" class="coral-fill" min="0.1" max="25" value="1" step="0.1">
+      </div>
+
+      <div class="transport">
+        <button class="play-btn" id="playBtn">▶ Play Tone</button>
+        <button class="stop-btn" id="stopBtn">■</button>
+      </div>
+    </div>
+
+    <!-- Sweep Engine -->
+    <div class="card">
+      <div class="card-label">Sweep Parameters</div>
+
+      <div class="param">
+        <div class="param-header">
+          <span class="param-name">Sweep Range Lo</span>
+          <span class="param-value" id="sweepLoVal">80 Hz</span>
+        </div>
+        <input type="range" id="sweepLo" class="teal-fill" min="20" max="18000" value="80" step="1">
+      </div>
+
+      <div class="param">
+        <div class="param-header">
+          <span class="param-name">Sweep Range Hi</span>
+          <span class="param-value" id="sweepHiVal">8.0 kHz</span>
+        </div>
+        <input type="range" id="sweepHi" class="teal-fill" min="20" max="18000" value="8000" step="1">
+      </div>
+
+      <div class="param">
+        <div class="param-header">
+          <span class="param-name">Sweep Speed</span>
+          <span class="param-value" id="speedVal">2.0 s</span>
+        </div>
+        <input type="range" id="sweepSpeed" class="gold-fill" min="0.5" max="8" value="2" step="0.1">
+      </div>
+
+      <div class="sweep-dir">
+        <button class="dir-btn active" data-dir="up">↑ Up</button>
+        <button class="dir-btn" data-dir="down">↓ Down</button>
+        <button class="dir-btn" data-dir="updown">↕ Up/Down</button>
+      </div>
+
+      <div class="transport">
+        <button class="sweep-btn" id="sweepBtn">⟳ Sweep</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Presets -->
+  <div class="card">
+    <div class="card-label">Quick Presets</div>
+    <div class="presets" id="presets">
+      <button class="preset-chip" data-preset="dubstep-wobble">Dubstep Wobble</button>
+      <button class="preset-chip" data-preset="acid-squelch">Acid Squelch</button>
+      <button class="preset-chip" data-preset="phat-kick">Phat Kick</button>
+      <button class="preset-chip" data-preset="deep-house">Deep House Pad</button>
+      <button class="preset-chip" data-preset="vocal-rider">Vocal Rider</button>
+      <button class="preset-chip" data-preset="cinematic">Cinematic Rise</button>
+    </div>
+  </div>
+
+  <!-- Info -->
+  <div class="about">
+    <div class="about-title">How to use</div>
+    <div class="about-text">
+      <strong>Play Tone</strong> — hold to hear a steady sine wave through the filter.
+      Adjust cutoff and resonance to shape the sound in real time.<br>
+      <strong>Sweep</strong> — automate the cutoff frequency up/down for that classic
+      filter-sweep sound. Set lo/hi bounds and speed.<br>
+      <strong>Presets</strong> — one-click filter shapes for common deep house and electronic music patterns.
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+</main>
+
+<script>
+'use strict';
+
+// ─── WEB AUDIO SETUP ────────────────────────────────────────
+let audioCtx = null;
+let oscillator = null;
+let filterNode = null;
+let analyserIn = null;
+let analyserOut = null;
+let gainNode = null;
+let isPlaying = false;
+let isSweeping = false;
+let sweepRafId = null;
+let sweepStartTime = 0;
+let sweepDirection = 1; // 1=up, -1=down, 0=updown
+let sweepPingPong = 1;
+
+// ─── DOM REFS ────────────────────────────────────────────────
+const scopeCanvas = document.getElementById('scope');
+const scopeCtx = scopeCanvas.getContext('2d');
+const respCanvas = document.getElementById('response');
+const respCtx = respCanvas.getContext('2d');
+
+const cutoffSlider = document.getElementById('cutoff');
+const resonanceSlider = document.getElementById('resonance');
+const sweepLoSlider = document.getElementById('sweepLo');
+const sweepHiSlider = document.getElementById('sweepHi');
+const sweepSpeedSlider = document.getElementById('sweepSpeed');
+
+const cutoffVal = document.getElementById('cutoffVal');
+const resVal = document.getElementById('resVal');
+const sweepLoVal = document.getElementById('sweepLoVal');
+const sweepHiVal = document.getElementById('sweepHiVal');
+const speedVal = document.getElementById('speedVal');
+
+const playBtn = document.getElementById('playBtn');
+const stopBtn = document.getElementById('stopBtn');
+const sweepBtn = document.getElementById('sweepBtn');
+const statusEl = document.getElementById('status');
+
+// ─── SLIDER FILL HELPER ─────────────────────────────────────
+function updateSliderFill(slider, cls) {
+  const min = parseFloat(slider.min);
+  const max = parseFloat(slider.max);
+  const val = parseFloat(slider.value);
+  const pct = ((val - min) / (max - min)) * 100;
+  // Use CSS custom property for the fill
+  slider.style.setProperty('--pct', pct + '%');
+}
+
+function hzStr(hz) {
+  if (hz >= 1000) return (hz / 1000).toFixed(1) + ' kHz';
+  return Math.round(hz) + ' Hz';
+}
+
+function updateDisplays() {
+  cutoffVal.textContent = hzStr(parseFloat(cutoffSlider.value));
+  resVal.textContent = parseFloat(resonanceSlider.value).toFixed(1);
+  sweepLoVal.textContent = hzStr(parseFloat(sweepLoSlider.value));
+  sweepHiVal.textContent = hzStr(parseFloat(sweepHiSlider.value));
+  speedVal.textContent = parseFloat(sweepSpeedSlider.value).toFixed(1) + ' s';
+  updateSliderFill(cutoffSlider, 'teal-fill');
+  updateSliderFill(resonanceSlider, 'coral-fill');
+  updateSliderFill(sweepLoSlider, 'teal-fill');
+  updateSliderFill(sweepHiSlider, 'teal-fill');
+  updateSliderFill(sweepSpeedSlider, 'gold-fill');
+}
+
+// ─── CANVAS SIZING ──────────────────────────────────────────
+function sizeCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  return { w: rect.width, h: rect.height };
+}
+
+// ─── AUDIO INIT ─────────────────────────────────────────────
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  analyserIn = audioCtx.createAnalyser();
+  analyserIn.fftSize = 2048;
+  analyserIn.smoothingTimeConstant = 0.3;
+
+  analyserOut = audioCtx.createAnalyser();
+  analyserOut.fftSize = 2048;
+  analyserOut.smoothingTimeConstant = 0.3;
+
+  gainNode = audioCtx.createGain();
+  gainNode.gain.value = 0.5;
+
+  filterNode = audioCtx.createBiquadFilter();
+  filterNode.type = 'lowpass';
+  filterNode.frequency.value = parseFloat(cutoffSlider.value);
+  filterNode.Q.value = parseFloat(resonanceSlider.value);
+
+  // Connect chain: source → filter → analyserOut → gain → destination
+  // We also tap the signal before the filter for the "input" display
+  filterNode.connect(analyserOut);
+  analyserOut.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  statusEl.textContent = 'Web Audio ready';
+  setTimeout(() => { statusEl.textContent = ''; }, 2000);
+}
+
+// ─── PLAY / STOP ────────────────────────────────────────────
+function startTone() {
+  initAudio();
+  if (oscillator) { oscillator.disconnect(); }
+  oscillator = audioCtx.createOscillator();
+  oscillator.type = 'sawtooth';
+  oscillator.frequency.value = 110; // A2 — warm bass range
+
+  const dryGain = audioCtx.createGain();
+  dryGain.gain.value = 0.3;
+  oscillator.connect(dryGain);
+  dryGain.connect(analyserIn);
+  oscillator.connect(filterNode);
+  oscillator.start();
+  isPlaying = true;
+  playBtn.classList.add('playing');
+  playBtn.textContent = '■ Playing';
+}
+
+function stopTone() {
+  if (oscillator) {
+    oscillator.stop();
+    oscillator.disconnect();
+    oscillator = null;
+  }
+  isPlaying = false;
+  playBtn.classList.remove('playing');
+  playBtn.textContent = '▶ Play Tone';
+}
+
+// ─── FILTER TYPE ────────────────────────────────────────────
+document.getElementById('filterTypes').addEventListener('click', e => {
+  const btn = e.target.closest('.ft-btn');
+  if (!btn) return;
+  document.querySelectorAll('.ft-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (filterNode) {
+    filterNode.type = btn.dataset.type;
+  }
+  drawResponseCurve();
+});
+
+// ─── SWEEP DIRECTION ────────────────────────────────────────
+document.querySelectorAll('.dir-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const dir = btn.dataset.dir;
+    if (dir === 'up') { sweepDirection = 1; sweepPingPong = 1; }
+    else if (dir === 'down') { sweepDirection = -1; sweepPingPong = -1; }
+    else { sweepDirection = 1; sweepPingPong = 0; }
+  });
+});
+
+// ─── SWEEP ───────────────────────────────────────────────────
+function startSweep() {
+  if (!isPlaying) startTone();
+  isSweeping = true;
+  sweepBtn.classList.add('sweeping');
+  sweepBtn.textContent = '⟳ Sweeping…';
+  sweepStartTime = performance.now();
+  runSweep();
+}
+
+function stopSweep() {
+  isSweeping = false;
+  sweepBtn.classList.remove('sweeping');
+  sweepBtn.textContent = '⟳ Sweep';
+  if (sweepRafId) { cancelAnimationFrame(sweepRafId); sweepRafId = null; }
+}
+
+function runSweep() {
+  if (!isSweeping) return;
+
+  const elapsed = (performance.now() - sweepStartTime) / 1000;
+  const speed = parseFloat(sweepSpeedSlider.value); // seconds for full range
+  const lo = parseFloat(sweepLoSlider.value);
+  const hi = parseFloat(sweepHiSlider.value);
+
+  // Progress 0→1→0
+  let progress = (elapsed % (speed * 2)) / speed;
+  if (progress > 1) progress = 2 - progress;
+
+  // Apply direction
+  let t;
+  if (sweepPingPong === 0) {
+    // updown — progress already ping-pongs
+    t = lo + progress * (hi - lo);
+  } else {
+    t = lo + progress * (hi - lo);
+    if (sweepPingPong === -1) t = hi - progress * (hi - lo);
+  }
+
+  if (filterNode) {
+    filterNode.frequency.setValueAtTime(Math.max(20, Math.min(18000, t)), audioCtx.currentTime);
+  }
+  cutoffSlider.value = Math.max(20, Math.min(18000, t));
+
+  sweepRafId = requestAnimationFrame(runSweep);
+}
+
+// ─── PRESETS ────────────────────────────────────────────────
+const presets = {
+  'dubstep-wobble': { type: 'lowpass', cutoff: 400, resonance: 12, sweepLo: 80, sweepHi: 3000, speed: 0.8, dir: 'updown' },
+  'acid-squelch':   { type: 'lowpass', cutoff: 200, resonance: 18, sweepLo: 100, sweepHi: 4000, speed: 1.2, dir: 'up' },
+  'phat-kick':     { type: 'lowpass', cutoff: 300, resonance: 6,  sweepLo: 60,  sweepHi: 150,  speed: 4.0, dir: 'down' },
+  'deep-house':    { type: 'lowpass', cutoff: 1200, resonance: 3,  sweepLo: 200, sweepHi: 6000, speed: 3.0, dir: 'up' },
+  'vocal-rider':   { type: 'bandpass', cutoff: 2000, resonance: 2, sweepLo: 500, sweepHi: 8000, speed: 2.5, dir: 'down' },
+  'cinematic':     { type: 'lowpass', cutoff: 150, resonance: 8,  sweepLo: 80,  sweepHi: 12000, speed: 6.0, dir: 'up' },
+};
+
+document.getElementById('presets').addEventListener('click', e => {
+  const chip = e.target.closest('.preset-chip');
+  if (!chip) return;
+
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+
+  const p = presets[chip.dataset.preset];
+  if (!p) return;
+
+  // Apply preset
+  cutoffSlider.value = p.cutoff;
+  resonanceSlider.value = p.resonance;
+  sweepLoSlider.value = p.sweepLo;
+  sweepHiSlider.value = p.sweepHi;
+  sweepSpeedSlider.value = p.speed;
+
+  // Update filter type
+  document.querySelectorAll('.ft-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === p.type);
+  });
+  if (filterNode) filterNode.type = p.type;
+
+  // Update direction
+  document.querySelectorAll('.dir-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.dir === p.dir);
+  });
+  if (p.dir === 'up') { sweepDirection = 1; sweepPingPong = 1; }
+  else if (p.dir === 'down') { sweepDirection = -1; sweepPingPong = -1; }
+  else { sweepDirection = 1; sweepPingPong = 0; }
+
+  updateDisplays();
+  drawResponseCurve();
+  statusEl.textContent = `Preset: ${chip.textContent}`;
+  setTimeout(() => { statusEl.textContent = ''; }, 2000);
+});
+
+// ─── OSCILLOSCOPE DRAW ─────────────────────────────────────
+function drawScope() {
+  const { w, h } = sizeCanvas(scopeCanvas);
+  scopeCtx.clearRect(0, 0, w, h);
+
+  const drawWave = (analyser, color) => {
+    if (!analyser) return;
+    const bufLen = analyser.frequencyBinCount;
+    const dataArr = new Uint8Array(bufLen);
+    analyser.getByteTimeDomainData(dataArr);
+
+    scopeCtx.strokeStyle = color;
+    scopeCtx.lineWidth = 1.5;
+    scopeCtx.beginPath();
+
+    const sliceW = w / bufLen;
+    let x = 0;
+    for (let i = 0; i < bufLen; i++) {
+      const v = dataArr[i] / 128.0;
+      const y = (v * h) / 2;
+      if (i === 0) scopeCtx.moveTo(x, y);
+      else scopeCtx.lineTo(x, y);
+      x += sliceW;
+    }
+    scopeCtx.stroke();
+  };
+
+  // Center line
+  scopeCtx.strokeStyle = 'rgba(0,229,200,0.08)';
+  scopeCtx.lineWidth = 1;
+  scopeCtx.beginPath();
+  scopeCtx.moveTo(0, h/2);
+  scopeCtx.lineTo(w, h/2);
+  scopeCtx.stroke();
+
+  drawWave(analyserIn, 'rgba(0,229,200,0.5)');
+  drawWave(analyserOut, '#ff6b47');
+
+  requestAnimationFrame(drawScope);
+}
+
+// ─── FREQUENCY RESPONSE CURVE DRAW ─────────────────────────
+function drawResponseCurve() {
+  const { w, h } = sizeCanvas(respCanvas);
+  respCtx.clearRect(0, 0, w, h);
+
+  if (!filterNode) return;
+
+  const type = document.querySelector('.ft-btn.active')?.dataset.type || 'lowpass';
+  const freq = parseFloat(cutoffSlider.value);
+  const q = parseFloat(resonanceSlider.value);
+
+  // Draw grid
+  respCtx.strokeStyle = 'rgba(0,229,200,0.06)';
+  respCtx.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    const y = (h / 4) * i;
+    respCtx.beginPath();
+    respCtx.moveTo(0, y);
+    respCtx.lineTo(w, y);
+    respCtx.stroke();
+  }
+  for (let i = 1; i < 8; i++) {
+    const x = (w / 8) * i;
+    respCtx.beginPath();
+    respCtx.moveTo(x, 0);
+    respCtx.lineTo(x, h);
+    respCtx.stroke();
+  }
+
+  // Draw theoretical filter response curve
+  respCtx.beginPath();
+  respCtx.strokeStyle = '#ff6b47';
+  respCtx.lineWidth = 2;
+
+  const minDb = -60;
+  const maxDb = 10;
+
+  for (let px = 0; px < w; px++) {
+    const freqNorm = Math.log10(20) + (px / w) * (Math.log10(18000) - Math.log10(20));
+    const f = Math.pow(10, freqNorm);
+
+    let gainDb;
+    const w0 = 2 * Math.PI * f;
+    const w1 = 2 * Math.PI * freq;
+    const Q = q;
+
+    if (type === 'lowpass') {
+      if (f < freq * 0.5) gainDb = maxDb;
+      else if (f < freq * 2) gainDb = maxDb - 3 * Math.log10(f / (freq * 0.5));
+      else if (f < freq * 10) gainDb = -20 * Math.log10(Math.sqrt(1 + Math.pow(f / freq, 4)));
+      else gainDb = minDb;
+
+      // Approximate LP response with resonance peak
+      const ratio = f / freq;
+      if (ratio > 0.5 && ratio < 2) {
+        const peak = Q / 10;
+        const dist = Math.abs(ratio - 1);
+        if (dist < 0.3) gainDb = Math.max(gainDb, maxDb + peak * (1 - dist / 0.3));
+      }
+      if (f < freq) gainDb = maxDb - 3 * Math.log10(Math.max(0.01, 1 - f/freq + 0.01));
+    } else if (type === 'highpass') {
+      if (f > freq * 2) gainDb = maxDb;
+      else if (f > freq * 0.5) gainDb = maxDb - 3 * Math.log10(Math.max(0.01, 1 - freq/f * 0.5));
+      else gainDb = minDb;
+    } else if (type === 'bandpass') {
+      const bw = freq / Q;
+      if (Math.abs(f - freq) < bw / 2) gainDb = maxDb;
+      else gainDb = minDb;
+    } else {
+      // notch
+      const bw = freq / Q;
+      if (Math.abs(f - freq) < bw / 4) gainDb = minDb;
+      else gainDb = maxDb;
+    }
+
+    const y = h - ((gainDb - minDb) / (maxDb - minDb)) * h;
+    if (px === 0) respCtx.moveTo(px, y);
+    else respCtx.lineTo(px, y);
+  }
+  respCtx.stroke();
+
+  // Cutoff marker
+  const cutoffNorm = (Math.log10(Math.min(17999, freq)) - Math.log10(20)) / (Math.log10(18000) - Math.log10(20));
+  const cx = cutoffNorm * w;
+  respCtx.strokeStyle = 'rgba(0,229,200,0.3)';
+  respCtx.lineWidth = 1;
+  respCtx.setLineDash([4, 4]);
+  respCtx.beginPath();
+  respCtx.moveTo(cx, 0);
+  respCtx.lineTo(cx, h);
+  respCtx.stroke();
+  respCtx.setLineDash([]);
+
+  // Cutoff label
+  respCtx.fillStyle = 'rgba(0,229,200,0.6)';
+  respCtx.font = '9px Space Mono, monospace';
+  respCtx.fillText(hzStr(freq), Math.min(w - 50, Math.max(5, cx - 20)), 12);
+}
+
+// ─── EVENT LISTENERS ────────────────────────────────────────
+playBtn.addEventListener('click', () => {
+  if (isPlaying) { stopTone(); stopSweep(); }
+  else startTone();
+});
+
+stopBtn.addEventListener('click', () => { stopTone(); stopSweep(); });
+
+sweepBtn.addEventListener('click', () => {
+  if (isSweeping) { stopSweep(); }
+  else startSweep();
+});
+
+cutoffSlider.addEventListener('input', () => {
+  const val = parseFloat(cutoffSlider.value);
+  if (filterNode) filterNode.frequency.setValueAtTime(val, audioCtx?.currentTime || 0);
+  updateDisplays();
+  drawResponseCurve();
+});
+
+resonanceSlider.addEventListener('input', () => {
+  const val = parseFloat(resonanceSlider.value);
+  if (filterNode) filterNode.Q.setValueAtTime(val, audioCtx?.currentTime || 0);
+  updateDisplays();
+  drawResponseCurve();
+});
+
+sweepLoSlider.addEventListener('input', () => {
+  if (parseFloat(sweepLoSlider.value) > parseFloat(sweepHiSlider.value)) {
+    sweepHiSlider.value = sweepLoSlider.value;
+  }
+  updateDisplays();
+});
+
+sweepHiSlider.addEventListener('input', () => {
+  if (parseFloat(sweepHiSlider.value) < parseFloat(sweepLoSlider.value)) {
+    sweepLoSlider.value = sweepHiSlider.value;
+  }
+  updateDisplays();
+});
+
+sweepSpeedSlider.addEventListener('input', updateDisplays);
+
+// Filter type buttons also update the response curve
+document.getElementById('filterTypes').addEventListener('click', drawResponseCurve);
+
+// ─── KEYBOARD SHORTCUTS ─────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && e.target === document.body) {
+    e.preventDefault();
+    if (isPlaying) { stopTone(); stopSweep(); }
+    else startTone();
+  }
+});
+
+// ─── RESIZE ─────────────────────────────────────────────────
+window.addEventListener('resize', () => {
+  sizeCanvas(scopeCanvas);
+  sizeCanvas(respCanvas);
+  drawResponseCurve();
+});
+
+// ─── INIT ───────────────────────────────────────────────────
+updateDisplays();
+drawScope();
+drawResponseCurve();
+
+// Auto-size canvases on load
+setTimeout(() => {
+  sizeCanvas(scopeCanvas);
+  sizeCanvas(respCanvas);
+  drawResponseCurve();
+}, 100);
+</script>
+</body>
+</html>
