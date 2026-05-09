@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BPM Sync Calculator — Deep House</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+
+  :root {
+    --bg: #07070d;
+    --surface: #0d0d16;
+    --surface2: #13131e;
+    --border: #1c1c2a;
+    --cyan: #00e5ff;
+    --amber: #ffb300;
+    --magenta: #ff00aa;
+    --mint: #00ff88;
+    --text: #e0e0f0;
+    --dim: #252540;
+    --text-dim: #5a5a7a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #090910 0%, var(--bg) 100%);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cyan);
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .key-hints {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+  }
+
+  .key-hints kbd {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 6px;
+    color: var(--text-dim);
+  }
+
+  /* ─── MAIN ─── */
+  main {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ─── BPM HERO ─── */
+  .bpm-hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .bpm-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, rgba(0, 229, 255, 0.05) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .bpm-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .bpm-input-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 20px;
+  }
+
+  .bpm-input {
+    background: var(--surface2);
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    color: var(--cyan);
+    font-family: 'Space Mono', monospace;
+    font-size: 64px;
+    font-weight: 700;
+    padding: 8px 20px;
+    width: 200px;
+    text-align: center;
+    outline: none;
+    transition: border-color 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .bpm-input:focus { border-color: var(--cyan); box-shadow: 0 0 24px rgba(0,229,255,0.2); }
+  .bpm-input:hover { border-color: var(--cyan); }
+
+  .tap-btn {
+    padding: 18px 28px;
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.12s;
+    margin-left: 12px;
+  }
+
+  .tap-btn:hover {
+    border-color: var(--amber);
+    color: var(--amber);
+    background: rgba(255, 179, 0, 0.06);
+    box-shadow: 0 0 18px rgba(255, 179, 0, 0.15);
+  }
+
+  .tap-btn:active, .tap-btn.tapped {
+    border-color: var(--amber);
+    color: #fff;
+    background: rgba(255, 179, 0, 0.2);
+    box-shadow: 0 0 28px rgba(255, 179, 0, 0.35);
+    transform: scale(0.97);
+  }
+
+  /* Beat indicator */
+  .beat-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .beat-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--dim);
+    transition: all 0.08s;
+  }
+
+  .beat-dot.active {
+    background: var(--cyan);
+    box-shadow: 0 0 14px var(--cyan);
+  }
+
+  /* ─── NOTE TABLE ─── */
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .note-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .note-row {
+    display: grid;
+    grid-template-columns: 140px 1fr 100px;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+    cursor: pointer;
+  }
+
+  .note-row:last-child { border-bottom: none; }
+  .note-row:hover { background: rgba(0, 229, 255, 0.03); }
+
+  .note-row.header {
+    background: var(--surface2);
+    cursor: default;
+  }
+
+  .note-row.header:hover { background: var(--surface2); }
+
+  .note-cell {
+    padding: 12px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+  }
+
+  .note-cell.note-name {
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.05em;
+  }
+
+  .note-cell.note-type {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+  }
+
+  .note-cell.ms-value {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 0.05em;
+    text-align: right;
+    padding-right: 20px;
+    position: relative;
+  }
+
+  .note-cell.ms-value .copied {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 9px;
+    color: var(--mint);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .note-cell.ms-value.show-copied .copied { opacity: 1; }
+
+  /* ─── TIMELINE ─── */
+  .timeline-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+
+  canvas#timeline {
+    width: 100%;
+    height: 80px;
+    display: block;
+    border-radius: 8px;
+  }
+
+  .timeline-labels {
+    display: flex;
+    margin-top: 6px;
+  }
+
+  .tl-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: var(--dim);
+    flex: 1;
+    text-align: center;
+  }
+
+  /* ─── LFO CALC ─── */
+  .lfo-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+  }
+
+  .lfo-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+  }
+
+  .lfo-card:hover {
+    border-color: var(--magenta);
+    background: rgba(255, 0, 170, 0.05);
+  }
+
+  .lfo-card .lfo-hz {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--magenta);
+    margin-bottom: 4px;
+  }
+
+  .lfo-card .lfo-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+  }
+
+  /* ─── SWING ─── */
+  .swing-info {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px 20px;
+  }
+
+  .swing-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .swing-row:last-child { border-bottom: none; }
+
+  .swing-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .swing-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--amber);
+  }
+
+  /* ─── STATUS ─── */
+  .status {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--mint);
+    letter-spacing: 0.1em;
+    text-align: center;
+    min-height: 14px;
+  }
+
+  /* ─── COMMON DELAYS ─── */
+  .common-delays {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .delay-chip {
+    padding: 8px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    transition: all 0.12s;
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+
+  .delay-chip:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0, 229, 255, 0.06);
+  }
+
+  .delay-chip strong { color: var(--cyan); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">BPM SYNC CALC</div>
+  <div class="header-right">
+    <span class="key-hints"><kbd>Space</kbd> tap tempo &nbsp; <kbd>C</kbd> copy all</span>
+  </div>
+</header>
+
+<main>
+  <!-- BPM Hero -->
+  <div class="bpm-hero">
+    <div class="bpm-label">Beats Per Minute</div>
+    <div class="bpm-input-wrap">
+      <input class="bpm-input" type="number" id="bpmInput" value="124" min="60" max="200" />
+      <button class="tap-btn" id="tapBtn">TAP</button>
+    </div>
+    <div class="beat-row" id="beatRow">
+      <div class="beat-dot" data-beat="0"></div>
+      <div class="beat-dot" data-beat="1"></div>
+      <div class="beat-dot" data-beat="2"></div>
+      <div class="beat-dot" data-beat="3"></div>
+    </div>
+  </div>
+
+  <!-- Note Divisions -->
+  <div>
+    <div class="section-label">Note Division Delays (ms)</div>
+    <div class="note-table" id="noteTable"></div>
+  </div>
+
+  <!-- Timeline -->
+  <div>
+    <div class="section-label">Visual Timeline — 1 bar (4 beats)</div>
+    <div class="timeline-wrap">
+      <canvas id="timeline"></canvas>
+      <div class="timeline-labels">
+        <div class="tl-label">0</div>
+        <div class="tl-label">⅛</div>
+        <div class="tl-label">¼</div>
+        <div class="tl-label">⅜</div>
+        <div class="tl-label">½</div>
+        <div class="tl-label">⅝</div>
+        <div class="tl-label">¾</div>
+        <div class="tl-label">⅞</div>
+        <div class="tl-label">1 bar</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LFO Rates -->
+  <div>
+    <div class="section-label">LFO Rates (Hz) — click to copy</div>
+    <div class="lfo-grid" id="lfoGrid"></div>
+  </div>
+
+  <!-- Swing Calculator -->
+  <div>
+    <div class="section-label">Swing / Groove</div>
+    <div class="swing-info" id="swingInfo"></div>
+  </div>
+
+  <!-- Common Delay Presets -->
+  <div>
+    <div class="section-label">Quick Copy — Classic Delays</div>
+    <div class="common-delays" id="commonDelays"></div>
+  </div>
+
+  <div class="status" id="statusBar"></div>
+</main>
+
+<script>
+'use strict';
+
+// ─── STATE ────────────────────────────────────────────────────
+let bpm = 124;
+let tapTimes = [];
+let tapTimeout = null;
+let audioCtx = null;
+
+// ─── TAP TEMPO ────────────────────────────────────────────────
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function handleTap() {
+  if (!audioCtx) initAudio();
+  const now = Date.now();
+  tapTimes.push(now);
+
+  // Keep last 8 taps
+  if (tapTimes.length > 8) tapTimes.shift();
+
+  // Clear old taps after 3s of inactivity
+  clearTimeout(tapTimeout);
+  tapTimeout = setTimeout(() => { tapTimes = []; }, 3000);
+
+  // Calculate BPM from tap intervals
+  if (tapTimes.length >= 2) {
+    const intervals = [];
+    for (let i = 1; i < tapTimes.length; i++) {
+      intervals.push(tapTimes[i] - tapTimes[i - 1]);
+    }
+    const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    const newBpm = Math.round(60000 / avgInterval);
+    if (newBpm >= 60 && newBpm <= 200) {
+      bpm = newBpm;
+      document.getElementById('bpmInput').value = bpm;
+      updateAll();
+    }
+  }
+
+  // Visual feedback
+  const btn = document.getElementById('tapBtn');
+  btn.classList.add('tapped');
+  setTimeout(() => btn.classList.remove('tapped'), 150);
+
+  // Beat dots
+  const beatIdx = tapTimes.length % 4;
+  document.querySelectorAll('.beat-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === beatIdx);
+  });
+}
+
+// ─── CALCULATIONS ─────────────────────────────────────────────
+function calcMs(beats) {
+  return (beats / bpm) * 60000;
+}
+
+function calcHz(beats) {
+  return bpm / (60 * beats);
+}
+
+// ─── BUILD NOTE TABLE ─────────────────────────────────────────
+const NOTE_DEFS = [
+  { label: '1/1', sub: 'whole', beats: 4 },
+  { label: '1/2', sub: 'half', beats: 2 },
+  { label: '1/4', sub: 'quarter', beats: 1 },
+  { label: '1/8', sub: 'eighth', beats: 0.5 },
+  { label: '1/16', sub: 'sixteenth', beats: 0.25 },
+  { label: '1/32', sub: 'thirty-second', beats: 0.125 },
+  { label: 'd. 1/8', sub: 'dotted eighth', beats: 0.75 },
+  { label: 'd. 1/4', sub: 'dotted quarter', beats: 1.5 },
+  { label: 'd. 1/2', sub: 'dotted half', beats: 3 },
+  { label: 't. 1/8', sub: 'triplet eighth', beats: 1/3 },
+  { label: 't. 1/16', sub: 'triplet sixteenth', beats: 1/6 },
+  { label: '1/8 T', sub: 'eighth triplet', beats: 1/3 },
+  { label: '1/4 T', sub: 'quarter triplet', beats: 2/3 },
+];
+
+const LFO_DEFS = [
+  { label: '1/4 note', beats: 1 },
+  { label: '1/8 note', beats: 0.5 },
+  { label: '1/16 note', beats: 0.25 },
+  { label: '1/32 note', beats: 0.125 },
+  { label: 'd. 1/4', beats: 1.5 },
+  { label: 'd. 1/8', beats: 0.75 },
+];
+
+const COMMON_DELAYS = [
+  { label: 'Slapback', ms: 83 },
+  { label: 'Rockabilly', ms: 166 },
+  { label: 'Quarter', ms: null, beats: 1 },
+  { label: 'Eighth', ms: null, beats: 0.5 },
+  { label: 'Dotted 8th', ms: null, beats: 0.75 },
+  { label: 'Sixteenth', ms: null, beats: 0.25 },
+  { label: '1/2 note', ms: null, beats: 2 },
+  { label: 'Long verb', ms: null, beats: 4 },
+];
+
+function buildNoteTable() {
+  const table = document.getElementById('noteTable');
+  table.innerHTML = '';
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'note-row header';
+  header.innerHTML = `
+    <div class="note-cell note-name" style="font-size:9px;color:var(--dim)">NOTE</div>
+    <div class="note-cell note-type" style="font-size:9px;color:var(--dim);padding-left:0">SUBDIVISION</div>
+    <div class="note-cell ms-value" style="font-size:9px;color:var(--dim);padding-right:20px">MS</div>
+  `;
+  table.appendChild(header);
+
+  NOTE_DEFS.forEach(def => {
+    const ms = calcMs(def.beats);
+    const row = document.createElement('div');
+    row.className = 'note-row';
+    row.innerHTML = `
+      <div class="note-cell note-name">${def.label}</div>
+      <div class="note-cell note-type">${def.sub}</div>
+      <div class="note-cell ms-value">${ms.toFixed(2)} ms<span class="copied">✓</span></div>
+    `;
+    row.addEventListener('click', () => {
+      copyToClipboard(ms.toFixed(2));
+      row.querySelector('.ms-value').classList.add('show-copied');
+      setTimeout(() => row.querySelector('.ms-value').classList.remove('show-copied'), 1200);
+      setStatus(`Copied: ${ms.toFixed(2)} ms`);
+    });
+    table.appendChild(row);
+  });
+}
+
+function buildLfoGrid() {
+  const grid = document.getElementById('lfoGrid');
+  grid.innerHTML = '';
+  LFO_DEFS.forEach(def => {
+    const hz = calcHz(def.beats);
+    const card = document.createElement('div');
+    card.className = 'lfo-card';
+    card.innerHTML = `
+      <div class="lfo-hz">${hz.toFixed(3)} Hz</div>
+      <div class="lfo-label">${def.label}</div>
+    `;
+    card.addEventListener('click', () => {
+      copyToClipboard(hz.toFixed(3));
+      setStatus(`Copied: ${hz.toFixed(3)} Hz`);
+    });
+    grid.appendChild(card);
+  });
+}
+
+function buildSwingInfo() {
+  const container = document.getElementById('swingInfo');
+  container.innerHTML = '';
+
+  const swings = [
+    { label: 'Straight 1/8', eighth: 0.5, sixteenth: 0.25 },
+    { label: 'Swing 50%', eighth: 0.5, sixteenth: 0.375 },
+    { label: 'Swing 60%', eighth: 0.55, sixteenth: 0.4 },
+    { label: 'Swing 66% (shuffle)', eighth: 0.666, sixteenth: 0.5 },
+    { label: 'Deep Swing 75%', eighth: 0.75, sixteenth: 0.625 },
+  ];
+
+  swings.forEach(sw => {
+    const row = document.createElement('div');
+    row.className = 'swing-row';
+
+    const ms8 = calcMs(sw.eighth);
+    const ms16 = calcMs(sw.sixteenth);
+
+    row.innerHTML = `
+      <div class="swing-label">${sw.label}</div>
+      <div class="swing-value">⅛: ${ms8.toFixed(1)}ms &nbsp;|&nbsp; 1/16: ${ms16.toFixed(1)}ms</div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function buildCommonDelays() {
+  const container = document.getElementById('commonDelays');
+  container.innerHTML = '';
+  COMMON_DELAYS.forEach(d => {
+    const chip = document.createElement('div');
+    chip.className = 'delay-chip';
+    const ms = d.ms !== null ? d.ms : calcMs(d.beats);
+    chip.innerHTML = `<strong>${ms.toFixed(1)}ms</strong> — ${d.label}`;
+    chip.addEventListener('click', () => {
+      copyToClipboard(ms.toFixed(1));
+      setStatus(`Copied: ${ms.toFixed(1)} ms`);
+    });
+    container.appendChild(chip);
+  });
+}
+
+// ─── TIMELINE ─────────────────────────────────────────────────
+function drawTimeline() {
+  const canvas = document.getElementById('timeline');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth * 2;
+  const H = canvas.offsetHeight * 2;
+  canvas.width = W;
+  canvas.height = H;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Beat grid
+  const beatWidth = W / 4;
+  ctx.strokeStyle = 'rgba(30,30,64,0.8)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const x = i * beatWidth;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+
+  // Subdivisions (1/16)
+  ctx.strokeStyle = 'rgba(20,20,40,0.6)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 16; i++) {
+    const x = (i / 16) * W;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.stroke();
+  }
+
+  // Markers for different note values
+  const markers = [
+    { beats: 0.5, color: 'rgba(0,229,255,0.5)', label: '⅛' },
+    { beats: 0.25, color: 'rgba(0,255,136,0.4)', label: '1/16' },
+    { beats: 0.75, color: 'rgba(255,0,170,0.4)', label: 'd.⅛' },
+  ];
+
+  const barMs = calcMs(4);
+  const totalMs = barMs;
+
+  markers.forEach(m => {
+    const x = (m.beats / 4) * W;
+    ctx.fillStyle = m.color;
+    ctx.fillRect(x - 1, 0, 2, H);
+  });
+
+  // Label
+  ctx.font = `${14}px 'Space Mono', monospace`;
+  ctx.fillStyle = 'rgba(90,90,122,0.8)';
+  ctx.textAlign = 'center';
+  ctx.fillText(`${bpm} BPM — 1 bar = ${barMs.toFixed(1)}ms`, W / 2, H / 2 + 5);
+}
+
+// ─── UPDATE ALL ───────────────────────────────────────────────
+function updateAll() {
+  buildNoteTable();
+  buildLfoGrid();
+  buildSwingInfo();
+  buildCommonDelays();
+  drawTimeline();
+}
+
+// ─── CLIPBOARD ─────────────────────────────────────────────────
+function copyToClipboard(text) {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text);
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+}
+
+function setStatus(msg) {
+  const el = document.getElementById('statusBar');
+  el.textContent = msg;
+  if (msg) setTimeout(() => { el.textContent = ''; }, 2000);
+}
+
+// ─── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  updateAll();
+
+  document.getElementById('tapBtn').addEventListener('click', handleTap);
+
+  document.getElementById('bpmInput').addEventListener('input', () => {
+    const val = parseInt(document.getElementById('bpmInput').value);
+    if (val >= 60 && val <= 200) {
+      bpm = val;
+      updateAll();
+    }
+  });
+
+  document.getElementById('bpmInput').addEventListener('change', () => {
+    bpm = Math.max(60, Math.min(200, parseInt(document.getElementById('bpmInput').value) || 124));
+    document.getElementById('bpmInput').value = bpm;
+    updateAll();
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); handleTap(); }
+    if (e.key.toLowerCase() === 'c') {
+      // Copy all ms values
+      const allMs = NOTE_DEFS.map(d => `${d.label}: ${calcMs(d.beats).toFixed(2)}ms`).join('\n');
+      copyToClipboard(allMs);
+      setStatus('All delay times copied!');
+    }
+  });
+
+  window.addEventListener('resize', () => drawTimeline());
+});
+</script>
+</body>
+</html>
