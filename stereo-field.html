@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stereo Field — Pan Visualizer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Outfit:wght@300;500;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a12;
+    --surface: #12121e;
+    --border: #1e1e32;
+    --cyan: #00e5cc;
+    --purple: #7c5cff;
+    --pink: #ff3cac;
+    --text: #d0d0f0;
+    --muted: #5a5a80;
+    --glow-cyan: 0 0 20px rgba(0,229,204,0.4);
+    --glow-purple: 0 0 20px rgba(124,92,255,0.4);
+    --glow-pink: 0 0 20px rgba(255,60,172,0.4);
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .app {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    height: 100vh;
+    padding: 20px;
+    gap: 16px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+  }
+
+  .logo {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .tagline {
+    font-size: 0.72rem;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    min-height: 0;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--purple), transparent);
+    opacity: 0.5;
+  }
+
+  .panel-title {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .field-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 340px;
+    aspect-ratio: 1;
+  }
+
+  #fieldCanvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  .meters {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .meter-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .meter-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  .meter-track {
+    width: 100%;
+    height: 120px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .meter-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 0%;
+    transition: height 0.05s ease-out;
+    border-radius: 4px;
+  }
+
+  .meter-fill.l { background: linear-gradient(to top, var(--cyan), var(--purple)); box-shadow: var(--glow-cyan); }
+  .meter-fill.r { background: linear-gradient(to top, var(--purple), var(--pink)); box-shadow: var(--glow-pink); }
+
+  .meter-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .pan-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+    width: 100%;
+    max-width: 340px;
+  }
+
+  .pan-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    min-width: 24px;
+    text-align: center;
+  }
+
+  .pan-track {
+    flex: 1;
+    height: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .pan-thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px;
+    height: 18px;
+    background: var(--cyan);
+    border-radius: 50%;
+    box-shadow: var(--glow-cyan);
+    transition: left 0.05s, background 0.2s;
+    cursor: grab;
+  }
+
+  .pan-thumb:active { cursor: grabbing; }
+
+  #spectrumCanvas {
+    width: 100%;
+    flex: 1;
+    max-height: 260px;
+    border-radius: 8px;
+  }
+
+  .freq-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 400px;
+    margin-top: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+  }
+
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 0 4px;
+  }
+
+  .ctrl-group {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .ctrl-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .ctrl-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--cyan);
+    min-width: 36px;
+  }
+
+  input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    background: var(--cyan);
+    border-radius: 50%;
+    box-shadow: var(--glow-cyan);
+    cursor: grab;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:active {
+    transform: scale(1.3);
+    cursor: grabbing;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn:hover {
+    border-color: var(--purple);
+    box-shadow: var(--glow-purple);
+    color: #fff;
+  }
+
+  .btn.active {
+    background: var(--purple);
+    border-color: var(--purple);
+    color: #fff;
+    box-shadow: var(--glow-purple);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  #waveCanvas {
+    width: 100%;
+    height: 60px;
+    border-radius: 8px;
+    margin-top: 12px;
+  }
+
+  .wave-labels {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  @media (max-width: 700px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .app { padding: 12px; }
+    .controls { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <div class="logo">Stereo Field</div>
+      <div class="tagline">Pan Position Visualizer</div>
+    </div>
+    <div class="btn-row">
+      <button class="btn" id="noiseBtn">Noise</button>
+      <button class="btn active" id="toneBtn">Tone</button>
+      <button class="btn" id="playBtn">&#9654; Play</button>
+    </div>
+  </header>
+
+  <div class="main-grid">
+    <div class="panel">
+      <div class="panel-title">Stereo Field</div>
+      <div class="field-wrap">
+        <canvas id="fieldCanvas"></canvas>
+      </div>
+
+      <div class="pan-row">
+        <span class="pan-label">L</span>
+        <div class="pan-track" id="panTrack">
+          <div class="pan-thumb" id="panThumb" style="left:50%"></div>
+        </div>
+        <span class="pan-label">R</span>
+      </div>
+
+      <div class="meters">
+        <div class="meter-col">
+          <div class="meter-label">LEFT</div>
+          <div class="meter-track">
+            <div class="meter-fill l" id="meterL"></div>
+          </div>
+          <div class="meter-value" id="valL">0</div>
+        </div>
+        <div class="meter-col">
+          <div class="meter-label">RIGHT</div>
+          <div class="meter-track">
+            <div class="meter-fill r" id="meterR"></div>
+          </div>
+          <div class="meter-value" id="valR">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Spectrum Analyzer</div>
+      <canvas id="spectrumCanvas"></canvas>
+      <div class="freq-labels">
+        <span>20Hz</span><span>100Hz</span><span>1kHz</span><span>5kHz</span><span>20kHz</span>
+      </div>
+      <canvas id="waveCanvas"></canvas>
+      <div class="wave-labels">
+        <span>Time</span><span>Waveform</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="ctrl-group">
+      <span class="ctrl-label">Pan</span>
+      <input type="range" id="panKnob" min="-1" max="1" step="0.01" value="0">
+      <span class="ctrl-value" id="panVal">0</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Freq</span>
+      <input type="range" id="freqKnob" min="80" max="2000" step="1" value="440">
+      <span class="ctrl-value" id="freqVal">440</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Volume</span>
+      <input type="range" id="volKnob" min="0" max="1" step="0.01" value="0.4">
+      <span class="ctrl-value" id="volVal">40</span>
+    </div>
+    <div class="ctrl-group">
+      <span class="ctrl-label">Width</span>
+      <input type="range" id="widthKnob" min="0" max="1" step="0.01" value="1">
+      <span class="ctrl-value" id="widthVal">100</span>
+    </div>
+  </div>
+</div>
+
+<script>
+const fieldCanvas = document.getElementById('fieldCanvas');
+const fc = fieldCanvas.getContext('2d');
+const spectrumCanvas = document.getElementById('spectrumCanvas');
+const sc = spectrumCanvas.getContext('2d');
+const waveCanvas = document.getElementById('waveCanvas');
+const wc = waveCanvas.getContext('2d');
+
+let W, H, CX, CY;
+let pan = 0;
+let freq = 440;
+let volume = 0.4;
+let stereoWidth = 1;
+let isPlaying = false;
+let mode = 'tone';
+let isDragging = false;
+let analyserL, analyserR, masterGain, osc, noiseNode;
+let audioCtx = null;
+let rafId = null;
+let timeData = new Float32Array(256);
+let stereoPanner = null;
+let sourceNode = null;
+
+function resize() {
+  const wrap = fieldCanvas.parentElement;
+  const size = Math.min(wrap.clientWidth, wrap.clientHeight, 340);
+  fieldCanvas.width = size * window.devicePixelRatio;
+  fieldCanvas.height = size * window.devicePixelRatio;
+  fieldCanvas.style.width = size + 'px';
+  fieldCanvas.style.height = size + 'px';
+  fc.scale(window.devicePixelRatio, window.devicePixelRatio);
+  W = size; H = size; CX = W/2; CY = H/2;
+
+  spectrumCanvas.width = spectrumCanvas.parentElement.clientWidth * window.devicePixelRatio;
+  spectrumCanvas.height = 260 * window.devicePixelRatio;
+  sc.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  waveCanvas.width = waveCanvas.parentElement.clientWidth * window.devicePixelRatio;
+  waveCanvas.height = 60 * window.devicePixelRatio;
+  wc.scale(window.devicePixelRatio, window.devicePixelRatio);
+}
+
+function drawField() {
+  fc.clearRect(0, 0, W, H);
+
+  const rings = [0.3, 0.55, 0.78, 1.0];
+  rings.forEach((r, i) => {
+    fc.beginPath();
+    fc.arc(CX, CY, CX * r, 0, Math.PI * 2);
+    fc.strokeStyle = i === 3 ? '#7c5cff' : '#1e1e32';
+    fc.lineWidth = i === 3 ? 1.5 : 1;
+    fc.stroke();
+  });
+
+  fc.beginPath();
+  fc.moveTo(CX, CY - CX); fc.lineTo(CX, CY + CX);
+  fc.moveTo(CX - CX, CY); fc.lineTo(CX + CX, CY);
+  fc.strokeStyle = '#1a1a2a'; fc.lineWidth = 1; fc.stroke();
+
+  fc.font = '11px Space Mono, monospace';
+  fc.fillStyle = '#00e5cc'; fc.textAlign = 'center';
+  fc.fillText('L', 16, CY + 4);
+  fc.fillStyle = '#ff3cac'; fc.fillText('R', W - 16, CY + 4);
+  fc.fillStyle = '#5a5a80'; fc.textAlign = 'left'; fc.fillText('C', CX + 4, 20);
+  fc.fillText('C', CX + 4, H - 6);
+
+  const dotX = CX + (pan * CX * 0.85);
+  const dotY = CY;
+  const dotR = 12;
+
+  const grad = fc.createRadialGradient(dotX, dotY, 0, dotX, dotY, dotR * 2.5);
+  grad.addColorStop(0, 'rgba(0, 229, 204, 0.6)');
+  grad.addColorStop(0.5, 'rgba(124, 92, 255, 0.2)');
+  grad.addColorStop(1, 'transparent');
+  fc.beginPath();
+  fc.arc(dotX, dotY, dotR * 2.5, 0, Math.PI * 2);
+  fc.fillStyle = grad;
+  fc.fill();
+
+  fc.beginPath();
+  fc.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+  fc.fillStyle = '#00e5cc';
+  fc.shadowColor = '#00e5cc';
+  fc.shadowBlur = 20;
+  fc.fill();
+  fc.shadowBlur = 0;
+
+  fc.beginPath();
+  fc.arc(dotX, dotY, dotR + 4, 0, Math.PI * 2);
+  fc.strokeStyle = 'rgba(0, 229, 204, 0.4)';
+  fc.lineWidth = 2;
+  fc.stroke();
+}
+
+function drawSpectrum() {
+  const sw = spectrumCanvas.width / window.devicePixelRatio;
+  const sh = spectrumCanvas.height / window.devicePixelRatio;
+  sc.clearRect(0, 0, sw, sh);
+
+  if (!analyserL || !isPlaying) {
+    sc.fillStyle = '#1e1e32';
+    sc.fillRect(0, sh * 0.85, sw, 2);
+    return;
+  }
+
+  const buf = new Uint8Array(analyserL.frequencyBinCount);
+  analyserL.getByteFrequencyData(buf);
+
+  const bars = 64;
+  const bw = sw / bars;
+  for (let i = 0; i < bars; i++) {
+    const bin = Math.floor(Math.pow(i / bars, 1.5) * buf.length * 0.7);
+    const amp = buf[bin] / 255;
+    const bh = amp * sh * 0.9;
+    const h = Math.max(1, bh);
+    const x = i * bw;
+    const y = sh - h;
+
+    const r = Math.round(0 + amp * 124);
+    const g = Math.round(229 - amp * 137);
+    const b = Math.round(204 - amp * 32);
+
+    sc.fillStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+    sc.shadowColor = 'rgba(' + r + ',' + g + ',' + b + ',0.5)';
+    sc.shadowBlur = 6;
+    sc.fillRect(x + 1, y, bw - 2, h);
+  }
+  sc.shadowBlur = 0;
+}
+
+function drawWaveform() {
+  const ww = waveCanvas.width / window.devicePixelRatio;
+  const wh = waveCanvas.height / window.devicePixelRatio;
+  wc.clearRect(0, 0, ww, wh);
+
+  wc.fillStyle = '#12121e';
+  wc.fillRect(0, 0, ww, wh);
+
+  if (!analyserL || !isPlaying) {
+    wc.beginPath();
+    wc.moveTo(0, wh/2); wc.lineTo(ww, wh/2);
+    wc.strokeStyle = '#2a2a3a'; wc.lineWidth = 1; wc.stroke();
+    return;
+  }
+
+  analyserL.getFloatTimeDomainData(timeData);
+
+  wc.beginPath();
+  const sliceW = ww / timeData.length;
+  let x = 0;
+  for (let i = 0; i < timeData.length; i++) {
+    const y = (1 - (timeData[i] + 1) / 2) * wh;
+    if (i === 0) wc.moveTo(x, y);
+    else wc.lineTo(x, y);
+    x += sliceW;
+  }
+
+  const grad = wc.createLinearGradient(0, 0, 0, wh);
+  grad.addColorStop(0, '#7c5cff');
+  grad.addColorStop(0.5, '#00e5cc');
+  grad.addColorStop(1, '#7c5cff');
+  wc.strokeStyle = grad;
+  wc.lineWidth = 1.5;
+  wc.shadowColor = '#00e5cc';
+  wc.shadowBlur = 8;
+  wc.stroke();
+  wc.shadowBlur = 0;
+}
+
+function updateMeters() {
+  if (!analyserL || !isPlaying) {
+    document.getElementById('meterL').style.height = '0%';
+    document.getElementById('meterR').style.height = '0%';
+    document.getElementById('valL').textContent = '0';
+    document.getElementById('valR').textContent = '0';
+    return;
+  }
+
+  const bufL = new Uint8Array(analyserL.frequencyBinCount);
+  const bufR = new Uint8Array(analyserR.frequencyBinCount);
+  analyserL.getByteFrequencyData(bufL);
+  analyserR.getByteFrequencyData(bufR);
+
+  let sumL = 0, sumR = 0;
+  for (let i = 0; i < bufL.length; i++) { sumL += bufL[i]; sumR += bufR[i]; }
+  const avgL = sumL / bufL.length / 255;
+  const avgR = sumR / bufR.length / 255;
+  const tilt = pan;
+
+  const effL = avgL * (1 - Math.max(0, tilt));
+  const effR = avgR * (1 + Math.min(0, tilt));
+
+  document.getElementById('meterL').style.height = (effL * 100).toFixed(0) + '%';
+  document.getElementById('meterR').style.height = (effR * 100).toFixed(0) + '%';
+  document.getElementById('valL').textContent = Math.round(effL * 100);
+  document.getElementById('valR').textContent = Math.round(effR * 100);
+}
+
+function loop() {
+  drawField();
+  drawSpectrum();
+  drawWaveform();
+  updateMeters();
+  rafId = requestAnimationFrame(loop);
+}
+
+function buildAudioChain() {
+  if (audioCtx) {
+    try { audioCtx.close(); } catch(e) {}
+  }
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  analyserL = audioCtx.createAnalyser();
+  analyserL.fftSize = 256;
+  analyserR = audioCtx.createAnalyser();
+  analyserR.fftSize = 256;
+
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = volume;
+
+  stereoPanner = audioCtx.createStereoPanner();
+  stereoPanner.pan.value = pan;
+
+  // Source -> masterGain -> stereoPanner -> analyserL -> destination
+  //                                              -> analyserR -> destination (copy for metering)
+  masterGain.connect(stereoPanner);
+  stereoPanner.connect(analyserL);
+  analyserL.connect(audioCtx.destination);
+
+  // For metering we mirror the signal
+  masterGain.connect(analyserR);
+  analyserR.connect(audioCtx.destination);
+}
+
+function startTone() {
+  buildAudioChain();
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+  osc = audioCtx.createOscillator();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  sourceNode = osc;
+  osc.connect(masterGain);
+  osc.start();
+  isPlaying = true;
+  document.getElementById('playBtn').textContent = '⏸ Pause';
+  document.getElementById('playBtn').classList.add('active');
+}
+
+function startNoise() {
+  buildAudioChain();
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+  const bufSize = 2 * audioCtx.sampleRate;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = Math.random() * 2 - 1;
+  noiseNode = audioCtx.createBufferSource();
+  noiseNode.buffer = buf;
+  noiseNode.loop = true;
+  sourceNode = noiseNode;
+  noiseNode.connect(masterGain);
+  noiseNode.start();
+  isPlaying = true;
+  document.getElementById('playBtn').textContent = '⏸ Pause';
+  document.getElementById('playBtn').classList.add('active');
+}
+
+function stopAudio() {
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} sourceNode = null; }
+  osc = null; noiseNode = null;
+  isPlaying = false;
+  document.getElementById('playBtn').textContent = '▶ Play';
+  document.getElementById('playBtn').classList.remove('active');
+}
+
+function updatePan() {
+  pan = parseFloat(document.getElementById('panKnob').value);
+  document.getElementById('panVal').textContent = pan.toFixed(2);
+  document.getElementById('panThumb').style.left = ((pan + 1) / 2 * 100).toFixed(1) + '%';
+  if (stereoPanner) stereoPanner.pan.value = pan;
+}
+
+function updateFreq() {
+  freq = parseFloat(document.getElementById('freqKnob').value);
+  document.getElementById('freqVal').textContent = Math.round(freq);
+  if (osc) osc.frequency.value = freq;
+}
+
+function updateVol() {
+  volume = parseFloat(document.getElementById('volKnob').value);
+  document.getElementById('volVal').textContent = Math.round(volume * 100);
+  if (masterGain) masterGain.gain.value = volume;
+}
+
+function updateWidth() {
+  stereoWidth = parseFloat(document.getElementById('widthKnob').value);
+  document.getElementById('widthVal').textContent = Math.round(stereoWidth * 100);
+}
+
+const panTrack = document.getElementById('panTrack');
+const panThumb = document.getElementById('panThumb');
+
+function panFromEvent(e) {
+  const rect = panTrack.getBoundingClientRect();
+  let x;
+  if (e.touches) x = e.touches[0].clientX - rect.left;
+  else x = e.clientX - rect.left;
+  const ratio = Math.max(0, Math.min(1, x / rect.width));
+  pan = ratio * 2 - 1;
+  pan = Math.round(pan * 100) / 100;
+  document.getElementById('panKnob').value = pan;
+  document.getElementById('panVal').textContent = pan.toFixed(2);
+  panThumb.style.left = ((pan + 1) / 2 * 100).toFixed(1) + '%';
+  if (stereoPanner) stereoPanner.pan.value = pan;
+}
+
+panTrack.addEventListener('mousedown', e => { isDragging = true; panFromEvent(e); });
+window.addEventListener('mousemove', e => { if (isDragging) panFromEvent(e); });
+window.addEventListener('mouseup', () => { isDragging = false; });
+panTrack.addEventListener('touchstart', e => { isDragging = true; panFromEvent(e); e.preventDefault(); }, { passive: false });
+window.addEventListener('touchmove', e => { if (isDragging) panFromEvent(e); }, { passive: false });
+window.addEventListener('touchend', () => { isDragging = false; });
+
+fieldCanvas.addEventListener('mousedown', e => {
+  const rect = fieldCanvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const x = (e.clientX - rect.left) * scaleX;
+  pan = (x - CX) / (CX * 0.85);
+  pan = Math.max(-1, Math.min(1, Math.round(pan * 100) / 100));
+  document.getElementById('panKnob').value = pan;
+  document.getElementById('panVal').textContent = pan.toFixed(2);
+  panThumb.style.left = ((pan + 1) / 2 * 100).toFixed(1) + '%';
+  if (stereoPanner) stereoPanner.pan.value = pan;
+});
+
+fieldCanvas.addEventListener('touchstart', e => {
+  const touch = e.touches[0];
+  const rect = fieldCanvas.getBoundingClientRect();
+  const scaleX = W / rect.width;
+  const x = (touch.clientX - rect.left) * scaleX;
+  pan = (x - CX) / (CX * 0.85);
+  pan = Math.max(-1, Math.min(1, Math.round(pan * 100) / 100));
+  document.getElementById('panKnob').value = pan;
+  document.getElementById('panVal').textContent = pan.toFixed(2);
+  panThumb.style.left = ((pan + 1) / 2 * 100).toFixed(1) + '%';
+  if (stereoPanner) stereoPanner.pan.value = pan;
+  e.preventDefault();
+}, { passive: false });
+
+document.getElementById('toneBtn').addEventListener('click', () => {
+  mode = 'tone';
+  document.getElementById('toneBtn').classList.add('active');
+  document.getElementById('noiseBtn').classList.remove('active');
+  if (isPlaying) { stopAudio(); startTone(); }
+});
+
+document.getElementById('noiseBtn').addEventListener('click', () => {
+  mode = 'noise';
+  document.getElementById('noiseBtn').classList.add('active');
+  document.getElementById('toneBtn').classList.remove('active');
+  if (isPlaying) { stopAudio(); startNoise(); }
+});
+
+document.getElementById('playBtn').addEventListener('click', () => {
+  if (isPlaying) { stopAudio(); }
+  else { if (mode === 'tone') startTone(); else startNoise(); }
+});
+
+document.getElementById('panKnob').addEventListener('input', updatePan);
+document.getElementById('freqKnob').addEventListener('input', updateFreq);
+document.getElementById('volKnob').addEventListener('input', updateVol);
+document.getElementById('widthKnob').addEventListener('input', updateWidth);
+
+resize();
+window.addEventListener('resize', resize);
+loop();
+</script>
+</body>
+</html>
