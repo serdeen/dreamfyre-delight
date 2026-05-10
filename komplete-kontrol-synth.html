@@ -287,23 +287,74 @@
       key.addEventListener('touchend', release);
     });
 
-    piano.addEventListener('touchmove', function(e) {
+    // Track touch state for swipe continuity
+    var activeTouches = new Map(); // touchId → noteNum
+
+    piano.addEventListener('touchstart', function(e) {
       e.preventDefault();
       for (var t = 0; t < e.changedTouches.length; t++) {
-        var el = document.elementFromPoint(e.changedTouches[t].clientX, e.changedTouches[t].clientY);
+        var touch = e.changedTouches[t];
+        var el = document.elementFromPoint(touch.clientX, touch.clientY);
         if (el && el.classList.contains('key')) {
           var n = parseInt(el.dataset.noteNum);
+          activeTouches.set(touch.identifier, n);
           initAudio();
-          if (!activeNotes.has(n)) playNote(n, 0.7);
-          piano.querySelectorAll('.key.pressed').forEach(function(k) { if (k !== el) k.classList.remove('pressed'); });
+          playNote(n, 0.8);
           el.classList.add('pressed');
         }
       }
     }, { passive: false });
 
-    piano.addEventListener('touchend', function() {
-      piano.querySelectorAll('.key.pressed').forEach(function(k) { k.classList.remove('pressed'); });
-    });
+    piano.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      for (var t = 0; t < e.changedTouches.length; t++) {
+        var touch = e.changedTouches[t];
+        var el = document.elementFromPoint(touch.clientX, touch.clientY);
+        var prev = activeTouches.get(touch.identifier);
+        if (el && el.classList.contains('key')) {
+          var n = parseInt(el.dataset.noteNum);
+          if (n !== prev) {
+            // Swiped to a different key — stop old, start new
+            if (prev !== undefined) {
+              stopNote(prev);
+              // Remove pressed from the previous key element
+              piano.querySelectorAll('.key.pressed').forEach(function(k) {
+                if (parseInt(k.dataset.noteNum) === prev) k.classList.remove('pressed');
+              });
+            }
+            activeTouches.set(touch.identifier, n);
+            initAudio();
+            playNote(n, 0.8);
+            el.classList.add('pressed');
+          }
+        } else {
+          // Finger landed on nothing — stop the note
+          if (prev !== undefined) {
+            stopNote(prev);
+            piano.querySelectorAll('.key.pressed').forEach(function(k) {
+              if (parseInt(k.dataset.noteNum) === prev) k.classList.remove('pressed');
+            });
+            activeTouches.delete(touch.identifier);
+          }
+        }
+      }
+    }, { passive: false });
+
+    var touchEndHandler = function(e) {
+      for (var t = 0; t < e.changedTouches.length; t++) {
+        var touch = e.changedTouches[t];
+        var prev = activeTouches.get(touch.identifier);
+        if (prev !== undefined) {
+          stopNote(prev);
+          piano.querySelectorAll('.key.pressed').forEach(function(k) {
+            if (parseInt(k.dataset.noteNum) === prev) k.classList.remove('pressed');
+          });
+          activeTouches.delete(touch.identifier);
+        }
+      }
+    };
+    piano.addEventListener('touchend', touchEndHandler);
+    piano.addEventListener('touchcancel', touchEndHandler);
   }
 
   // ── ADSR CANVAS ──
