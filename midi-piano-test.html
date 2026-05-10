@@ -8,71 +8,46 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #0d0d14;
+    --surface: #1a1a2e;
     --cyan: #00f5d4;
     --magenta: #f72585;
     --gold: #ffd93d;
     --text: #e0e0e0;
     --dim: #555570;
-    --dragon-bg: #1a1a2e;
   }
   body {
     background: var(--bg);
     color: var(--text);
     font-family: 'Courier New', monospace;
-    min-height: 100vh;
+    height: 100vh;
     display: flex;
     flex-direction: column;
     user-select: none;
     overflow: hidden;
   }
-  /* ── DRAGON HEADER ── */
-  .dragon-header {
-    background: var(--dragon-bg);
+  .header {
+    background: var(--surface);
     border-bottom: 2px solid var(--magenta);
-    padding: 8px 12px;
+    padding: 6px 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-shrink: 0;
   }
-  .dragon-title {
+  .dragon-title { display: flex; align-items: center; gap: 8px; }
+  .dragon-logo { width: 24px; height: 24px; image-rendering: pixelated; }
+  .dragon-title span { font-size: 0.8rem; color: var(--cyan); letter-spacing: 0.1em; text-transform: uppercase; }
+  .midi-badge { background: var(--bg); border: 1px solid var(--dim); border-radius: 4px; padding: 3px 8px; font-size: 0.6rem; color: var(--dim); }
+  .midi-badge.connected { border-color: var(--cyan); color: var(--cyan); }
+  .controls {
+    background: var(--surface);
     display: flex;
     align-items: center;
-    gap: 8px;
-  }
-  .dragon-logo {
-    width: 28px;
-    height: 28px;
-    image-rendering: pixelated;
-  }
-  .dragon-title span {
-    font-size: 0.85rem;
-    color: var(--cyan);
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-  }
-  .midi-badge {
-    background: var(--bg);
-    border: 1px solid var(--dim);
-    border-radius: 4px;
-    padding: 4px 8px;
-    font-size: 0.65rem;
-    color: var(--dim);
-  }
-  .midi-badge.connected {
-    border-color: var(--cyan);
-    color: var(--cyan);
-  }
-  /* ── CONTROLS (upper third) ── */
-  .controls {
-    display: flex;
-    gap: 6px;
-    padding: 10px 8px;
-    background: var(--dragon-bg);
-    border-bottom: 1px solid var(--border);
-    flex-wrap: wrap;
     justify-content: center;
+    gap: 8px;
+    padding: 8px;
     flex-shrink: 0;
+    flex-wrap: wrap;
   }
   .ctrl-btn {
     background: #22223a;
@@ -80,132 +55,50 @@
     border-radius: 6px;
     color: var(--text);
     font-family: 'Courier New', monospace;
-    font-size: 0.7rem;
-    padding: 8px 10px;
+    font-size: 0.75rem;
     cursor: pointer;
-    min-width: 52px;
-    min-height: 44px;
-    text-align: center;
-    transition: border-color 0.1s, background 0.1s;
+    min-width: 60px;
+    min-height: 48px;
+    padding: 6px 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 2px;
+    transition: border-color 0.1s;
   }
-  .ctrl-btn:active, .ctrl-btn.pressed {
-    background: var(--cyan);
-    color: var(--bg);
-    border-color: var(--cyan);
-  }
-  .ctrl-btn .label {
-    font-size: 0.5rem;
-    color: var(--dim);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  .ctrl-btn .value {
-    font-size: 0.8rem;
-    color: var(--cyan);
-    font-weight: bold;
-  }
-  .ctrl-btn.pressed .value {
-    color: var(--bg);
-  }
+  .ctrl-btn:active, .ctrl-btn.pressed { background: var(--cyan); color: var(--bg); border-color: var(--cyan); }
+  .ctrl-btn .lbl { font-size: 0.5rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .ctrl-btn .val { font-size: 0.85rem; color: var(--cyan); font-weight: bold; }
+  .ctrl-btn.pressed .val { color: var(--bg); }
   select.ctrl-select {
     background: #22223a;
     border: 2px solid #3a3a5a;
     border-radius: 6px;
     color: var(--text);
     font-family: 'Courier New', monospace;
-    font-size: 0.75rem;
-    padding: 8px 6px;
-    min-height: 44px;
+    font-size: 0.8rem;
+    padding: 6px 8px;
+    min-height: 48px;
     cursor: pointer;
-    min-width: 80px;
+    min-width: 90px;
   }
-  .border { border-color: #3a3a5a; }
-  /* ── PIANO (fills most of screen) ── */
-  .piano-wrap {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    padding: 0;
-    min-height: 0;
-  }
-  .piano {
-    flex: 1;
-    display: flex;
-    position: relative;
-    min-height: 0;
-  }
-  .key {
-    position: relative;
-    cursor: pointer;
-    border-radius: 0 0 4px 4px;
-    transition: filter 0.06s;
-    flex-shrink: 0;
-  }
-  .key.white {
-    height: 100%;
-    background: linear-gradient(180deg, #f0f0e8 0%, #c8c8bc 100%);
-    border: 1px solid #999;
-    border-top: none;
-    margin-right: -1px;
-    z-index: 1;
-  }
-  .key.white:active, .key.white.pressed {
-    background: linear-gradient(180deg, #e0e0d0 0%, #aaa 100%);
-    filter: brightness(0.9);
-  }
-  .key.black {
-    position: absolute;
-    border: 1px solid #000;
-    border-top: none;
-    z-index: 2;
-    border-radius: 0 0 3px 3px;
-    cursor: pointer;
-  }
-  .key.black:active, .key.black.pressed {
-    background: linear-gradient(180deg, #555 0%, #222 100%);
-    filter: brightness(1.3);
-  }
-  /* Pixel art dragon on black keys */
-  .key.black::after {
-    content: '';
-    position: absolute;
-    bottom: 4px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 4px;
-    height: 4px;
-    background: var(--magenta);
-    border-radius: 1px;
-    opacity: 0.4;
-  }
-  /* ── FOOTER LOG ── */
-  .log-bar {
-    background: #111122;
-    border-top: 2px solid #1e1e2e;
-    padding: 4px 8px;
-    font-size: 0.55rem;
-    color: var(--dim);
-    height: 28px;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-  }
-  .log-bar span { color: var(--cyan); }
+  .piano-wrap { height: calc(100vh / 3); display: flex; flex-direction: column; flex-shrink: 0; }
+  .piano { flex: 1; display: flex; position: relative; min-height: 0; }
+  .key { position: relative; cursor: pointer; border-radius: 0 0 4px 4px; transition: filter 0.06s; flex-shrink: 0; }
+  .key.white { height: 100%; background: linear-gradient(180deg, #f5f5f0 0%, #d0d0c4 100%); border: 1px solid #aaa; border-top: none; margin-right: -1px; z-index: 1; }
+  .key.white:active, .key.white.pressed { background: linear-gradient(180deg, #e0e0d5 0%, #b8b8a8 100%); filter: brightness(0.92); }
+  .key.black { position: absolute; background: linear-gradient(180deg, #2a2a2a 0%, #0a0a0a 100%); border: 1px solid #000; border-top: none; z-index: 2; border-radius: 0 0 3px 3px; }
+  .key.black:active, .key.black.pressed { background: linear-gradient(180deg, #444 0%, #1a1a1a 100%); filter: brightness(1.2); }
+  .footer { flex: 1; background: var(--bg); display: flex; align-items: center; justify-content: center; border-top: 1px solid #1e1e2e; }
+  .footer-text { font-size: 0.6rem; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .footer-text span { color: var(--magenta); }
 </style>
 </head>
 <body>
-
-<!-- DRAGON HEADER -->
-<div class="dragon-header">
+<div class="header">
   <div class="dragon-title">
-    <svg class="dragon-logo" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <!-- Pixel art dragon head -->
+    <svg class="dragon-logo" viewBox="0 0 16 16" fill="none">
       <rect x="4" y="2" width="2" height="2" fill="#f72585"/>
       <rect x="8" y="2" width="2" height="2" fill="#f72585"/>
       <rect x="2" y="4" width="10" height="6" fill="#00f5d4"/>
@@ -222,8 +115,6 @@
   </div>
   <div class="midi-badge" id="midi-status">No MIDI</div>
 </div>
-
-<!-- CONTROLS -->
 <div class="controls">
   <select class="ctrl-select" id="wave-select">
     <option value="sine">Sine</option>
@@ -231,77 +122,33 @@
     <option value="square">Square</option>
     <option value="sawtooth">Saw</option>
   </select>
-  <div class="ctrl-btn" id="oct-down">
-    <span class="label">Oct</span>
-    <span class="value">&#9660;</span>
-  </div>
-  <div class="ctrl-btn" id="oct-display">
-    <span class="label">Octave</span>
-    <span class="value" id="oct-val">0</span>
-  </div>
-  <div class="ctrl-btn" id="oct-up">
-    <span class="label">Oct</span>
-    <span class="value">&#9650;</span>
-  </div>
-  <div class="ctrl-btn" id="vol-btn">
-    <span class="label">Vol</span>
-    <span class="value" id="vol-val">60%</span>
-  </div>
-  <div class="ctrl-btn" id="atk-btn">
-    <span class="label">Atk</span>
-    <span class="value" id="atk-val">10ms</span>
-  </div>
-  <div class="ctrl-btn" id="rel-btn">
-    <span class="label">Rel</span>
-    <span class="value" id="rel-val">150ms</span>
-  </div>
+  <div class="ctrl-btn" id="oct-down"><span class="lbl">Oct</span><span class="val">&#9660;</span></div>
+  <div class="ctrl-btn" id="oct-display"><span class="lbl">Octave</span><span class="val" id="oct-val">0</span></div>
+  <div class="ctrl-btn" id="oct-up"><span class="lbl">Oct</span><span class="val">&#9650;</span></div>
+  <div class="ctrl-btn" id="vol-btn"><span class="lbl">Vol</span><span class="val" id="vol-val">60%</span></div>
+  <div class="ctrl-btn" id="atk-btn"><span class="lbl">Atk</span><span class="val" id="atk-val">10ms</span></div>
+  <div class="ctrl-btn" id="rel-btn"><span class="lbl">Rel</span><span class="val" id="rel-val">150ms</span></div>
 </div>
-
-<!-- PIANO -->
-<div class="piano-wrap">
-  <div class="piano" id="piano"></div>
-</div>
-
-<!-- LOG BAR -->
-<div class="log-bar" id="log-bar">Press a key...</div>
-
+<div class="piano-wrap"><div class="piano" id="piano"></div></div>
+<div class="footer"><div class="footer-text">Play with keys, <span>keyboard</span>, or <span>MIDI</span></div></div>
 <script>
 (function() {
   var NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-  var audioCtx = null;
-  var masterGain, compressor;
+  var audioCtx = null, masterGain, compressor;
   var activeNotes = new Map();
-  var currentWave = 'sine';
-  var octaveShift = 0;
-  var atkMs = 10, relMs = 150;
-  var vol = 0.6;
-  var logTimeout = null;
+  var currentWave = 'sine', octaveShift = 0, atkMs = 10, relMs = 150, vol = 0.6;
 
-  function showLog(msg) {
-    var el = document.getElementById('log-bar');
-    el.innerHTML = msg;
-    clearTimeout(logTimeout);
-    logTimeout = setTimeout(function() { el.innerHTML = 'Dragon Piano ready'; }, 2000);
-  }
-
-  function calcMidiFreq(noteNum) {
-    return 440 * Math.pow(2, (noteNum - 69 + octaveShift * 12) / 12);
-  }
-
+  function calcMidiFreq(n) { return 440 * Math.pow(2, (n - 69 + octaveShift * 12) / 12); }
   function initAudio() {
     if (audioCtx) return;
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioCtx.createGain();
     masterGain.gain.value = vol;
     compressor = audioCtx.createDynamicsCompressor();
-    compressor.threshold.value = -6;
-    compressor.ratio.value = 4;
-    compressor.knee.value = 3;
+    compressor.threshold.value = -6; compressor.ratio.value = 4; compressor.knee.value = 3;
     masterGain.connect(compressor);
     compressor.connect(audioCtx.destination);
-    showLog('<span>Audio on</span>');
   }
-
   function playNote(noteNum, velocity) {
     initAudio();
     if (activeNotes.has(noteNum)) return;
@@ -316,16 +163,11 @@
     noteGain.connect(masterGain);
     osc.start();
     activeNotes.set(noteNum, { osc: osc, noteGain: noteGain });
-    var n = NOTES[(noteNum + octaveShift * 12) % 12];
-    var oct = Math.floor((noteNum + octaveShift * 12) / 12);
-    showLog('<span>▶ ' + n + oct + '</span> vel:' + Math.round(velocity * 127));
   }
-
   function stopNote(noteNum) {
     var node = activeNotes.get(noteNum);
     if (!node) return;
-    var osc = node.osc;
-    var noteGain = node.noteGain;
+    var osc = node.osc, noteGain = node.noteGain;
     var now = audioCtx.currentTime;
     noteGain.gain.cancelScheduledValues(now);
     noteGain.gain.setValueAtTime(noteGain.gain.value, now);
@@ -333,12 +175,9 @@
     setTimeout(function() { try { osc.stop(); } catch(e) {} }, relMs + 50);
     activeNotes.delete(noteNum);
   }
-
   function buildPiano() {
     var piano = document.getElementById('piano');
-    var octaves = [3, 4];
-    var whiteCount = 14;
-
+    var octaves = [3, 4], whiteCount = 14;
     for (var o = 0; o < octaves.length; o++) {
       for (var i = 0; i < 12; i++) {
         var note = NOTES[i];
@@ -351,7 +190,6 @@
         }
       }
     }
-
     var offsets = { 'C#': 0.65, 'D#': 1.75, 'F#': 3.9, 'G#': 4.95, 'A#': 6.1 };
     for (var o = 0; o < octaves.length; o++) {
       for (var i = 0; i < 12; i++) {
@@ -365,11 +203,11 @@
           key.dataset.noteNum = noteNum;
           key.style.left = leftPct + '%';
           key.style.height = '60%';
+          key.style.width = (100 / whiteCount) * 0.65 + '%';
           piano.appendChild(key);
         }
       }
     }
-
     piano.querySelectorAll('.key').forEach(function(key) {
       var noteNum = parseInt(key.dataset.noteNum);
       var press = function(e) { e.preventDefault(); initAudio(); playNote(noteNum, 0.8); key.classList.add('pressed'); };
@@ -380,7 +218,6 @@
       key.addEventListener('touchstart', press, { passive: false });
       key.addEventListener('touchend', release);
     });
-
     piano.addEventListener('touchmove', function(e) {
       e.preventDefault();
       for (var t = 0; t < e.changedTouches.length; t++) {
@@ -394,116 +231,41 @@
         }
       }
     }, { passive: false });
-
-    piano.addEventListener('touchend', function(e) {
+    piano.addEventListener('touchend', function() {
       piano.querySelectorAll('.key.pressed').forEach(function(k) { k.classList.remove('pressed'); });
     });
   }
-
-  // MIDI — MUST use initMIDI() for wiring, no separate navigator.requestMIDIAccess call at bottom
   async function initMIDI() {
-    if (!navigator.requestMIDIAccess) {
-      showLog('MIDI not supported');
-      return;
-    }
+    if (!navigator.requestMIDIAccess) return;
     try {
       var midiAccess = await navigator.requestMIDIAccess({ sysex: false });
       midiAccess.inputs.forEach(function(input) { input.onmidimessage = handleMIDIMessage; });
-      midiAccess.onstatechange = function(e) {
-        if (e.port.state === 'connected') {
-          e.port.onmidimessage = handleMIDIMessage;
-        }
-      };
-    } catch(e) {
-      showLog('MIDI denied');
-    }
+      midiAccess.onstatechange = function(e) { if (e.port.state === 'connected') e.port.onmidimessage = handleMIDIMessage; };
+    } catch(e) {}
   }
-
   function handleMIDIMessage(event) {
-    var data = event.data;
-    var status = data[0];
-    var d1 = data[1];
-    var d2 = data[2];
-    var cmd = status & 0xf0;
-    var port = event.target;
+    var data = event.data, status = data[0], d1 = data[1], d2 = data[2];
+    var cmd = status & 0xf0, port = event.target;
     var isKK = port.name && port.name.toLowerCase().includes('komplete kontrol');
-
     if (cmd === 0x90 && d2 > 0) {
       playNote(d1, d2 / 127);
-      if (isKK) {
-        var el = document.getElementById('midi-status');
-        el.textContent = '🎹 ' + port.name;
-        el.classList.add('connected');
-      }
-    } else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) {
-      stopNote(d1);
-    }
+      if (isKK) { var el = document.getElementById('midi-status'); el.textContent = '🎹 ' + port.name; el.classList.add('connected'); }
+    } else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) { stopNote(d1); }
   }
-
-  // Controls
-  document.getElementById('wave-select').addEventListener('change', function(e) {
-    currentWave = e.target.value;
-  });
-
-  document.getElementById('oct-up').addEventListener('click', function() {
-    octaveShift = Math.min(octaveShift + 1, 2);
-    document.getElementById('oct-val').textContent = octaveShift >= 0 ? '+' + octaveShift : octaveShift;
-  });
-
-  document.getElementById('oct-down').addEventListener('click', function() {
-    octaveShift = Math.max(octaveShift - 1, -2);
-    document.getElementById('oct-val').textContent = octaveShift >= 0 ? '+' + octaveShift : octaveShift;
-  });
-
-  // Volume cycle
-  var volumes = [0.3, 0.5, 0.7, 1.0];
-  var volIdx = 1;
-  document.getElementById('vol-btn').addEventListener('click', function() {
-    volIdx = (volIdx + 1) % volumes.length;
-    vol = volumes[volIdx];
-    document.getElementById('vol-val').textContent = Math.round(vol * 100) + '%';
-    if (masterGain) masterGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.02);
-  });
-
-  // Attack cycle
-  var atkValues = [5, 10, 30, 50, 100];
-  var atkIdx = 1;
-  document.getElementById('atk-btn').addEventListener('click', function() {
-    atkIdx = (atkIdx + 1) % atkValues.length;
-    atkMs = atkValues[atkIdx];
-    document.getElementById('atk-val').textContent = atkMs + 'ms';
-  });
-
-  // Release cycle
-  var relValues = [50, 100, 150, 300, 500];
-  var relIdx = 2;
-  document.getElementById('rel-btn').addEventListener('click', function() {
-    relIdx = (relIdx + 1) % relValues.length;
-    relMs = relValues[relIdx];
-    document.getElementById('rel-val').textContent = relMs + 'ms';
-  });
-
-  // Keyboard: A-L = white keys C3-B3, W-U = black keys
-  var keyMap = {
-    'a': 60, 'w': 61, 's': 62, 'e': 63, 'd': 64, 'f': 65, 't': 66, 'g': 67,
-    'y': 68, 'h': 69, 'u': 70, 'j': 71, 'k': 72, 'o': 73, 'l': 74, 'p': 75, ';': 76
-  };
+  document.getElementById('wave-select').addEventListener('change', function(e) { currentWave = e.target.value; });
+  document.getElementById('oct-up').addEventListener('click', function() { octaveShift = Math.min(octaveShift + 1, 2); document.getElementById('oct-val').textContent = octaveShift >= 0 ? '+' + octaveShift : octaveShift; });
+  document.getElementById('oct-down').addEventListener('click', function() { octaveShift = Math.max(octaveShift - 1, -2); document.getElementById('oct-val').textContent = octaveShift >= 0 ? '+' + octaveShift : octaveShift; });
+  var volumes = [0.3, 0.5, 0.7, 1.0], volIdx = 1;
+  document.getElementById('vol-btn').addEventListener('click', function() { volIdx = (volIdx + 1) % volumes.length; vol = volumes[volIdx]; document.getElementById('vol-val').textContent = Math.round(vol * 100) + '%'; if (masterGain) masterGain.gain.setTargetAtTime(vol, audioCtx.currentTime, 0.02); });
+  var atkValues = [5, 10, 30, 50, 100], atkIdx = 1;
+  document.getElementById('atk-btn').addEventListener('click', function() { atkIdx = (atkIdx + 1) % atkValues.length; atkMs = atkValues[atkIdx]; document.getElementById('atk-val').textContent = atkMs + 'ms'; });
+  var relValues = [50, 100, 150, 300, 500], relIdx = 2;
+  document.getElementById('rel-btn').addEventListener('click', function() { relIdx = (relIdx + 1) % relValues.length; relMs = relValues[relIdx]; document.getElementById('rel-val').textContent = relMs + 'ms'; });
+  var keyMap = { 'a': 60, 'w': 61, 's': 62, 'e': 63, 'd': 64, 'f': 65, 't': 66, 'g': 67, 'y': 68, 'h': 69, 'u': 70, 'j': 71, 'k': 72, 'o': 73, 'l': 74, 'p': 75, ';': 76 };
   var pressedKeys = new Set();
-  document.addEventListener('keydown', function(e) {
-    if (e.repeat || pressedKeys.has(e.key)) return;
-    pressedKeys.add(e.key);
-    var note = keyMap[e.key.toLowerCase()];
-    if (note !== undefined) { initAudio(); playNote(note, 0.8); }
-  });
-  document.addEventListener('keyup', function(e) {
-    pressedKeys.delete(e.key);
-    var note = keyMap[e.key.toLowerCase()];
-    if (note !== undefined) stopNote(note);
-  });
-
+  document.addEventListener('keydown', function(e) { if (e.repeat || pressedKeys.has(e.key)) return; pressedKeys.add(e.key); var note = keyMap[e.key.toLowerCase()]; if (note !== undefined) { initAudio(); playNote(note, 0.8); } });
+  document.addEventListener('keyup', function(e) { pressedKeys.delete(e.key); var note = keyMap[e.key.toLowerCase()]; if (note !== undefined) stopNote(note); });
   buildPiano();
-  // CRITICAL: Call initMIDI() here — do NOT call navigator.requestMIDIAccess separately
-  // at the bottom of the script. That causes MIDI to not be wired up properly.
   initMIDI();
 })();
 </script>
