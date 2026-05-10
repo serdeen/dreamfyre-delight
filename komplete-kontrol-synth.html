@@ -435,9 +435,7 @@
 
   buildPiano();
   updateADSR();
-  if (navigator.requestMIDIAccess) {
-    navigator.requestMIDIAccess({ sysex: false }).then(() => updateMIDIStatus()).catch(() => {});
-  }
+  initMIDI();
 })();
 </script>
 </body>
