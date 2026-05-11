@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KK Synth — Dreamfyre</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0d0d14; --surface: #1a1a2e; --border: #1e1e2e;
+    --cyan: #00f5d4; --magenta: #f72585; --gold: #ffd93d;
+    --text: #e0e0e0; --dim: #555570;
+  }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Courier New', monospace;
+    height: 100vh; display: flex; flex-direction: column;
+    user-select: none; overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--surface); border-bottom: 2px solid var(--magenta);
+    padding: 6px 12px; display: flex; align-items: center;
+    justify-content: space-between; flex-shrink: 0;
+  }
+  .dragon-title { display: flex; align-items: center; gap: 8px; }
+  .dragon-logo { width: 24px; height: 24px; image-rendering: pixelated; }
+  .dragon-title span { font-size: 0.8rem; color: var(--cyan); letter-spacing: 0.1em; text-transform: uppercase; }
+  .midi-badge { background: var(--bg); border: 1px solid var(--dim); border-radius: 4px; padding: 3px 8px; font-size: 0.6rem; color: var(--dim); }
+  .midi-badge.connected { border-color: var(--cyan); color: var(--cyan); }
+
+  /* ── CONTROLS (upper band) ── */
+  .controls-bar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 6px 8px; display: flex; align-items: center;
+    gap: 6px; flex-wrap: wrap; justify-content: center; flex-shrink: 0;
+  }
+  .ctrl-btn {
+    background: #22223a; border: 2px solid #3a3a5a; border-radius: 6px;
+    color: var(--text); font-family: 'Courier New', monospace; font-size: 0.7rem;
+    cursor: pointer; min-width: 52px; min-height: 48px; padding: 4px 6px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  }
+  .ctrl-btn:active, .ctrl-btn.active { background: var(--cyan); color: var(--bg); border-color: var(--cyan); }
+  .ctrl-btn .lbl { font-size: 0.45rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .ctrl-btn .val { font-size: 0.8rem; color: var(--cyan); font-weight: bold; }
+  .ctrl-btn.active .val, .ctrl-btn:active .val { color: var(--bg); }
+  select.ctrl-select {
+    background: #22223a; border: 2px solid #3a3a5a; border-radius: 6px;
+    color: var(--text); font-family: 'Courier New', monospace; font-size: 0.75rem;
+    padding: 4px 6px; min-height: 48px; cursor: pointer; min-width: 80px;
+  }
+  .divider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
+
+  /* ── ADSR canvas ── */
+  .adsr-wrap { padding: 4px 8px 0; flex-shrink: 0; background: var(--surface); }
+  .adsr-canvas { width: 100%; height: 44px; background: var(--bg); border-radius: 4px; border: 1px solid var(--border); display: block; }
+
+  /* ── PIANO (upper third) ── */
+  .piano-wrap { height: calc(100vh / 3); display: flex; flex-direction: column; flex-shrink: 0; }
+  .piano { flex: 1; display: flex; position: relative; min-height: 0; }
+  .key { position: relative; cursor: pointer; border-radius: 0 0 4px 4px; transition: filter 0.06s; flex-shrink: 0; }
+  .key.white {
+    flex: 1; height: 100%; background: #ffffff;
+    border: 1px solid #888; border-top: none;
+    box-shadow: inset 0 -4px 8px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.3);
+  }
+  .key.white.pressed { background: #dde8ff; }
+  .key.black {
+    position: absolute; height: 62%; background: linear-gradient(180deg, #1a1a1a 0%, #000 100%);
+    border: 1px solid #000; border-top: none; border-radius: 0 0 3px 3px; z-index: 2;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+  }
+  .key.black.pressed { background: linear-gradient(180deg, #334 0%, #112 100%); }
+
+  /* ── KK DISPLAY + FOOTER ── */
+  .lower { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+  .kk-display {
+    width: 160px; background: #0a0a14; border-right: 1px solid var(--magenta);
+    padding: 8px; flex-shrink: 0; overflow-y: auto;
+  }
+  .kk-title { font-size: 0.55rem; color: var(--magenta); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 6px; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+  .param-row { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid #151522; }
+  .param-name { font-size: 0.55rem; color: var(--dim); text-transform: uppercase; }
+  .param-val { font-size: 0.6rem; color: var(--cyan); font-family: 'Courier New', monospace; }
+  .param-val.highlight { color: var(--magenta); }
+  .footer-info { flex: 1; background: var(--bg); display: flex; align-items: center; justify-content: center; }
+  .footer-text { font-size: 0.55rem; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .footer-text span { color: var(--magenta); }
+  @media (max-width: 768px) {
+    .footer-info { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="dragon-title">
+    <svg class="dragon-logo" viewBox="0 0 16 16" fill="none">
+      <rect x="4" y="2" width="2" height="2" fill="#f72585"/>
+      <rect x="8" y="2" width="2" height="2" fill="#f72585"/>
+      <rect x="2" y="4" width="10" height="6" fill="#00f5d4"/>
+      <rect x="4" y="4" width="2" height="2" fill="#0d0d14"/>
+      <rect x="8" y="4" width="2" height="2" fill="#0d0d14"/>
+      <rect x="0" y="6" width="2" height="2" fill="#ffd93d"/>
+      <rect x="12" y="6" width="2" height="2" fill="#ffd93d"/>
+      <rect x="6" y="8" width="4" height="2" fill="#f72585"/>
+      <rect x="4" y="10" width="8" height="2" fill="#f72585"/>
+      <rect x="2" y="12" width="4" height="2" fill="#00f5d4"/>
+      <rect x="10" y="12" width="4" height="2" fill="#00f5d4"/>
+    </svg>
+    <span>KK Synth</span>
+  </div>
+  <div class="midi-badge" id="midi-status">No MIDI</div>
+</div>
+
+<div class="controls-bar">
+  <select class="ctrl-select" id="wave-select">
+    <option value="sine">Sine</option>
+    <option value="triangle">Tri</option>
+    <option value="square">Square</option>
+    <option value="sawtooth">Saw</option>
+  </select>
+  <div class="divider"></div>
+  <div class="ctrl-btn" id="oct-down"><span class="lbl">Oct</span><span class="val">&#9660;</span></div>
+  <div class="ctrl-btn" id="oct-display"><span class="lbl">Octave</span><span class="val" id="oct-val">0</span></div>
+  <div class="ctrl-btn" id="oct-up"><span class="lbl">Oct</span><span class="val">&#9650;</span></div>
+  <div class="divider"></div>
+  <div class="ctrl-btn" id="lfo-toggle"><span class="lbl">LFO</span><span class="val">Off</span></div>
+  <div class="divider"></div>
+  <div class="ctrl-btn" id="atk-btn"><span class="lbl">Atk</span><span class="val" id="atk-val">50ms</span></div>
+  <div class="ctrl-btn" id="dec-btn"><span class="lbl">Dec</span><span class="val" id="dec-val">300ms</span></div>
+  <div class="ctrl-btn" id="sus-btn"><span class="lbl">Sus</span><span class="val" id="sus-val">70%</span></div>
+  <div class="ctrl-btn" id="rel-btn"><span class="lbl">Rel</span><span class="val" id="rel-val">400ms</span></div>
+</div>
+
+<div class="adsr-wrap">
+  <canvas class="adsr-canvas" id="adsr-canvas"></canvas>
+</div>
+
+<div class="piano-wrap"><div class="piano" id="piano"></div></div>
+
+<div class="lower">
+  <div class="kk-display">
+    <div class="kk-title">KK MK2 Display</div>
+    <div class="param-row"><span class="param-name">Cutoff</span><span class="param-val" id="p-cutoff">2000</span></div>
+    <div class="param-row"><span class="param-name">Reso</span><span class="param-val" id="p-reso">1.00</span></div>
+    <div class="param-row"><span class="param-name">Attack</span><span class="param-val" id="p-attack">0.05</span></div>
+    <div class="param-row"><span class="param-name">Decay</span><span class="param-val" id="p-decay">0.30</span></div>
+    <div class="param-row"><span class="param-name">Sustain</span><span class="param-val" id="p-sustain">0.70</span></div>
+    <div class="param-row"><span class="param-name">Release</span><span class="param-val" id="p-release">0.40</span></div>
+    <div class="param-row"><span class="param-name">LFO Rate</span><span class="param-val" id="p-lfoRate">2.00</span></div>
+    <div class="param-row"><span class="param-name">LFO Depth</span><span class="param-val" id="p-lfoDepth">200</span></div>
+    <div class="param-row" style="border-top: 1px solid var(--magenta); margin-top:4px; padding-top:4px;">
+      <span class="param-name" style="color:var(--magenta)">Octave</span>
+      <span class="param-val" id="p-octave">0</span>
+    </div>
+  </div>
+  <div class="footer-info">
+    <div class="footer-text">KK Knobs CC21–28 → Cutoff / Reso / ADSR / LFO &nbsp;|&nbsp; <span>Play=116 Stop=117</span></div>
+  </div>
+</div>
+
+<script>
+(function() {
+  var NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  var audioCtx = null, masterGain, compressor, lfoOsc, lfoGain;
+  var currentWave = 'sine', octaveShift = 0, lfoEnabled = false;
+  var activeNotes = new Map();
+  var WHITE_SLOT = 50, BLACK_W = 30; // pixel-based key geometry
+
+  var synthParams = {
+    cutoff: 2000, resonance: 1, attack: 0.05, decay: 0.3,
+    sustain: 0.7, release: 0.4, lfoRate: 2, lfoDepth: 200
+  };
+
+  function calcMidiFreq(n) {
+    return 440 * Math.pow(2, (n - 69 + octaveShift * 12) / 12);
+  }
+
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.55;
+    compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.value = -6; compressor.ratio.value = 4; compressor.knee.value = 3;
+    masterGain.connect(compressor);
+    compressor.connect(audioCtx.destination);
+    lfoOsc = audioCtx.createOscillator();
+    lfoOsc.frequency.value = synthParams.lfoRate;
+    lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = synthParams.lfoDepth;
+    lfoOsc.connect(lfoGain);
+    lfoOsc.start();
+  }
+
+  function playNote(noteNum, velocity) {
+    initAudio();
+    if (activeNotes.has(noteNum)) return;
+    var osc = audioCtx.createOscillator();
+    var filter = audioCtx.createBiquadFilter();
+    var noteGain = audioCtx.createGain();
+    osc.type = currentWave;
+    osc.frequency.value = calcMidiFreq(noteNum);
+    filter.type = 'lowpass';
+    filter.frequency.value = synthParams.cutoff;
+    filter.Q.value = synthParams.resonance;
+    noteGain.gain.value = 0;
+    var now = audioCtx.currentTime;
+    noteGain.gain.setTargetAtTime(velocity * 0.15, now, synthParams.attack);
+    osc.connect(filter);
+    filter.connect(noteGain);
+    noteGain.connect(masterGain);
+    if (lfoEnabled) lfoGain.connect(filter.frequency);
+    osc.start();
+    activeNotes.set(noteNum, { osc: osc, filter: filter, noteGain: noteGain });
+    drawADSR();
+  }
+
+  function stopNote(noteNum) {
+    var node = activeNotes.get(noteNum);
+    if (!node) return;
+    var osc = node.osc, noteGain = node.noteGain;
+    var now = audioCtx.currentTime;
+    noteGain.gain.cancelScheduledValues(now);
+    noteGain.gain.setValueAtTime(noteGain.gain.value, now);
+    noteGain.gain.exponentialRampToValueAtTime(0.0001, now + synthParams.release);
+    setTimeout(function() { try { osc.stop(); } catch(e) {} }, (synthParams.release + 0.05) * 1000);
+    activeNotes.delete(noteNum);
+    drawADSR();
+  }
+
+  function stopAll() {
+    Array.from(activeNotes.keys()).forEach(function(n) { stopNote(n); });
+  }
+
+  // ── PIANO BUILD (pixel-accurate key positions) ──
+  function buildPiano() {
+    var piano = document.getElementById('piano');
+    var octaves = [4, 5];
+
+    // White keys (flex: 1 each)
+    for (var o = 0; o < octaves.length; o++) {
+      for (var i = 0; i < 12; i++) {
+        var note = NOTES[i];
+        if (!note.includes('#')) {
+          var noteNum = (octaves[o] + 1) * 12 + i;
+          var key = document.createElement('div');
+          key.className = 'key white';
+          key.dataset.noteNum = noteNum;
+          piano.appendChild(key);
+        }
+      }
+    }
+
+    // Black keys — pixel SLOT approach (whiteIdx * 50 + 9)
+    // whiteIdx is the index of the white key to the LEFT of each black key
+    var blackDefs = [
+      { note: 'C#', oct: 4, wi: 0  },
+      { note: 'D#', oct: 4, wi: 1  },
+      { note: 'F#', oct: 4, wi: 3  },
+      { note: 'G#', oct: 4, wi: 4  },
+      { note: 'A#', oct: 4, wi: 5  },
+      { note: 'C#', oct: 5, wi: 7  },
+      { note: 'D#', oct: 5, wi: 8  },
+      { note: 'F#', oct: 5, wi: 10 },
+      { note: 'G#', oct: 5, wi: 11 },
+      { note: 'A#', oct: 5, wi: 12 },
+    ];
+    blackDefs.forEach(function(bd) {
+      var noteNum = (bd.oct + 1) * 12 + NOTES.indexOf(bd.note);
+      var key = document.createElement('div');
+      key.className = 'key black';
+      key.dataset.noteNum = noteNum;
+      key.style.left = (bd.wi * WHITE_SLOT + 9) + 'px';
+      key.style.width = BLACK_W + 'px';
+      piano.appendChild(key);
+    });
+
+    // Event wiring
+    piano.querySelectorAll('.key').forEach(function(key) {
+      var noteNum = parseInt(key.dataset.noteNum);
+      var press = function(e) { e.preventDefault(); initAudio(); playNote(noteNum, 0.8); key.classList.add('pressed'); };
+      var release = function() { stopNote(noteNum); key.classList.remove('pressed'); };
+      key.addEventListener('mousedown', press);
+      key.addEventListener('mouseup', release);
+      key.addEventListener('mouseleave', release);
+      key.addEventListener('touchstart', press, { passive: false });
+      key.addEventListener('touchend', release);
+    });
+
+    piano.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+      for (var t = 0; t < e.changedTouches.length; t++) {
+        var el = document.elementFromPoint(e.changedTouches[t].clientX, e.changedTouches[t].clientY);
+        if (el && el.classList.contains('key')) {
+          var n = parseInt(el.dataset.noteNum);
+          initAudio();
+          if (!activeNotes.has(n)) playNote(n, 0.7);
+          piano.querySelectorAll('.key.pressed').forEach(function(k) { if (k !== el) k.classList.remove('pressed'); });
+          el.classList.add('pressed');
+        }
+      }
+    }, { passive: false });
+
+    piano.addEventListener('touchend', function() {
+      piano.querySelectorAll('.key.pressed').forEach(function(k) { k.classList.remove('pressed'); });
+    });
+  }
+
+  // ── ADSR CANVAS ──
+  var adsrCanvas = document.getElementById('adsr-canvas');
+  var adsrCtx = adsrCanvas.getContext('2d');
+
+  function drawADSR() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = adsrCanvas.clientWidth, h = adsrCanvas.clientHeight;
+    if (!w || !h) return;
+    if (adsrCanvas.width !== w * dpr || adsrCanvas.height !== h * dpr) {
+      adsrCanvas.width = w * dpr; adsrCanvas.height = h * dpr;
+      adsrCtx.scale(dpr, dpr);
+    }
+    adsrCtx.clearRect(0, 0, w, h);
+    var a = synthParams.attack, d = synthParams.decay, s = synthParams.sustain, r = synthParams.release;
+    var total = a + d + r + 0.3;
+    var px = function(t) { return (t / total) * w; };
+    var py = function(v) { return h - v * (h - 4) - 2; };
+    adsrCtx.beginPath();
+    adsrCtx.moveTo(0, h);
+    adsrCtx.lineTo(px(a), py(1));
+    adsrCtx.lineTo(px(a + d), py(s));
+    adsrCtx.lineTo(px(a + d + 0.3), py(s));
+    adsrCtx.lineTo(px(a + d + 0.3 + r), py(0));
+    adsrCtx.strokeStyle = activeNotes.size > 0 ? '#00f5d4' : '#334';
+    adsrCtx.lineWidth = 2;
+    adsrCtx.stroke();
+    adsrCtx.lineTo(px(a + d + 0.3 + r), h);
+    adsrCtx.lineTo(0, h);
+    adsrCtx.fillStyle = activeNotes.size > 0 ? 'rgba(0,245,212,0.08)' : 'rgba(51,51,68,0.3)';
+    adsrCtx.fill();
+  }
+  window.addEventListener('resize', drawADSR);
+
+  // ── MIDI ──
+  async function initMIDI() {
+    if (!navigator.requestMIDIAccess) return;
+    try {
+      var midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+      midiAccess.inputs.forEach(function(input) { input.onmidimessage = handleMIDIMessage; });
+      midiAccess.onstatechange = function(e) {
+        if (e.port.state === 'connected') e.port.onmidimessage = handleMIDIMessage;
+      };
+    } catch(e) {}
+  }
+
+  function handleMIDIMessage(event) {
+    var data = event.data, status = data[0], d1 = data[1], d2 = data[2];
+    var cmd = status & 0xf0;
+    var port = event.target;
+    var isKK = port.name && port.name.toLowerCase().includes('komplete kontrol');
+    var badge = document.getElementById('midi-status');
+
+    if (cmd === 0x90 && d2 > 0) {
+      if (d1 === 116) { document.getElementById('lfo-toggle').click(); return; } // Play → LFO toggle
+      if (d1 === 117) { stopAll(); return; }                                     // Stop → kill notes
+      initAudio();
+      playNote(d1, d2 / 127);
+      badge.textContent = isKK ? '🐉 KK connected' : '🎹 ' + port.name;
+      badge.classList.add('connected');
+    } else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) {
+      if (d1 !== 116 && d1 !== 117) stopNote(d1);
+    } else if (cmd === 0xb0) {
+      // KK encoder knobs CC21-28
+      if (isKK && d1 >= 21 && d1 <= 28) {
+        var paramNames = ['cutoff','resonance','attack','decay','sustain','release','lfoRate','lfoDepth'];
+        var param = paramNames[d1 - 21];
+        var raw = d2 / 127;
+        if (param === 'cutoff')    { synthParams.cutoff = 100 + raw * 9900; }
+        else if (param === 'resonance')  { synthParams.resonance = raw * 20; }
+        else if (param === 'attack')     { synthParams.attack = 0.005 + raw * 0.995; }
+        else if (param === 'decay')      { synthParams.decay = raw * 2; }
+        else if (param === 'sustain')    { synthParams.sustain = raw; }
+        else if (param === 'release')    { synthParams.release = 0.05 + raw * 2; }
+        else if (param === 'lfoRate')    {
+          synthParams.lfoRate = 0.5 + raw * 15;
+          if (lfoOsc) lfoOsc.frequency.setTargetAtTime(synthParams.lfoRate, audioCtx.currentTime, 0.05);
+        } else if (param === 'lfoDepth') {
+          synthParams.lfoDepth = raw * 1000;
+          if (lfoGain) lfoGain.gain.setTargetAtTime(synthParams.lfoDepth, audioCtx.currentTime, 0.05);
+        }
+        updateKKDisplay(param, synthParams[param]);
+        updateControlLabels();
+        drawADSR();
+      }
+      // KK menu buttons CC102-105 → octave shift
+      if (isKK && d1 === 102 && d2 > 0) setOctave(-1);
+      if (isKK && d1 === 103 && d2 > 0) setOctave(1);
+    }
+  }
+
+  function updateKKDisplay(param, val) {
+    var map = { cutoff:'p-cutoff', resonance:'p-reso', attack:'p-attack', decay:'p-decay',
+                sustain:'p-sustain', release:'p-release', lfoRate:'p-lfoRate', lfoDepth:'p-lfoDepth' };
+    var el = document.getElementById(map[param]);
+    if (el) {
+      el.textContent = typeof val === 'number' ? (val < 100 ? val.toFixed(2) : Math.round(val)) : val;
+      el.classList.add('highlight');
+      setTimeout(function() { el.classList.remove('highlight'); }, 300);
+    }
+  }
+
+  function setOctave(dir) {
+    octaveShift = Math.max(-2, Math.min(2, octaveShift + dir));
+    document.getElementById('oct-val').textContent = octaveShift >= 0 ? '+' + octaveShift : octaveShift;
+    document.getElementById('p-octave').textContent = octaveShift >= 0 ? '+' + octaveShift : octaveShift;
+  }
+
+  function updateControlLabels() {
+    document.getElementById('p-cutoff').textContent = Math.round(synthParams.cutoff);
+    document.getElementById('p-reso').textContent = synthParams.resonance.toFixed(2);
+    document.getElementById('p-attack').textContent = synthParams.attack.toFixed(2);
+    document.getElementById('p-decay').textContent = synthParams.decay.toFixed(2);
+    document.getElementById('p-sustain').textContent = synthParams.sustain.toFixed(2);
+    document.getElementById('p-release').textContent = synthParams.release.toFixed(2);
+    document.getElementById('p-lfoRate').textContent = synthParams.lfoRate.toFixed(2);
+    document.getElementById('p-lfoDepth').textContent = Math.round(synthParams.lfoDepth);
+  }
+
+  // ── ON-SCREEN CONTROLS ──
+  document.getElementById('wave-select').addEventListener('change', function(e) {
+    currentWave = e.target.value;
+    activeNotes.forEach(function(node) { try { node.osc.type = currentWave; } catch(err) {} });
+  });
+
+  document.getElementById('oct-up').addEventListener('click', function() { setOctave(1); });
+  document.getElementById('oct-down').addEventListener('click', function() { setOctave(-1); });
+
+  document.getElementById('lfo-toggle').addEventListener('click', function() {
+    lfoEnabled = !lfoEnabled;
+    var btn = document.getElementById('lfo-toggle');
+    btn.querySelector('.val').textContent = lfoEnabled ? 'On' : 'Off';
+    btn.classList.toggle('active', lfoEnabled);
+    if (audioCtx) {
+      if (lfoEnabled) {
+        activeNotes.forEach(function(node) { lfoGain.connect(node.filter.frequency); });
+      } else {
+        try { lfoGain.disconnect(); } catch(e) {}
+      }
+    }
+  });
+
+  // ADSR buttons — cycle values
+  var atkVals = [0.005, 0.01, 0.05, 0.1, 0.3, 0.8], atkIdx = 2;
+  document.getElementById('atk-btn').addEventListener('click', function() {
+    atkIdx = (atkIdx + 1) % atkVals.length;
+    synthParams.attack = atkVals[atkIdx];
+    document.getElementById('atk-val').textContent = Math.round(synthParams.attack * 1000) + 'ms';
+    updateKKDisplay('attack', synthParams.attack); drawADSR();
+  });
+
+  var decVals = [0.05, 0.1, 0.3, 0.5, 1.0, 2.0], decIdx = 2;
+  document.getElementById('dec-btn').addEventListener('click', function() {
+    decIdx = (decIdx + 1) % decVals.length;
+    synthParams.decay = decVals[decIdx];
+    document.getElementById('dec-val').textContent = Math.round(synthParams.decay * 1000) + 'ms';
+    updateKKDisplay('decay', synthParams.decay); drawADSR();
+  });
+
+  var susVals = [0.2, 0.4, 0.6, 0.7, 0.85, 1.0], susIdx = 3;
+  document.getElementById('sus-btn').addEventListener('click', function() {
+    susIdx = (susIdx + 1) % susVals.length;
+    synthParams.sustain = susVals[susIdx];
+    document.getElementById('sus-val').textContent = Math.round(synthParams.sustain * 100) + '%';
+    updateKKDisplay('sustain', synthParams.sustain); drawADSR();
+  });
+
+  var relVals = [0.05, 0.15, 0.4, 0.8, 1.5, 3.0], relIdx = 2;
+  document.getElementById('rel-btn').addEventListener('click', function() {
+    relIdx = (relIdx + 1) % relVals.length;
+    synthParams.release = relVals[relIdx];
+    document.getElementById('rel-val').textContent = Math.round(synthParams.release * 1000) + 'ms';
+    updateKKDisplay('release', synthParams.release); drawADSR();
+  });
+
+  // Keyboard input
+  var keyMap = { 'a':60,'w':61,'s':62,'e':63,'d':64,'f':65,'t':66,'g':67,'y':68,'h':69,'u':70,'j':71,'k':72,'o':73,'l':74,'p':75,';':76 };
+  var pressedKeys = new Set();
+  document.addEventListener('keydown', function(e) {
+    if (e.repeat || pressedKeys.has(e.key)) return;
+    pressedKeys.add(e.key);
+    var note = keyMap[e.key.toLowerCase()];
+    if (note !== undefined) { initAudio(); playNote(note, 0.8); }
+  });
+  document.addEventListener('keyup', function(e) {
+    pressedKeys.delete(e.key);
+    var note = keyMap[e.key.toLowerCase()];
+    if (note !== undefined) stopNote(note);
+  });
+
+  buildPiano();
+  drawADSR();
+  initMIDI(); // ← single call at bottom of IIFE, correct pattern
+})();
+</script>
+</body>
+</html>
