@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Drum Lab — Dreamfyre Delight for Moe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --neon-cyan: #00f5d4;
+    --neon-magenta: #f72585;
+    --neon-yellow: #fee440;
+    --neon-purple: #7b2ff7;
+    --text: #e0e0e0;
+    --text-dim: #666680;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+    overflow-x: hidden;
+  }
+
+  /* Generative background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 30%, rgba(247,37,133,0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 80% 70%, rgba(0,245,212,0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 50% 50%, rgba(123,47,247,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.2rem;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 2rem;
+  }
+
+  .bpm-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 5rem;
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 30px rgba(0,245,212,0.4), 0 0 60px rgba(0,245,212,0.2);
+    cursor: pointer;
+    user-select: none;
+    transition: text-shadow 0.1s;
+  }
+
+  .bpm-display:active {
+    text-shadow: 0 0 50px rgba(0,245,212,0.8), 0 0 80px rgba(0,245,212,0.4);
+  }
+
+  .bpm-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    letter-spacing: 0.2em;
+    margin-bottom: 0.5rem;
+  }
+
+  .tap-btn {
+    margin-top: 1rem;
+    padding: 0.8rem 3rem;
+    background: transparent;
+    border: 1px solid var(--neon-magenta);
+    color: var(--neon-magenta);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+
+  .tap-btn:hover {
+    background: rgba(247,37,133,0.1);
+    box-shadow: 0 0 20px rgba(247,37,133,0.3);
+  }
+
+  .tap-btn:active {
+    background: rgba(247,37,133,0.25);
+  }
+
+  .controls-row {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    align-items: center;
+  }
+
+  .control-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    letter-spacing: 0.15em;
+  }
+
+  .genre-select, .time-sig-select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .play-btn {
+    padding: 0.8rem 2rem;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
+    border: none;
+    color: var(--bg);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+
+  .play-btn:hover {
+    box-shadow: 0 0 30px rgba(0,245,212,0.4);
+    transform: translateY(-1px);
+  }
+
+  .play-btn.playing {
+    background: linear-gradient(135deg, var(--neon-magenta), var(--neon-purple));
+    box-shadow: 0 0 30px rgba(247,37,133,0.4);
+  }
+
+  /* Sequencer grid */
+  .sequencer {
+    display: grid;
+    gap: 4px;
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow-x: auto;
+  }
+
+  .sequencer-header {
+    display: contents;
+  }
+
+  .seq-header-cell {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-align: center;
+    padding-bottom: 0.5rem;
+  }
+
+  .seq-row {
+    display: contents;
+  }
+
+  .seq-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    padding-right: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .seq-cell {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    background: var(--border);
+    cursor: pointer;
+    transition: all 0.1s;
+    position: relative;
+  }
+
+  .seq-cell:hover {
+    border: 1px solid var(--text-dim);
+  }
+
+  .seq-cell.active {
+    background: var(--neon-cyan);
+    box-shadow: 0 0 12px rgba(0,245,212,0.5);
+  }
+
+  .seq-cell.beat-cell {
+    background: var(--neon-yellow);
+    box-shadow: 0 0 12px rgba(254,228,64,0.5);
+  }
+
+  .seq-cell.playing-cell {
+    transform: scale(1.2);
+    box-shadow: 0 0 20px rgba(0,245,212,0.8);
+  }
+
+  .seq-cell.playing-cell.beat-cell {
+    box-shadow: 0 0 20px rgba(254,228,64,0.8);
+  }
+
+  .footer {
+    margin-top: 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    text-align: center;
+  }
+
+  .footer span {
+    color: var(--neon-magenta);
+  }
+
+  /* Beat flash overlay */
+  .beat-flash {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.05s;
+    z-index: 100;
+  }
+
+  @keyframes scroll-hint {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+  }
+
+  .scroll-hint {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    margin-top: 0.5rem;
+    animation: scroll-hint 2s ease-in-out infinite;
+  }
+
+  /* BPM slider */
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 120px;
+    height: 2px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--neon-cyan);
+    cursor: pointer;
+    box-shadow: 0 0 8px rgba(0,245,212,0.5);
+  }
+
+  .midi-note-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--neon-yellow);
+    margin-top: 0.3rem;
+    min-height: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="beat-flash" id="beatFlash"></div>
+
+<h1>DRUM LAB</h1>
+<div class="subtitle">// beat laboratory — dreamfyre delight for Moe</div>
+
+<div class="bpm-label">BPM</div>
+<div class="bpm-display" id="bpmDisplay" title="Click to type BPM directly">128</div>
+<div class="midi-note-display" id="midiNote"></div>
+<input type="range" id="bpmSlider" min="60" max="200" value="128" style="margin-top:0.5rem">
+
+<div class="controls-row">
+  <div class="control-group">
+    <div class="control-label">GENRE</div>
+    <select class="genre-select" id="genreSelect">
+      <option value="house">House</option>
+      <option value="techno">Techno</option>
+      <option value="hiphop">Hip-Hop</option>
+      <option value="dnb">Drum & Bass</option>
+      <option value="dubstep">Dubstep</option>
+      <option value="trap">Trap</option>
+      <option value="lofi">Lo-Fi</option>
+      <option value="garage">UK Garage</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <div class="control-label">SWING</div>
+    <select class="genre-select" id="swingSelect">
+      <option value="0">0%</option>
+      <option value="15">15%</option>
+      <option value="30" selected>30%</option>
+      <option value="50">50%</option>
+      <option value="70">70%</option>
+    </select>
+  </div>
+  <button class="play-btn" id="playBtn">▶ PLAY</button>
+  <button class="tap-btn" id="tapBtn">TAP TEMPO</button>
+</div>
+
+<div class="scroll-hint">← scroll horizontally →</div>
+
+<div class="sequencer" id="sequencer"></div>
+
+<div class="footer">
+  <span>Vhagar</span> // Dreamfyre // built overnight
+</div>
+
+<script>
+// ─── Audio Engine ───────────────────────────────────────────────────────────
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+function resumeCtx() {
+  if (ctx.state === 'suspended') ctx.resume();
+}
+
+function synthKick(time) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.frequency.setValueAtTime(150, time);
+  osc.frequency.exponentialRampToValueAtTime(30, time + 0.15);
+  gain.gain.setValueAtTime(1.0, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(time); osc.stop(time + 0.3);
+}
+
+function synthSnare(time) {
+  const noise = ctx.createBufferSource();
+  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  noise.buffer = buf;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.6, time);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'highpass'; filter.frequency.value = 1000;
+  noise.connect(filter).connect(noiseGain).connect(ctx.destination);
+  noise.start(time); noise.stop(time + 0.15);
+
+  const osc = ctx.createOscillator();
+  const oscGain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(180, time);
+  osc.frequency.exponentialRampToValueAtTime(80, time + 0.05);
+  oscGain.gain.setValueAtTime(0.5, time);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+  osc.connect(oscGain).connect(ctx.destination);
+  osc.start(time); osc.stop(time + 0.08);
+}
+
+function synthHat(time, closed = true) {
+  const noise = ctx.createBufferSource();
+  const dur = closed ? 0.05 : 0.2;
+  const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  noise.buffer = buf;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(closed ? 0.2 : 0.35, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'highpass'; filter.frequency.value = 7000;
+  noise.connect(filter).connect(gain).connect(ctx.destination);
+  noise.start(time); noise.stop(time + dur);
+}
+
+function synthTom(time, freq = 200) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, time);
+  osc.frequency.exponentialRampToValueAtTime(freq * 0.5, time + 0.1);
+  gain.gain.setValueAtTime(0.7, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(time); osc.stop(time + 0.15);
+}
+
+function synthClap(time) {
+  for (let i = 0; i < 3; i++) {
+    const noise = ctx.createBufferSource();
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.01, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let j = 0; j < data.length; j++) data[j] = Math.random() * 2 - 1;
+    noise.buffer = buf;
+    const gain = ctx.createGain();
+    const offset = time + i * 0.015;
+    gain.gain.setValueAtTime(0.5, offset);
+    gain.gain.exponentialRampToValueAtTime(0.001, offset + 0.01);
+    noise.connect(gain).connect(ctx.destination);
+    noise.start(offset); noise.stop(offset + 0.01);
+  }
+}
+
+// ─── Drum Patterns ────────────────────────────────────────────────────────────
+const patterns = {
+  house: [
+    [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],  // kick
+    [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0],  // snare
+    [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],  // closed hat
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],  // open hat
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],  // clap
+  ],
+  techno: [
+    [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 0,0,0,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+  ],
+  hiphop: [
+    [1,0,0,0, 0,0,1,0, 0,1,0,0, 0,0,0,0],
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,1,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+  ],
+  dnb: [
+    [1,0,0,0, 1,0,0,0, 0,0,1,0, 0,0,0,0],
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+  ],
+  dubstep: [
+    [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+  ],
+  trap: [
+    [1,0,0,0, 0,0,1,0, 1,0,0,0, 0,0,1,0],
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+  ],
+  lofi: [
+    [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,1,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+  ],
+  garage: [
+    [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],
+    [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+    [0,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,0,0],
+  ],
+};
+
+const rowLabels = ['KICK', 'SNARE', 'HAT', 'OPEN HAT', 'CLAP'];
+const synthFns = [synthKick, synthSnare, synthHat, (t) => synthHat(t, false), synthClap];
+const cellColors = ['active', 'active', 'active', 'beat-cell', 'beat-cell'];
+const beatCellColors = ['playing-cell', 'playing-cell', 'playing-cell', 'beat-cell', 'beat-cell'];
+
+// ─── State ───────────────────────────────────────────────────────────────────
+let bpm = 128;
+let currentGenre = 'house';
+let grid = patterns.house.map(r => [...r]);
+let isPlaying = false;
+let scheduler = null;
+let currentStep = 0;
+let nextNoteTime = 0.0;
+const lookahead = 25.0; // ms
+const scheduleAhead = 0.1; // seconds
+
+// ─── Sequencer UI ─────────────────────────────────────────────────────────────
+function renderSequencer() {
+  const seq = document.getElementById('sequencer');
+  seq.innerHTML = '';
+
+  // Header row
+  const headerRow = document.createElement('div');
+  headerRow.className = 'seq-header-cell';
+  headerRow.style.display = 'grid';
+  headerRow.style.gridTemplateColumns = '50px repeat(16, 28px)';
+  headerRow.style.gap = '4px';
+  headerRow.style.marginBottom = '4px';
+
+  const emptyCell = document.createElement('div');
+  headerRow.appendChild(emptyCell);
+  for (let i = 0; i < 16; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'seq-header-cell';
+    cell.textContent = (i % 4 === 0) ? (i + 1) : '';
+    cell.style.width = '28px';
+    cell.style.height = '14px';
+    cell.style.display = 'flex';
+    cell.style.alignItems = 'center';
+    cell.style.justifyContent = 'center';
+    headerRow.appendChild(cell);
+  }
+  seq.appendChild(headerRow);
+
+  // Drum rows
+  for (let r = 0; r < grid.length; r++) {
+    const rowDiv = document.createElement('div');
+    rowDiv.style.display = 'grid';
+    rowDiv.style.gridTemplateColumns = '50px repeat(16, 28px)';
+    rowDiv.style.gap = '4px';
+
+    const label = document.createElement('div');
+    label.className = 'seq-label';
+    label.textContent = rowLabels[r];
+    rowDiv.appendChild(label);
+
+    for (let c = 0; c < 16; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'seq-cell ' + (grid[r][c] ? cellColors[r] : '');
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      cell.addEventListener('click', () => {
+        grid[r][c] = grid[r][c] ? 0 : 1;
+        renderSequencer();
+      });
+      rowDiv.appendChild(cell);
+    }
+    seq.appendChild(rowDiv);
+  }
+}
+
+// ─── Scheduler ────────────────────────────────────────────────────────────────
+function nextNoteTimeWithSwing(step) {
+  const secondsPerBeat = 60.0 / bpm;
+  const swing = parseInt(document.getElementById('swingSelect').value) / 100;
+  const stepDuration = secondsPerBeat / 4;
+  // Swing applies to off-beats (steps 1, 3, 5, 7, ...)
+  if (step % 2 === 1) {
+    return stepDuration * (1 + swing * 0.5);
+  }
+  return stepDuration;
+}
+
+function scheduleNote(step, time) {
+  for (let r = 0; r < grid.length; r++) {
+    if (grid[r][step]) {
+      synthFns[r](time);
+    }
+  }
+  // Visual highlight
+  setTimeout(() => {
+    if (!isPlaying) return;
+    const rows = document.querySelectorAll('.seq-row');
+    const cells = document.querySelectorAll('.seq-cell');
+    cells.forEach(c => c.classList.remove('playing-cell'));
+    for (let r = 0; r < grid.length; r++) {
+      const idx = r * 16 + step;
+      if (grid[r][step] && cells[idx]) {
+        cells[idx].classList.add('playing-cell');
+      }
+    }
+    // Beat flash
+    const flash = document.getElementById('beatFlash');
+    if (step % 4 === 0) {
+      flash.style.background = 'rgba(0,245,212,0.04)';
+      flash.style.opacity = '1';
+      setTimeout(() => flash.style.opacity = '0', 50);
+    } else if (step % 4 === 2) {
+      flash.style.background = 'rgba(247,37,133,0.03)';
+      flash.style.opacity = '1';
+      setTimeout(() => flash.style.opacity = '0', 50);
+    }
+  }, (time - ctx.currentTime) * 1000);
+}
+
+function schedulerTick() {
+  while (nextNoteTime < ctx.currentTime + scheduleAhead) {
+    scheduleNote(currentStep, nextNoteTime);
+    const swing = parseInt(document.getElementById('swingSelect').value) / 100;
+    const secondsPerBeat = 60.0 / bpm;
+    const stepDuration = secondsPerBeat / 4;
+    nextNoteTime += stepDuration * (currentStep % 2 === 1 ? (1 + swing * 0.5) : 1);
+    currentStep = (currentStep + 1) % 16;
+  }
+  scheduler = setTimeout(schedulerTick, lookahead);
+}
+
+function startPlayback() {
+  resumeCtx();
+  isPlaying = true;
+  currentStep = 0;
+  nextNoteTime = ctx.currentTime + 0.05;
+  schedulerTick();
+  document.getElementById('playBtn').textContent = '■ STOP';
+  document.getElementById('playBtn').classList.add('playing');
+}
+
+function stopPlayback() {
+  isPlaying = false;
+  clearTimeout(scheduler);
+  scheduler = null;
+  document.querySelectorAll('.seq-cell').forEach(c => c.classList.remove('playing-cell'));
+  document.getElementById('playBtn').textContent = '▶ PLAY';
+  document.getElementById('playBtn').classList.remove('playing');
+}
+
+// ─── Tap Tempo ───────────────────────────────────────────────────────────────
+let tapTimes = [];
+
+function handleTap() {
+  resumeCtx();
+  const now = Date.now();
+  if (tapTimes.length > 0 && now - tapTimes[tapTimes.length - 1] > 3000) {
+    tapTimes = [];
+  }
+  tapTimes.push(now);
+  if (tapTimes.length >= 2) {
+    let total = 0;
+    for (let i = 1; i < tapTimes.length; i++) {
+      total += tapTimes[i] - tapTimes[i - 1];
+    }
+    const avgMs = total / (tapTimes.length - 1);
+    const newBpm = Math.round(60000 / avgMs);
+    if (newBpm >= 40 && newBpm <= 220) {
+      bpm = newBpm;
+      document.getElementById('bpmDisplay').textContent = bpm;
+      document.getElementById('bpmSlider').value = bpm;
+    }
+  }
+  document.getElementById('midiNote').textContent = tapTimes.length >= 2
+    ? `≈ ${bpm} BPM` : 'tap more to calibrate';
+  setTimeout(() => {
+    if (tapTimes.length > 0) {
+      document.getElementById('midiNote').textContent = '';
+    }
+  }, 2000);
+}
+
+// ─── BPM display click to edit ───────────────────────────────────────────────
+function setupBpmEdit() {
+  const display = document.getElementById('bpmDisplay');
+  display.addEventListener('dblclick', () => {
+    const input = prompt('Enter BPM (40–220):', bpm);
+    const val = parseInt(input);
+    if (val >= 40 && val <= 220) {
+      bpm = val;
+      display.textContent = bpm;
+      document.getElementById('bpmSlider').value = bpm;
+    }
+  });
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderSequencer();
+setupBpmEdit();
+
+document.getElementById('playBtn').addEventListener('click', () => {
+  resumeCtx();
+  if (isPlaying) stopPlayback(); else startPlayback();
+});
+
+document.getElementById('tapBtn').addEventListener('click', handleTap);
+
+document.getElementById('bpmSlider').addEventListener('input', (e) => {
+  bpm = parseInt(e.target.value);
+  document.getElementById('bpmDisplay').textContent = bpm;
+});
+
+document.getElementById('bpmDisplay').addEventListener('click', handleTap);
+
+document.getElementById('genreSelect').addEventListener('change', (e) => {
+  currentGenre = e.target.value;
+  grid = patterns[currentGenre].map(r => [...r]);
+  renderSequencer();
+});
+
+// Keyboard: tap tempo with spacebar
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && !e.target.matches('input, select, textarea')) {
+    e.preventDefault();
+    handleTap();
+  }
+  if (e.code === 'Enter' && !e.target.matches('input, select, textarea')) {
+    e.preventDefault();
+    resumeCtx();
+    if (isPlaying) stopPlayback(); else startPlayback();
+  }
+});
+</script>
+</body>
+</html>

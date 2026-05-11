@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slicer Dice — Dreamfyre Delight</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --amber: #ff6b35;
+    --text: #e0e0e0;
+    --text-dim: #666680;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 30% 20%, rgba(255,107,53,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 60% at 70% 80%, rgba(255,107,53,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+  }
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    letter-spacing: 0.15em;
+    color: var(--amber);
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 860px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed var(--text-dim);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--amber);
+    background: rgba(255,107,53,0.05);
+  }
+  .drop-zone.has-file {
+    border-style: solid;
+    border-color: var(--amber);
+    color: var(--amber);
+  }
+
+  /* Waveform */
+  #waveform-canvas {
+    width: 100%;
+    height: 80px;
+    background: var(--surface);
+    border-radius: 8px;
+    display: block;
+  }
+
+  /* Slice grid */
+  .slice-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+  }
+  .slice-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 0.5rem;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    text-align: center;
+  }
+  .slice-btn:hover {
+    border-color: var(--amber);
+    background: rgba(255,107,53,0.1);
+  }
+  .slice-btn.active {
+    background: rgba(255,107,53,0.25);
+    border-color: var(--amber);
+    box-shadow: 0 0 12px rgba(255,107,53,0.3);
+  }
+
+  /* Dice roll */
+  .controls-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .dice-btn {
+    background: var(--surface);
+    border: 2px solid var(--amber);
+    border-radius: 10px;
+    padding: 0.8rem 1.6rem;
+    color: var(--amber);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+    letter-spacing: 0.05em;
+  }
+  .dice-btn:hover { background: rgba(255,107,53,0.15); }
+  .dice-btn.shaking {
+    animation: shake 0.5s ease-in-out;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-8px) rotate(-2deg); }
+    40% { transform: translateX(8px) rotate(2deg); }
+    60% { transform: translateX(-6px) rotate(-1deg); }
+    80% { transform: translateX(6px) rotate(1deg); }
+  }
+
+  .bpm-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+  .bpm-control input {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    width: 70px;
+    padding: 0.4rem 0.6rem;
+    text-align: center;
+  }
+  .bpm-control input:focus {
+    outline: none;
+    border-color: var(--amber);
+  }
+
+  /* Volume row */
+  .volume-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .volume-row label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .volume-row input[type=range] {
+    flex: 1;
+    accent-color: var(--amber);
+  }
+  .master-vol {
+    max-width: 200px;
+    flex: none;
+    width: 180px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Slicer Dice</h1>
+
+<div class="container">
+
+  <div class="drop-zone" id="drop-zone">
+    Drop a WAV or MP3 file here
+  </div>
+  <input type="file" id="file-input" accept="audio/*" style="display:none">
+
+  <canvas id="waveform-canvas"></canvas>
+
+  <div class="slice-grid" id="slice-grid">
+    <button class="slice-btn" data-slice="0">1</button>
+    <button class="slice-btn" data-slice="1">2</button>
+    <button class="slice-btn" data-slice="2">3</button>
+    <button class="slice-btn" data-slice="3">4</button>
+    <button class="slice-btn" data-slice="4">5</button>
+    <button class="slice-btn" data-slice="5">6</button>
+    <button class="slice-btn" data-slice="6">7</button>
+    <button class="slice-btn" data-slice="7">8</button>
+  </div>
+
+  <div class="controls-row">
+    <button class="dice-btn" id="dice-btn">Roll Dice</button>
+    <div class="bpm-control">
+      <label for="bpm-input">BPM</label>
+      <input type="number" id="bpm-input" value="120" min="40" max="300">
+    </div>
+  </div>
+
+  <div class="volume-row">
+    <label class="master-vol">Master</label>
+    <input type="range" id="master-vol" min="0" max="1" step="0.01" value="0.7">
+    <label style="font-size:0.8rem;color:var(--text-dim)" id="file-label">No file loaded</label>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  let audioCtx = null;
+  let masterGain = null;
+  let audioBuffer = null;
+  let numSlices = 8;
+  let sliceGainNodes = [];
+  let activeSourceNodes = [];
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const waveformCanvas = document.getElementById('waveform-canvas');
+  const diceBtn = document.getElementById('dice-btn');
+  const bpmInput = document.getElementById('bpm-input');
+  const masterVol = document.getElementById('master-vol');
+  const fileLabel = document.getElementById('file-label');
+  const sliceGrid = document.getElementById('slice-grid');
+
+  // Init audio context on first interaction
+  function ensureAudioCtx() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.7;
+      masterGain.connect(audioCtx.destination);
+
+      // Dynamics compressor for speaker safety
+      const comp = audioCtx.createDynamicsCompressor();
+      comp.threshold.value = -6;
+      comp.ratio.value = 4;
+      masterGain.connect(comp);
+      comp.connect(audioCtx.destination);
+
+      // Create per-slice gain nodes
+      sliceGainNodes = [];
+      for (let i = 0; i < numSlices; i++) {
+        const g = audioCtx.createGain();
+        g.gain.value = 1.0;
+        g.connect(masterGain);
+        sliceGainNodes.push(g);
+      }
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  // --- File load ---
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) loadFile(file);
+  });
+
+  function loadFile(file) {
+    if (!file) return;
+    ensureAudioCtx();
+    fileLabel.textContent = file.name;
+    dropZone.classList.add('has-file');
+    dropZone.textContent = file.name;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      audioCtx.decodeAudioData(ev.target.result).then((buf) => {
+        audioBuffer = buf;
+        drawWaveform();
+        enableSliceButtons();
+      }).catch((err) => {
+        fileLabel.textContent = 'Decode error: ' + err.message;
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // --- Waveform ---
+  function drawWaveform() {
+    if (!audioBuffer) return;
+    const ctx = waveformCanvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const w = waveformCanvas.offsetWidth;
+    const h = 80;
+    waveformCanvas.width = w * dpr;
+    waveformCanvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const data = audioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / 500);
+    const sliceWidth = w / numSlices;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#1e1e2e';
+    ctx.fillRect(0, 0, w, h);
+
+    // Draw waveform
+    ctx.beginPath();
+    ctx.strokeStyle = '#ff6b35';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 500 && i * step < data.length; i++) {
+      const x = (i / 500) * w;
+      const y = h / 2 + (data[i * step] * h * 0.8 / 2);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Slice markers
+    ctx.strokeStyle = 'rgba(255,107,53,0.5)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    for (let i = 1; i < numSlices; i++) {
+      const x = i * sliceWidth;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+
+  // Resize canvas on window resize
+  window.addEventListener('resize', () => {
+    if (audioBuffer) drawWaveform();
+  });
+
+  // --- Slice triggers ---
+  function enableSliceButtons() {
+    const btns = sliceGrid.querySelectorAll('.slice-btn');
+    btns.forEach((btn) => {
+      btn.disabled = false;
+      btn.addEventListener('click', () => triggerSlice(+btn.dataset.slice, btn));
+    });
+  }
+
+  function triggerSlice(idx, btnEl) {
+    if (!audioBuffer) return;
+    ensureAudioCtx();
+
+    const duration = audioBuffer.duration;
+    const startTime = (idx / numSlices) * duration;
+    const sliceDur = duration / numSlices;
+
+    const src = audioCtx.createBufferSource();
+    src.buffer = audioBuffer;
+
+    const env = audioCtx.createGain();
+    env.gain.setValueAtTime(0, audioCtx.currentTime);
+    env.gain.linearRampToValueAtTime(0.9, audioCtx.currentTime + 0.01);
+    env.gain.setValueAtTime(0.9, audioCtx.currentTime + sliceDur * 0.7);
+    env.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + sliceDur);
+
+    src.connect(env);
+    env.connect(sliceGainNodes[idx]);
+
+    src.start(audioCtx.currentTime, startTime, sliceDur);
+    src.onended = () => {
+      activeSourceNodes = activeSourceNodes.filter(s => s !== src);
+    };
+    activeSourceNodes.push(src);
+
+    // Visual feedback
+    if (btnEl) {
+      btnEl.classList.add('active');
+      setTimeout(() => btnEl.classList.remove('active'), (sliceDur * 1000) + 50);
+    }
+  }
+
+  // --- Dice roll ---
+  diceBtn.addEventListener('click', () => {
+    if (!audioBuffer) return;
+    ensureAudioCtx();
+
+    diceBtn.classList.remove('shaking');
+    void diceBtn.offsetWidth; // reflow to restart animation
+    diceBtn.classList.add('shaking');
+
+    const bpm = Math.max(40, Math.min(300, +bpmInput.value || 120));
+    const stepTime = (60000 / bpm) / 2; // 8th note feel per slice
+
+    // Fisher-Yates shuffle
+    const indices = [0, 1, 2, 3, 4, 5, 6, 7];
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+
+    indices.forEach((idx, i) => {
+      setTimeout(() => {
+        const btns = sliceGrid.querySelectorAll('.slice-btn');
+        triggerSlice(idx, btns[idx]);
+      }, i * stepTime);
+    });
+  });
+
+  // --- Master volume ---
+  masterVol.addEventListener('input', () => {
+    if (masterGain) masterGain.gain.value = +masterVol.value;
+  });
+
+  // Disable slice buttons until file loaded
+  sliceGrid.querySelectorAll('.slice-btn').forEach(b => b.disabled = true);
+})();
+</script>
+</body>
+</html>

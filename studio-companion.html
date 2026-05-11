@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Studio Companion</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #08080b;
+      --surface:  #101016;
+      --card:     #16161e;
+      --border:   #2a2a38;
+      --gold:     #e8a838;
+      --gold-dim: #a07220;
+      --gold-glow: rgba(232,168,56,0.18);
+      --text:     #ddd8ce;
+      --text-dim: #6a6578;
+      --text-mute:#3e3b4a;
+      --green:    #4ade80;
+      --red:      #f87171;
+      --radius:   10px;
+      --radius-lg: 16px;
+    }
+
+    html { font-size: 16px; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 64px;
+      overflow-x: hidden;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      fill: var(--gold);
+      filter: drop-shadow(0 0 8px var(--gold-glow));
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: var(--text);
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ── Grid ───────────────────────────────── */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      width: 100%;
+      max-width: 680px;
+    }
+
+    @media (min-width: 700px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s ease;
+    }
+
+    .card:hover { border-color: var(--gold-dim); }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .card:hover::before { opacity: 1; }
+
+    .card-wide { grid-column: 1 / -1; }
+
+    .card-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 400;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── BPM Section ─────────────────────────── */
+    .bpm-display {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .bpm-number {
+      font-size: 5rem;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      line-height: 1;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      transition: color 0.15s ease;
+    }
+
+    .bpm-number.tapping { color: var(--gold); }
+
+    .bpm-unit {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+      margin-top: 4px;
+      letter-spacing: 0.1em;
+    }
+
+    .beat-bar {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+
+    .beat-pip {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      transition: background 0.08s ease, transform 0.08s ease, box-shadow 0.08s ease;
+    }
+
+    .beat-pip.active {
+      background: var(--gold);
+      transform: scale(1.4);
+      box-shadow: 0 0 10px var(--gold-glow);
+    }
+
+    .bpm-controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .tap-btn {
+      flex: 1;
+      min-width: 120px;
+      padding: 20px 24px;
+      background: var(--surface);
+      border: 1px solid var(--gold-dim);
+      border-radius: var(--radius);
+      color: var(--gold);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: background 0.12s ease, transform 0.1s ease, box-shadow 0.12s ease;
+      position: relative;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .tap-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gold);
+      opacity: 0;
+      transition: opacity 0.1s ease;
+    }
+
+    .tap-btn:hover {
+      background: var(--gold-glow);
+      box-shadow: 0 0 20px var(--gold-glow);
+    }
+
+    .tap-btn:active, .tap-btn.pressed {
+      transform: scale(0.96);
+      background: var(--gold);
+      color: var(--bg);
+      box-shadow: 0 0 30px var(--gold-glow);
+    }
+
+    .icon-btn {
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-dim);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      border-color: var(--text-dim);
+      color: var(--text);
+    }
+
+    .icon-btn:active { transform: scale(0.95); }
+
+    /* ── Chord Explorer ───────────────────────── */
+    .key-selector {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+
+    .key-btn {
+      padding: 7px 13px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-dim);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .key-btn:hover { border-color: var(--text-dim); color: var(--text); }
+    .key-btn.active {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--bg);
+      font-weight: 500;
+      box-shadow: 0 0 12px var(--gold-glow);
+    }
+
+    .chord-type-row {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .chord-type-btn {
+      padding: 6px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-dim);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .chord-type-btn:hover { border-color: var(--text-dim); color: var(--text); }
+    .chord-type-btn.active {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: var(--gold-glow);
+    }
+
+    .chord-notes {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 16px;
+      min-height: 44px;
+    }
+
+    .note-chip {
+      padding: 6px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      transition: all 0.15s ease;
+    }
+
+    .note-chip.root {
+      background: var(--gold-glow);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    .note-chip.playing {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: var(--bg);
+      transform: scale(1.08);
+    }
+
+    .play-chord-btn {
+      width: 100%;
+      padding: 14px;
+      background: var(--gold);
+      border: none;
+      border-radius: var(--radius);
+      color: var(--bg);
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      margin-bottom: 12px;
+    }
+
+    .play-chord-btn:hover {
+      filter: brightness(1.1);
+      box-shadow: 0 4px 20px var(--gold-glow);
+    }
+
+    .play-chord-btn:active { transform: scale(0.97); }
+
+    .chord-info {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-mute);
+      text-align: center;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── Tuner ───────────────────────────────── */
+    .tuner-display {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .tuner-string {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      flex: 1;
+      transition: all 0.2s ease;
+      cursor: default;
+    }
+
+    .tuner-string:hover { border-color: var(--gold-dim); }
+
+    .tuner-string.playing {
+      border-color: var(--gold);
+      background: var(--gold-glow);
+    }
+
+    .str-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      width: 24px;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+
+    .str-note {
+      font-family: 'DM Mono', monospace;
+      font-size: 1.1rem;
+      font-weight: 500;
+      color: var(--text);
+      min-width: 28px;
+    }
+
+    .str-note.playing { color: var(--gold); }
+
+    .str-hz {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-mute);
+      margin-left: auto;
+    }
+
+    /* ── Scale Reference ─────────────────────── */
+    .scale-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .scale-item {
+      padding: 10px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      cursor: default;
+      transition: all 0.15s ease;
+    }
+
+    .scale-item:hover { border-color: var(--gold-dim); }
+
+    .scale-item.playing {
+      border-color: var(--gold);
+      background: var(--gold-glow);
+    }
+
+    .scale-name {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+
+    .scale-notes {
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Footer ─────────────────────────────── */
+    footer {
+      margin-top: 48px;
+      text-align: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-mute);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Animations ─────────────────────────── */
+    @keyframes pulse-gold {
+      0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
+      50% { box-shadow: 0 0 20px 4px var(--gold-glow); }
+    }
+
+    .tap-btn.pulsing {
+      animation: pulse-gold 1.2s ease infinite;
+    }
+
+    /* ── Scrollbar ───────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <svg class="logo-icon" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+        <path d="M18 2 L34 10 L34 26 L18 34 L2 26 L2 10 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M18 8 L28 13 L28 23 L18 28 L8 23 L8 13 Z" fill="currentColor" opacity="0.3"/>
+        <circle cx="18" cy="18" r="4" fill="currentColor"/>
+      </svg>
+      <h1>Studio Companion</h1>
+    </div>
+    <p class="subtitle">BPM Tap &nbsp;·&nbsp; Chord Explorer &nbsp;·&nbsp; Tuner Reference</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- BPM Tap -->
+    <div class="card">
+      <div class="card-label">BPM Tap</div>
+      <div class="bpm-display">
+        <div class="bpm-number" id="bpmNumber">120</div>
+        <div class="bpm-unit">BPM</div>
+      </div>
+      <div class="beat-bar" id="beatBar">
+        <div class="beat-pip" id="pip0"></div>
+        <div class="beat-pip" id="pip1"></div>
+        <div class="beat-pip" id="pip2"></div>
+        <div class="beat-pip" id="pip3"></div>
+      </div>
+      <div class="bpm-controls">
+        <button class="tap-btn" id="tapBtn">TAP</button>
+        <button class="icon-btn" id="decBtn">−10</button>
+        <button class="icon-btn" id="incBtn">+10</button>
+        <button class="icon-btn" id="resetBtn">RESET</button>
+      </div>
+    </div>
+
+    <!-- Chord Explorer -->
+    <div class="card">
+      <div class="card-label">Chord Explorer</div>
+      <div class="key-selector" id="keySelector"></div>
+      <div class="chord-type-row" id="chordTypeRow"></div>
+      <button class="play-chord-btn" id="playChordBtn">▶ PLAY CHORD</button>
+      <div class="chord-notes" id="chordNotes"></div>
+      <div class="chord-info" id="chordInfo">Select a key and chord type</div>
+    </div>
+
+    <!-- Tuner Reference (Wide) -->
+    <div class="card card-wide">
+      <div class="card-label">Guitar Tuner Reference</div>
+      <div class="tuner-display" id="tunerDisplay"></div>
+    </div>
+
+    <!-- Scale Reference (Wide) -->
+    <div class="card card-wide">
+      <div class="card-label">Scale Reference</div>
+      <div class="scale-grid" id="scaleGrid"></div>
+    </div>
+
+  </div>
+
+  <footer>STUDIO COMPANION v1.0 &nbsp;·&nbsp; VHAGAR BUILD &nbsp;·&nbsp; DREAMFYRE</footer>
+
+<script>
+// ─── Audio Context ──────────────────────────────────────────────────────────
+let audioCtx = null;
+
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+// Equal temperament note frequencies (A4 = 440 Hz)
+const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const NOTE_FREQS = {};
+NOTE_NAMES.forEach((n, i) => { NOTE_FREQS[n] = 440 * Math.pow(2, (i - 9) / 12); });
+
+function noteHz(name, octave) {
+  return NOTE_FREQS[name.replace(/\d+/, '')] * Math.pow(2, octave - 4);
+}
+
+function playTone(freq, startTime, duration, volume = 0.25) {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const now = startTime ?? ctx.currentTime;
+
+  osc.type = 'triangle';
+  osc.frequency.setValueAtTime(freq, now);
+
+  gain.gain.setValueAtTime(0, now);
+  gain.gain.linearRampToValueAtTime(volume, now + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + duration + 0.05);
+}
+
+function playChord(notes, octave = 4, duration = 2.0) {
+  const ctx = getAudioCtx();
+  notes.forEach(n => playTone(noteHz(n, octave), null, duration));
+}
+
+// ─── BPM Tap ────────────────────────────────────────────────────────────────
+const NOTES  = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const KEYS   = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const DISPLAY_KEYS = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+const CHORD_TYPES = [
+  { label: 'Major',      suffix: '',     intervals: [0,4,7] },
+  { label: 'Minor',      suffix: 'm',    intervals: [0,3,7] },
+  { label: '7th',        suffix: '7',    intervals: [0,4,7,10] },
+  { label: 'maj7',       suffix: 'maj7',intervals: [0,4,7,11] },
+  { label: 'min7',       suffix: 'm7',   intervals: [0,3,7,10] },
+  { label: 'sus2',       suffix: 'sus2',intervals: [0,2,7] },
+  { label: 'sus4',       suffix: 'sus4',intervals: [0,5,7] },
+  { label: 'add9',       suffix: 'add9', intervals: [0,4,7,14] },
+  { label: 'dim',        suffix: 'dim',  intervals: [0,3,6] },
+  { label: 'aug',        suffix: 'aug',  intervals: [0,4,8] },
+];
+
+const SCALES = [
+  { name: 'Major',       intervals: [0,2,4,5,7,9,11] },
+  { name: 'Minor',       intervals: [0,2,3,5,7,8,10] },
+  { name: 'Harm. Min',   intervals: [0,2,3,5,7,8,11] },
+  { name: 'Mel. Min',    intervals: [0,2,3,5,7,9,11] },
+  { name: 'Dorian',      intervals: [0,2,3,5,7,9,10] },
+  { name: 'Phrygian',    intervals: [0,1,3,5,7,8,10] },
+  { name: 'Lydian',      intervals: [0,2,4,6,7,9,11] },
+  { name: 'Mixolydian',  intervals: [0,2,4,5,7,9,10] },
+  { name: 'Locrian',     intervals: [0,1,3,5,6,8,10] },
+  { name: 'Penta. Maj',  intervals: [0,2,4,7,9] },
+  { name: 'Penta. Min',  intervals: [0,3,5,7,10] },
+  { name: 'Blues',       intervals: [0,3,5,6,7,10] },
+  { name: 'Whole Tone',  intervals: [0,2,4,6,8,10] },
+  { name: 'Chromatic',   intervals: [0,1,2,3,4,5,6,7,8,9,10,11] },
+  { name: 'Raga Bhairav',intervals: [0,1,4,5,7,8,11] },
+  { name: 'Byzantine',   intervals: [0,1,4,5,7,8,11] },
+];
+
+let bpm = 120;
+let tapTimes = [];
+let tapAnimFrame = null;
+let beatIndex = 0;
+let beatInterval = null;
+const BPM_NUMBER = document.getElementById('bpmNumber');
+const TAP_BTN    = document.getElementById('tapBtn');
+
+function updateBpmDisplay() {
+  BPM_NUMBER.textContent = Math.round(bpm);
+}
+
+function flashBeat(i) {
+  for (let j = 0; j < 4; j++) {
+    document.getElementById('pip' + j).classList.remove('active');
+  }
+  document.getElementById('pip' + i).classList.add('active');
+}
+
+function startBeatVisualizer() {
+  if (beatInterval) clearInterval(beatInterval);
+  beatIndex = 0;
+  const interval = 60000 / bpm;
+  beatInterval = setInterval(() => {
+    flashBeat(beatIndex % 4);
+    beatIndex++;
+  }, interval);
+}
+
+function stopBeatVisualizer() {
+  if (beatInterval) { clearInterval(beatInterval); beatInterval = null; }
+  for (let j = 0; j < 4; j++) document.getElementById('pip' + j).classList.remove('active');
+}
+
+function handleTap(e) {
+  e.preventDefault();
+  const now = performance.now();
+  BPM_NUMBER.classList.add('tapping');
+
+  TAP_BTN.classList.add('pressed');
+  setTimeout(() => TAP_BTN.classList.remove('pressed'), 120);
+
+  // Play a subtle click
+  playTone(880, null, 0.05, 0.08);
+
+  if (tapTimes.length > 0 && now - tapTimes[tapTimes.length - 1] > 3000) {
+    tapTimes = []; // reset if gap > 3s
+  }
+
+  tapTimes.push(now);
+
+  if (tapTimes.length > 1) {
+    const diffs = [];
+    for (let i = 1; i < tapTimes.length; i++) {
+      diffs.push(tapTimes[i] - tapTimes[i-1]);
+    }
+    const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+    bpm = Math.max(30, Math.min(300, Math.round(60000 / avg)));
+    updateBpmDisplay();
+    startBeatVisualizer();
+  }
+}
+
+TAP_BTN.addEventListener('click', handleTap);
+TAP_BTN.addEventListener('touchstart', handleTap, { passive: false });
+
+document.getElementById('decBtn').addEventListener('click', () => {
+  bpm = Math.max(30, bpm - 10);
+  updateBpmDisplay();
+  startBeatVisualizer();
+});
+
+document.getElementById('incBtn').addEventListener('click', () => {
+  bpm = Math.min(300, bpm + 10);
+  updateBpmDisplay();
+  startBeatVisualizer();
+});
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  bpm = 120;
+  tapTimes = [];
+  updateBpmDisplay();
+  BPM_NUMBER.classList.remove('tapping');
+  stopBeatVisualizer();
+});
+
+// Spacebar to tap
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'Space' && e.target === document.body) {
+    e.preventDefault();
+    handleTap(e);
+  }
+});
+
+// ─── Chord Explorer ─────────────────────────────────────────────────────────
+let selectedKey = 'C';
+let selectedType = CHORD_TYPES[0];
+
+const keySelector = document.getElementById('keySelector');
+const chordTypeRow = document.getElementById('chordTypeRow');
+const chordNotesEl = document.getElementById('chordNotes');
+const chordInfoEl  = document.getElementById('chordInfo');
+const playChordBtn = document.getElementById('playChordBtn');
+
+function buildKeySelector() {
+  keySelector.innerHTML = '';
+  KEYS.forEach((k, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'key-btn' + (k === selectedKey ? ' active' : '');
+    btn.textContent = DISPLAY_KEYS[i];
+    btn.addEventListener('click', () => {
+      selectedKey = k;
+      document.querySelectorAll('.key-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateChordDisplay();
+    });
+    keySelector.appendChild(btn);
+  });
+}
+
+function buildChordTypeRow() {
+  chordTypeRow.innerHTML = '';
+  CHORD_TYPES.forEach(ct => {
+    const btn = document.createElement('button');
+    btn.className = 'chord-type-btn' + (ct.label === selectedType.label ? ' active' : '');
+    btn.textContent = ct.label;
+    btn.addEventListener('click', () => {
+      selectedType = ct;
+      document.querySelectorAll('.chord-type-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      updateChordDisplay();
+    });
+    chordTypeRow.appendChild(btn);
+  });
+}
+
+function noteName(idx) {
+  return NOTES[((idx % 12) + 12) % 12];
+}
+
+function getChordNotes(root, type) {
+  const rootIdx = NOTES.indexOf(root);
+  return type.intervals.map(i => noteName(rootIdx + i));
+}
+
+let currentChips = [];
+
+function updateChordDisplay() {
+  const notes = getChordNotes(selectedKey, selectedType);
+  chordNotesEl.innerHTML = '';
+  currentChips = [];
+
+  notes.forEach((n, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'note-chip' + (i === 0 ? ' root' : '');
+    chip.textContent = n;
+    chip.dataset.index = i;
+    currentChips.push(chip);
+    chordNotesEl.appendChild(chip);
+  });
+
+  const chordName = selectedKey + selectedType.suffix;
+  chordInfoEl.textContent = `${chordName} · ${notes.length} notes · ${selectedType.intervals.length}-note voicing`;
+}
+
+playChordBtn.addEventListener('click', () => {
+  const notes = getChordNotes(selectedKey, selectedType);
+  playChordBtn.textContent = '▶ PLAYING...';
+  playChordBtn.style.opacity = '0.7';
+
+  // Animate chips
+  currentChips.forEach((chip, i) => {
+    setTimeout(() => {
+      chip.classList.add('playing');
+      setTimeout(() => chip.classList.remove('playing'), 400);
+    }, i * 80);
+  });
+
+  playChord(notes, 4, 2.2);
+
+  setTimeout(() => {
+    playChordBtn.textContent = '▶ PLAY CHORD';
+    playChordBtn.style.opacity = '1';
+  }, 1500);
+});
+
+buildKeySelector();
+buildChordTypeRow();
+updateChordDisplay();
+
+// ─── Tuner Reference ────────────────────────────────────────────────────────
+const TUNING_STANDARD = [
+  { str: '6', note: 'E', octave: 2 },
+  { str: '5', note: 'A', octave: 2 },
+  { str: '4', note: 'D', octave: 3 },
+  { str: '3', note: 'G', octave: 3 },
+  { str: '2', note: 'B', octave: 3 },
+  { str: '1', note: 'E', octave: 4 },
+];
+
+const TUNER_DISPLAY = document.getElementById('tunerDisplay');
+
+function buildTuner() {
+  TUNER_DISPLAY.innerHTML = '';
+  TUNING_STANDARD.forEach(({ str, note, octave }) => {
+    const div = document.createElement('div');
+    div.className = 'tuner-string';
+    div.dataset.str = str;
+    const freq = noteHz(note, octave).toFixed(1);
+    div.innerHTML = `
+      <span class="str-label">${str}</span>
+      <span class="str-note">${note}</span>
+      <span class="str-hz">${freq} Hz</span>
+    `;
+    div.addEventListener('click', () => {
+      document.querySelectorAll('.tuner-string').forEach(s => s.classList.remove('playing'));
+      document.querySelectorAll('.str-note').forEach(n => n.classList.remove('playing'));
+      div.classList.add('playing');
+      div.querySelector('.str-note').classList.add('playing');
+      const f = parseFloat(freq);
+      playTone(f, null, 1.5, 0.2);
+      setTimeout(() => { div.classList.remove('playing'); div.querySelector('.str-note').classList.remove('playing'); }, 1500);
+    });
+    TUNER_DISPLAY.appendChild(div);
+  });
+}
+
+buildTuner();
+
+// ─── Scale Reference ────────────────────────────────────────────────────────
+const SCALE_GRID = document.getElementById('scaleGrid');
+
+function buildScaleGrid() {
+  SCALE_GRID.innerHTML = '';
+  SCALES.forEach((scale, si) => {
+    const div = document.createElement('div');
+    div.className = 'scale-item';
+    div.dataset.scaleIndex = si;
+    const rootIdx = NOTES.indexOf('C');
+    const scaleNotes = scale.intervals.map(i => noteName(rootIdx + i)).join(' · ');
+    div.innerHTML = `<div class="scale-name">${scale.name}</div><div class="scale-notes">${scaleNotes}</div>`;
+    div.addEventListener('click', () => {
+      document.querySelectorAll('.scale-item').forEach(s => s.classList.remove('playing'));
+      div.classList.add('playing');
+      const freqs = scale.intervals.map(i => noteHz(noteName(rootIdx + i), 4));
+      freqs.forEach((f, i) => setTimeout(() => playTone(f, null, 0.4, 0.15), i * 120));
+      setTimeout(() => div.classList.remove('playing'), freqs.length * 120 + 400);
+    });
+    SCALE_GRID.appendChild(div);
+  });
+}
+
+buildScaleGrid();
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+updateBpmDisplay();
+  </script>
+</body>
+</html>

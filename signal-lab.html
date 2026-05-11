@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signal Lab</title>
+    <style>
+        body {
+            background-color: #0a0a0f;
+            font-family: 'Space Mono', monospace;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 40px auto;
+        }
+        
+        canvas {
+            border: 1px solid #00f5d4;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            padding-top: 20px;
+        }
+        
+        button {
+            background-color: #00f5d4;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 20px;
+            background-color: #f72585;
+            border-radius: 5px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]:focus {
+            box-shadow: 0 0 10px rgba(0, 255, 212, 0.5);
+        }
+        
+        label {
+            font-size: 16px;
+            margin-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Signal Lab</h1>
+        <canvas id="scope" width="800"></canvas>
+        <div class="controls">
+            <button id="sine-btn">Sine</button>
+            <button id="square-btn">Square</button>
+            <button id="saw-btn">Sawtooth</button>
+            <button id="tri-btn">Triangle</button>
+            <input type="range" id="freq-slider" min="20" max="2000" value="100"> <span id="freq-label">500 Hz</span>
+            <label for="freq-slider">Frequency (Hz)</label>
+            <input type="range" id="gain-slider" min="0" max="1" value="0.5"> <span id="gain-label">0.5</span>
+            <label for="gain-slider">Gain</label>
+            <button id="play-btn">▶ Play</button>
+            <button id="stop-btn">■ Stop</button>
+        </div>
+    </div>
+
+    <script>
+        const audioCtx = new AudioContext();
+        let oscillator;
+        let gainNode;
+        let analyser;
+        let masterGain;
+        let compressor;
+        const dpr = window.devicePixelRatio || 1;
+        const width = 800;
+        const height = 180;
+
+        document.addEventListener('DOMContentLoaded', initAudio);
+
+        function initAudio() {
+            gainNode = audioCtx.createGain();
+            analyser = audioCtx.createAnalyser();
+            masterGain = audioCtx.createGain();
+            compressor = audioCtx.createDynamicsCompressor();
+            compressor.threshold.value = -6;
+            compressor.ratio.value = 4;
+
+            masterGain.connect(compressor);
+            compressor.connect(audioCtx.destination);
+
+            document.getElementById('freq-slider').addEventListener('input', updateFreqLabel);
+            document.getElementById('gain-slider').addEventListener('input', updateGainLabel);
+
+            document.getElementById('play-btn').addEventListener('click', startOsc);
+            document.getElementById('stop-btn').addEventListener('click', stopOsc);
+
+            let selectedType = 'sine';
+            document.querySelectorAll('.waveform-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (selectedType !== btn.id) {
+                        selectedType = btn.id;
+                        startOsc();
+                    }
+                });
+            });
+
+            function drawScope() {
+                const data = analyser.getByteTimeDomainData();
+                const ctx = document.getElementById('scope').getContext('2d');
+                ctx.clearRect(0, 0, width * dpr, height * dpr);
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                for (let i = 0; i < data.length; i++) {
+                    const x = i / data.length * width;
+                    ctx.fillRect(x * dpr, height / 2 + (data[i] - 128) * dpr, 1 * dpr, Math.abs(data[i] - 128) * dpr);
+                }
+                requestAnimationFrame(drawScope);
+            }
+
+            drawScope();
+        }
+
+        function setFrequency(freq) {
+            oscillator.frequency.setTargetAtTime(freq, audioCtx.currentTime, 0.1);
+        }
+
+        function setGain(gain) {
+            gainNode.gain.setTargetAtTime(gain, audioCtx.currentTime, 0.1);
+        }
+
+        function drawScope() {
+            const data = analyser.getByteTimeDomainData();
+            const ctx = document.getElementById('scope').getContext('2d');
+            ctx.clearRect(0, 0, width * dpr, height * dpr);
+            ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+            for (let i = 0; i < data.length; i++) {
+                const x = i / data.length * width;
+                ctx.fillRect(x * dpr, height / 2 + (data[i] - 128) * dpr, 1 * dpr, Math.abs(data[i] - 128) * dpr);
+            }
+            requestAnimationFrame(drawScope);
+        }
+
+        function startOsc() {
+            if (!oscillator) {
+                const selectedType = document.querySelector('.waveform-btn.selected').id;
+                oscillator = audioCtx.createOscillator();
+                oscillator.type = selectedType;
+                oscillator.frequency.value = parseFloat(document.getElementById('freq-slider').value);
+                setGain(parseFloat(document.getElementById('gain-slider').value));
+                masterGain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.05);
+
+                analyser.connect(gainNode);
+                gainNode.connect(compressor);
+                compressor.connect(audioCtx.destination);
+                oscillator.connect(analyser);
+
+                oscillator.start();
+            }
+        }
+
+        function stopOsc() {
+            if (oscillator) {
+                oscillator.stop(audioCtx.currentTime + 0.1);
+            }
+        }
+
+        function updateFreqLabel() {
+            document.getElementById('freq-label').textContent = `Frequency: ${document.getElementById('freq-slider').value} Hz`;
+        }
+
+        function updateGainLabel() {
+            document.getElementById('gain-label').textContent = `Gain: ${document.getElementById('gain-slider').value}`;
+        }
+    </script>

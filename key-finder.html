@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harmonic Key Finder — Deep House</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+
+  :root {
+    --bg: #090910;
+    --surface: #0f0f1a;
+    --surface2: #161625;
+    --border: #1e1e30;
+    --gold: #ffd700;
+    --amber: #ffb300;
+    --cyan: #00e5ff;
+    --magenta: #ff00aa;
+    --mint: #00ff88;
+    --dim: #2a2a45;
+    --text: #e0e0f0;
+    --text-dim: #6a6a8a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #0d0d18 0%, var(--bg) 100%);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cyan);
+  }
+
+  .logo span { color: var(--magenta); }
+
+  .bpm-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  /* ─── MAIN ─── */
+  main {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 60px);
+  }
+
+  /* ─── SELECTOR PANEL ─── */
+  #selector-panel {
+    background: var(--bg);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .panel-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* Root picker */
+  .root-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .root-btn {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .root-btn:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0, 229, 255, 0.06);
+  }
+
+  .root-btn.active {
+    background: rgba(0, 229, 255, 0.15);
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 18px rgba(0, 229, 255, 0.3);
+  }
+
+  /* Mode picker */
+  .mode-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .mode-btn {
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+    line-height: 1.4;
+  }
+
+  .mode-btn .mode-sub {
+    font-size: 9px;
+    color: var(--dim);
+    font-weight: 400;
+    margin-top: 2px;
+    display: block;
+  }
+
+  .mode-btn:hover { border-color: var(--magenta); color: var(--magenta); background: rgba(255,0,170,0.06); }
+  .mode-btn.active {
+    background: rgba(255, 0, 170, 0.15);
+    border-color: var(--magenta);
+    color: var(--magenta);
+    box-shadow: 0 0 18px rgba(255, 0, 170, 0.25);
+  }
+
+  /* ─── RESULTS PANEL ─── */
+  #results-panel {
+    background: var(--bg);
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    overflow-y: auto;
+  }
+
+  /* Key Summary */
+  .key-summary {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .key-summary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at center, rgba(0,229,255,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .key-name-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 48px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .key-name-display .root { color: var(--cyan); }
+  .key-name-display .mode { color: var(--magenta); }
+
+  .relative-key {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  .relative-key span { color: var(--gold); }
+
+  .key-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 50px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    background: rgba(255, 179, 0, 0.1);
+    border: 1px solid rgba(255, 179, 0, 0.3);
+    color: var(--amber);
+  }
+
+  /* Chord Grid */
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.25em;
+    color: var(--dim);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .chord-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .chord-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.12s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chord-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--cyan);
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+
+  .chord-card:hover {
+    border-color: var(--cyan);
+    background: rgba(0, 229, 255, 0.04);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+
+  .chord-card:hover::before { opacity: 1; }
+
+  .chord-card.playing {
+    border-color: var(--cyan);
+    background: rgba(0, 229, 255, 0.1);
+    box-shadow: 0 0 24px rgba(0, 229, 255, 0.2);
+  }
+
+  .chord-card.playing::before { opacity: 1; }
+
+  .chord-card .chord-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .chord-card .chord-type {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .chord-card .chord-notes {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .note-chip {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    transition: all 0.1s;
+  }
+
+  .chord-card:hover .note-chip {
+    background: rgba(0, 229, 255, 0.1);
+    border-color: rgba(0, 229, 255, 0.3);
+    color: var(--cyan);
+  }
+
+  .chord-card .chord-degree {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    position: absolute;
+    top: 8px;
+    right: 10px;
+  }
+
+  .chord-card .deep-house-tag {
+    font-size: 9px;
+    color: var(--amber);
+    background: rgba(255, 179, 0, 0.08);
+    border: 1px solid rgba(255, 179, 0, 0.2);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-top: 6px;
+    display: inline-block;
+    letter-spacing: 0.05em;
+  }
+
+  /* Scale info */
+  .scale-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+
+  .scale-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .scale-card:hover {
+    border-color: var(--magenta);
+    background: rgba(255, 0, 170, 0.05);
+  }
+
+  .scale-card .scale-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--magenta);
+    margin-bottom: 4px;
+  }
+
+  .scale-card .scale-notes {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  /* Tip */
+  .tip-box {
+    background: rgba(255, 179, 0, 0.05);
+    border: 1px solid rgba(255, 179, 0, 0.15);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .tip-box strong { color: var(--amber); }
+
+  /* Status */
+  .status {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--mint);
+    letter-spacing: 0.1em;
+    min-height: 14px;
+  }
+
+  /* Piano keyboard */
+  .piano-strip {
+    display: flex;
+    position: relative;
+    width: fit-content;
+    margin: 0 auto;
+  }
+
+  .piano-strip .key {
+    position: relative;
+    cursor: pointer;
+  }
+
+  .piano-strip .white {
+    width: 44px;
+    height: 140px;
+    background: #f0eeea;
+    border: 1px solid #c8c4bc;
+    border-radius: 0 0 5px 5px;
+    z-index: 1;
+  }
+
+  .piano-strip .black {
+    width: 28px;
+    height: 88px;
+    background: #1a1a1a;
+    border-radius: 0 0 3px 3px;
+    margin-left: -14px;
+    margin-right: -14px;
+    z-index: 2;
+  }
+
+  .piano-strip .key-label {
+    position: absolute;
+    bottom: 6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: #999;
+    pointer-events: none;
+  }
+
+  .piano-strip .black .key-label { color: #555; }
+
+  .piano-strip .key:hover { background: #e0dcd4; }
+  .piano-strip .black:hover { background: #2a2a2a; }
+  .piano-strip .key.active { background: var(--cyan) !important; }
+  .piano-strip .black.active { background: var(--magenta) !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">KEY<span>Finder</span></div>
+  <div style="display:flex;align-items:center;gap:16px">
+    <span class="bpm-badge">Deep House Edition</span>
+    <span class="status" id="statusBar"></span>
+  </div>
+</header>
+
+<main>
+  <!-- SELECTOR -->
+  <div id="selector-panel">
+    <div>
+      <div class="panel-title">Root Note</div>
+      <div class="root-grid" id="rootGrid"></div>
+    </div>
+    <div>
+      <div class="panel-title">Mode</div>
+      <div class="mode-grid">
+        <button class="mode-btn active" data-mode="major" data-index="0">
+          Major
+          <span class="mode-sub">Ionian</span>
+        </button>
+        <button class="mode-btn" data-mode="minor" data-index="1">
+          Minor
+          <span class="mode-sub">Aeolian</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="results-panel">
+    <div class="key-summary">
+      <div class="key-name-display" id="keyNameDisplay">
+        <span class="root">C</span><span class="mode"> Major</span>
+      </div>
+      <div class="relative-key">Relative: <span id="relativeKey">C</span></div>
+      <div class="key-badge" id="keyBadge">🎹 Deep House Key</div>
+    </div>
+
+    <!-- Piano -->
+    <div>
+      <div class="section-label">Piano</div>
+      <div class="piano-strip" id="pianoStrip"></div>
+    </div>
+
+    <!-- Diatonic Chords -->
+    <div>
+      <div class="section-label">Diatonic Chords — click to play</div>
+      <div class="chord-grid" id="chordGrid"></div>
+    </div>
+
+    <!-- Scales -->
+    <div>
+      <div class="section-label">Useful Scales</div>
+      <div class="scale-cards" id="scaleCards"></div>
+    </div>
+
+    <!-- Tip -->
+    <div class="tip-box">
+      <strong>Deep House Piano Tip:</strong> Minor keys (Am, Dm, Em) dominate deep house. Common progressions: i — VI — III — VII (拉), i — IV — VII — III, and vi — IV — i — V in major. Focus on chords with 7ths and extensions — shell voicings (3rd + 7th) leave room for the bass.
+    </div>
+  </div>
+</main>
+
+<script>
+'use strict';
+
+// ─── MUSIC DATA ────────────────────────────────────────────────
+const NOTES = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const NOTE_MAP = { 'C':0,'Db':1,'D':2,'Eb':3,'E':4,'F':5,'Gb':6,'G':7,'Ab':8,'A':9,'Bb':10,'B':11 };
+
+// Intervals in semitones from root
+const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11];
+const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10];
+
+// Diatonic chord qualities per degree (major/minor mode)
+const MAJOR_CHORD_QUALITIES = ['maj','min','min','maj','maj','min','dim'];
+const MINOR_CHORD_QUALITIES = ['min','dim','maj','min','min','maj','maj'];
+
+const CHORD_SUFFIXES = {
+  maj: 'maj7', min: 'min7', dim: 'm7b5', dom: '7',
+};
+
+const CHORD_INTERVALS = {
+  maj: [0, 4, 7],
+  min: [0, 3, 7],
+  dim: [0, 3, 6],
+  dom: [0, 4, 7],
+};
+
+// Scales per mode
+const SCALES = {
+  major: [
+    { name: 'Major (Ionian)', intervals: [0,2,4,5,7,9,11] },
+    { name: 'Mixolydian', intervals: [0,2,4,5,7,9,10] },
+    { name: 'Lydian', intervals: [0,2,4,6,7,9,11] },
+    { name: 'Dorian', intervals: [0,2,3,5,7,9,10] },
+  ],
+  minor: [
+    { name: 'Natural Minor (Aeolian)', intervals: [0,2,3,5,7,8,10] },
+    { name: 'Dorian', intervals: [0,2,3,5,7,9,10] },
+    { name: 'Phrygian', intervals: [0,1,3,5,7,8,10] },
+    { name: 'Harmonic Minor', intervals: [0,2,3,5,7,8,11] },
+  ],
+};
+
+// Deep house tags per degree (which chords appear most in deep house progressions)
+const DEEP_HOUSE_CHORDS = {
+  major: [0, 3, 4, 6]; // I, IV, V, vii°
+  minor: [0, 5, 6, 3]; // i, VI, VII, iv
+};
+
+// ─── STATE ────────────────────────────────────────────────────
+let audioCtx = null;
+let masterGain = null;
+let reverbNode = null;
+let selectedRoot = 0;
+let selectedMode = 'major';
+
+// Piano keys for 2 octaves (C4 to C6)
+const PIANO_MIDI = [60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84];
+
+// ─── AUDIO ─────────────────────────────────────────────────────
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.6;
+  masterGain.connect(audioCtx.destination);
+
+  reverbNode = audioCtx.createDelay(2);
+  const fb = audioCtx.createGain();
+  fb.gain.value = 0.5;
+  reverbNode.connect(fb);
+  fb.connect(reverbNode);
+  reverbNode.connect(masterGain);
+  reverbNode.delayTime.value = 0.4;
+}
+
+function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+
+function noteNameFromMidi(m) {
+  const n = m % 12;
+  const oct = Math.floor(m / 12) - 1;
+  return NOTES[n] + oct;
+}
+
+function playChordByIntervals(rootMidi, intervals, duration = 2) {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+
+  intervals.forEach((offset, i) => {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.value = 2500;
+
+    // Chord tone — warm sine with slight harmonic
+    const real = new Float32Array([0, 1, 0.3, 0.1]);
+    const imag = new Float32Array(real.length);
+    osc.setPeriodicWave(audioCtx.createPeriodicWave(real, imag));
+    osc.frequency.value = midiToFreq(rootMidi + offset);
+
+    osc.connect(filt);
+    filt.connect(g);
+    g.connect(masterGain);
+
+    // Reverb send
+    const revSend = audioCtx.createGain();
+    revSend.gain.value = 0.2;
+    g.connect(revSend);
+    revSend.connect(reverbNode);
+
+    const delay = i * 0.018;
+    g.gain.setValueAtTime(0, now + delay);
+    g.gain.linearRampToValueAtTime(0.12 / intervals.length, now + delay + 0.02);
+    g.gain.setValueAtTime(0.12 / intervals.length, now + delay + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + delay + duration);
+
+    osc.start(now + delay);
+    osc.stop(now + delay + duration + 0.05);
+  });
+}
+
+function playNote(midi, duration = 1) {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = midiToFreq(midi);
+  osc.connect(g);
+  g.connect(masterGain);
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.3, now + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  osc.start(now);
+  osc.stop(now + duration + 0.05);
+}
+
+// ─── MUSIC LOGIC ───────────────────────────────────────────────
+function getDiatonicChords(rootIdx, mode) {
+  const scale = mode === 'major' ? MAJOR_SCALE : MINOR_SCALE;
+  const qualities = mode === 'major' ? MAJOR_CHORD_QUALITIES : MINOR_CHORD_QUALITIES;
+  const chords = [];
+
+  scale.forEach((interval, degree) => {
+    const chordRoot = (rootIdx + interval) % 12;
+    const quality = qualities[degree];
+    const suffix = CHORD_SUFFIXES[quality];
+    const chordIntervals = CHORD_INTERVALS[quality];
+
+    // Build chord notes
+    const chordNotes = chordIntervals.map(c => {
+      const midi = 60 + ((chordRoot + c) % 12);
+      return noteNameFromMidi(midi);
+    });
+
+    // Roman numeral
+    const numerals = ['I','II','III','IV','V','VI','VII'];
+    const numeral = (quality === 'min') ? numerals[degree].toLowerCase() : numerals[degree];
+
+    // Extension for 7th
+    const extSuffix = suffix.replace('7', '7');
+    const fullName = NOTES[chordRoot] + extSuffix;
+
+    // Is this a deep house chord?
+    const dhTag = (mode === 'major' && DEEP_HOUSE_CHORDS.major.includes(degree)) ||
+                  (mode === 'minor' && DEEP_HOUSE_CHORDS.minor.includes(degree));
+
+    chords.push({
+      root: chordRoot,
+      quality,
+      degree,
+      numeral,
+      name: fullName,
+      notes: chordNotes,
+      intervals: chordIntervals,
+      isDeepHouse: dhTag,
+    });
+  });
+
+  return chords;
+}
+
+function getRelativeKey(rootIdx, mode) {
+  if (mode === 'major') {
+    // Relative minor is 3 semitones down
+    const rel = (rootIdx + 9) % 12;
+    return { root: rel, mode: 'minor' };
+  } else {
+    // Relative major is 3 semitones up
+    const rel = (rootIdx + 3) % 12;
+    return { root: rel, mode: 'major' };
+  }
+}
+
+// ─── UI BUILDERS ───────────────────────────────────────────────
+function buildRootGrid() {
+  const grid = document.getElementById('rootGrid');
+  grid.innerHTML = '';
+  NOTES.forEach((note, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'root-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = note;
+    btn.dataset.idx = i;
+    btn.addEventListener('click', () => selectRoot(i));
+    grid.appendChild(btn);
+  });
+}
+
+function buildPianoStrip() {
+  const strip = document.getElementById('pianoStrip');
+  strip.innerHTML = '';
+  const IS_BLACK = [false, true, false, true, false, false, true, false, true, false, true, false];
+
+  PIANO_MIDI.forEach((midi, i) => {
+    const isBlack = IS_BLACK[midi % 12];
+    if (isBlack) return; // black keys added after whites
+
+    const key = document.createElement('div');
+    key.className = 'key white';
+    key.dataset.midi = midi;
+
+    const label = document.createElement('span');
+    label.className = 'key-label';
+    label.textContent = NOTES[midi % 12];
+    key.appendChild(label);
+
+    key.addEventListener('mousedown', () => {
+      if (!audioCtx) initAudio();
+      playNote(midi, 1.2);
+      key.classList.add('active');
+    });
+    key.addEventListener('mouseup', () => key.classList.remove('active'));
+    key.addEventListener('mouseleave', () => key.classList.remove('active'));
+
+    strip.appendChild(key);
+
+    // Add black key after this white key if applicable
+    const blackIdx = (midi % 12);
+    const blackMap = { 1: true, 3: true, 6: true, 8: true, 10: true };
+    if (blackMap[blackIdx]) {
+      const bKey = document.createElement('div');
+      bKey.className = 'key black';
+      bKey.dataset.midi = midi + 1;
+      const bLabel = document.createElement('span');
+      bLabel.className = 'key-label';
+      bLabel.textContent = NOTES[(midi + 1) % 12];
+      bKey.appendChild(bLabel);
+      bKey.addEventListener('mousedown', () => {
+        if (!audioCtx) initAudio();
+        playNote(midi + 1, 1.2);
+        bKey.classList.add('active');
+      });
+      bKey.addEventListener('mouseup', () => bKey.classList.remove('active'));
+      bKey.addEventListener('mouseleave', () => bKey.classList.remove('active'));
+      strip.appendChild(bKey);
+    }
+  });
+}
+
+function updateDisplay() {
+  const root = NOTES[selectedRoot];
+  const modeLabel = selectedMode === 'major' ? 'Major' : 'Minor';
+  const modeShort = selectedMode === 'major' ? 'maj' : 'min';
+
+  document.getElementById('keyNameDisplay').innerHTML =
+    `<span class="root">${root}</span><span class="mode"> ${modeLabel}</span>`;
+
+  // Relative key
+  const rel = getRelativeKey(selectedRoot, selectedMode);
+  document.getElementById('relativeKey').textContent = NOTES[rel.root] + (rel.mode === 'major' ? ' Major' : ' Minor');
+
+  // Deep house badge
+  const dhKeys = selectedMode === 'minor' ? '🎹 Deep House Key' : '✨ Open Key';
+  document.getElementById('keyBadge').textContent = dhKeys;
+
+  // Chord grid
+  const chords = getDiatonicChords(selectedRoot, selectedMode);
+  const grid = document.getElementById('chordGrid');
+  grid.innerHTML = '';
+
+  chords.forEach(chord => {
+    const card = document.createElement('div');
+    card.className = 'chord-card';
+    card.dataset.degree = chord.degree;
+
+    const qualityColor = chord.quality === 'maj' ? 'var(--cyan)' :
+                        chord.quality === 'min' ? 'var(--magenta)' : 'var(--dim)';
+
+    card.innerHTML = `
+      <div class="chord-degree">${chord.numeral}</div>
+      <div class="chord-name" style="color:${qualityColor}">${NOTES[chord.root]}</div>
+      <div class="chord-type">${CHORD_SUFFIXES[chord.quality].replace('7', '')}</div>
+      <div class="chord-notes">
+        ${chord.notes.map(n => `<span class="note-chip">${n}</span>`).join('')}
+      </div>
+      ${chord.isDeepHouse ? '<div class="deep-house-tag">🔥 Deep House</div>' : ''}
+    `;
+
+    card.addEventListener('click', () => {
+      playChord(card, chord);
+    });
+
+    grid.appendChild(card);
+  });
+
+  // Scale cards
+  const scaleList = SCALES[selectedMode];
+  const scaleContainer = document.getElementById('scaleCards');
+  scaleContainer.innerHTML = '';
+
+  scaleList.forEach(scale => {
+    const card = document.createElement('div');
+    card.className = 'scale-card';
+    const scaleNotes = scale.intervals.map(int => {
+      const midi = 60 + ((selectedRoot + int) % 12);
+      return NOTES[midi % 12];
+    });
+    card.innerHTML = `
+      <div class="scale-name">${scale.name}</div>
+      <div class="scale-notes">${scaleNotes.join(' — ')}</div>
+    `;
+    card.addEventListener('click', () => {
+      playScale(selectedRoot, scale);
+    });
+    scaleContainer.appendChild(card);
+  });
+
+  // Highlight piano keys
+  highlightChordKeys(chords);
+}
+
+function playChord(card, chord) {
+  if (!audioCtx) initAudio();
+
+  // Visual feedback
+  document.querySelectorAll('.chord-card').forEach(c => c.classList.remove('playing'));
+  card.classList.add('playing');
+  setTimeout(() => card.classList.remove('playing'), 1200);
+
+  const rootMidi = 60 + chord.root;
+  playChordByIntervals(rootMidi, chord.intervals, 2.5);
+  setStatus(`Playing: ${chord.name} (${chord.notes.join(' ')})`);
+}
+
+function playScale(rootIdx, scale) {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  scale.intervals.forEach((interval, i) => {
+    const midi = 60 + ((rootIdx + interval) % 12) + 12; // one octave up
+    setTimeout(() => {
+      playNote(midi, 0.8);
+    }, i * 220);
+  });
+
+  setStatus(`Playing: ${scale.name}`);
+}
+
+function highlightChordKeys(chords) {
+  document.querySelectorAll('.piano-strip .key').forEach(key => {
+    key.classList.remove('active');
+  });
+}
+
+function selectRoot(idx) {
+  selectedRoot = idx;
+  document.querySelectorAll('.root-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+  updateDisplay();
+}
+
+function setMode(mode) {
+  selectedMode = mode;
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  updateDisplay();
+}
+
+function setStatus(msg) {
+  document.getElementById('statusBar').textContent = msg;
+  if (msg) setTimeout(() => { document.getElementById('statusBar').textContent = ''; }, 2000);
+}
+
+// ─── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildRootGrid();
+  buildPianoStrip();
+  updateDisplay();
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => setMode(btn.dataset.mode));
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    const noteMap = { 'z':0,'s':1,'x':2,'d':3,'c':4,'v':5,'g':6,'b':7,'h':8,'n':9,'j':10,'m':11 };
+    const key = e.key.toLowerCase();
+    if (noteMap[key] !== undefined) {
+      const midi = 60 + noteMap[key];
+      if (!audioCtx) initAudio();
+      playNote(midi, 0.8);
+    }
+  });
+});
+</script>
+</body>
+</html>

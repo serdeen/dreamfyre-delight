@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🌟 Palabras! Spanish Words</title>
+<style>
+  :root {
+    --bg1: #1a0533;
+    --bg2: #0a1a3a;
+    --card-bg: #2d0a5e;
+    --accent: #ff6fd8;
+    --accent2: #7ee8fa;
+    --gold: #ffd700;
+    --text: #fff;
+    --dim: rgba(255,255,255,0.6);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    min-height: 100vh;
+    background: linear-gradient(160deg, var(--bg1), var(--bg2));
+    font-family: 'Arial Rounded MT Bold', 'Helvetica Rounded', Arial, sans-serif;
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+
+  header {
+    text-align: center;
+    padding: 20px 16px 8px;
+  }
+
+  header h1 {
+    font-size: 2rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .score-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin: 8px 0;
+    font-size: 0.9rem;
+    color: var(--dim);
+  }
+
+  .score-val {
+    color: var(--gold);
+    font-weight: bold;
+    font-size: 1.1rem;
+  }
+
+  /* Category pills */
+  .cats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0 16px 12px;
+  }
+
+  .cat-pill {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 5px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--dim);
+  }
+
+  .cat-pill.active {
+    background: rgba(126,232,250,0.15);
+    border-color: var(--accent2);
+    color: var(--accent2);
+  }
+
+  /* Card */
+  .card-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 24px;
+    width: 100%;
+    max-width: 480px;
+    min-height: 320px;
+  }
+
+  .card {
+    width: 100%;
+    max-width: 380px;
+    background: linear-gradient(135deg, rgba(80,0,120,0.7), rgba(0,40,100,0.7));
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 24px;
+    padding: 30px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card:active {
+    transform: scale(0.97);
+  }
+
+  .card.flipped {
+    animation: card-flip 0.3s ease;
+  }
+
+  @keyframes card-flip {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.9) rotateY(10deg); }
+    100% { transform: scale(1); }
+  }
+
+  .card-emoji {
+    font-size: clamp(4rem, 20vw, 7rem);
+    line-height: 1;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+    margin-bottom: 8px;
+  }
+
+  .english-word {
+    font-size: clamp(1.3rem, 6vw, 2rem);
+    color: var(--accent2);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .tap-hint {
+    font-size: 0.8rem;
+    color: var(--dim);
+    letter-spacing: 1px;
+    animation: pulse-hint 2s infinite;
+  }
+
+  @keyframes pulse-hint {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  .spanish-reveal {
+    display: none;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+  }
+
+  .spanish-reveal.show {
+    display: block;
+    animation: fade-up 0.3s ease;
+  }
+
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .spanish-word {
+    font-size: clamp(1.8rem, 8vw, 2.8rem);
+    color: var(--accent);
+    font-weight: bold;
+    text-shadow: 0 0 20px rgba(255,111,216,0.5);
+  }
+
+  .pronunciation {
+    font-size: 0.9rem;
+    color: var(--dim);
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  .say-it-btn {
+    background: rgba(255,111,216,0.12);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: all 0.15s;
+    font-family: inherit;
+    letter-spacing: 1px;
+  }
+
+  .say-it-btn:hover, .say-it-btn:active {
+    background: rgba(255,111,216,0.25);
+  }
+
+  /* Navigation */
+  .nav-row {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    padding: 16px 24px;
+    width: 100%;
+    max-width: 480px;
+  }
+
+  .nav-btn {
+    flex: 1;
+    max-width: 140px;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.15);
+    color: var(--text);
+    padding: 12px;
+    border-radius: 14px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.15s;
+    font-weight: bold;
+  }
+
+  .nav-btn:hover, .nav-btn:active {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.4);
+  }
+
+  .nav-btn.primary {
+    background: rgba(126,232,250,0.1);
+    border-color: var(--accent2);
+    color: var(--accent2);
+    font-size: 1.1rem;
+  }
+
+  /* Progress */
+  .progress-bar {
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    width: calc(100% - 48px);
+    margin: 0 24px 16px;
+    max-width: 432px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* Celebration */
+  .celebration {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 4rem;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 100;
+  }
+
+  .celebration.pop {
+    animation: celebrate 0.6s ease;
+  }
+
+  @keyframes celebrate {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+    30% { opacity: 1; transform: translate(-50%, -50%) scale(1.4); }
+    70% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    100% { opacity: 0; transform: translate(-50%, -60%) scale(1); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌟 Palabras!</h1>
+  <p style="color:var(--dim);font-size:0.8rem;margin-top:4px;">Tap to learn Spanish words</p>
+</header>
+
+<div class="score-row">
+  <span>Words seen: <span class="score-val" id="seen">0</span></span>
+  <span>⭐ <span class="score-val" id="stars">0</span></span>
+</div>
+
+<div class="cats" id="catRow"></div>
+
+<div class="card-area">
+  <div class="card" id="card" onclick="revealOrNext()">
+    <div class="card-emoji" id="cardEmoji">🌟</div>
+    <div class="english-word" id="cardEnglish">Loading...</div>
+    <div class="tap-hint" id="tapHint">Tap to see Spanish!</div>
+    <div class="spanish-reveal" id="spanishReveal">
+      <div class="spanish-word" id="cardSpanish"></div>
+      <div class="pronunciation" id="cardPronun"></div>
+      <button class="say-it-btn" onclick="speakWord(event)">🔊 Say it!</button>
+    </div>
+  </div>
+</div>
+
+<div class="progress-bar">
+  <div class="progress-fill" id="progressFill" style="width:0%"></div>
+</div>
+
+<div class="nav-row">
+  <button class="nav-btn" onclick="prevCard()">← Back</button>
+  <button class="nav-btn primary" onclick="nextCard()">Next →</button>
+</div>
+
+<div class="celebration" id="celebration">⭐</div>
+
+<script>
+const WORDS = {
+  animals: [
+    { emoji:'🐱', en:'Cat',       es:'Gato',       pron:'GAH-toh' },
+    { emoji:'🐶', en:'Dog',       es:'Perro',      pron:'PEH-rroh' },
+    { emoji:'🐠', en:'Fish',      es:'Pez',        pron:'PEH-ss' },
+    { emoji:'🐦', en:'Bird',      es:'Pájaro',     pron:'PAH-ha-roh' },
+    { emoji:'🐘', en:'Elephant',  es:'Elefante',   pron:'el-eh-FAN-teh' },
+    { emoji:'🦁', en:'Lion',      es:'León',       pron:'leh-ON' },
+    { emoji:'🐢', en:'Turtle',    es:'Tortuga',    pron:'tor-TOO-gah' },
+    { emoji:'🦋', en:'Butterfly', es:'Mariposa',   pron:'mah-ree-POH-sah' },
+    { emoji:'🐰', en:'Rabbit',    es:'Conejo',     pron:'koh-NEH-hoh' },
+    { emoji:'🦆', en:'Duck',      es:'Pato',       pron:'PAH-toh' },
+  ],
+  colors: [
+    { emoji:'🔴', en:'Red',       es:'Rojo',       pron:'ROH-hoh' },
+    { emoji:'🔵', en:'Blue',      es:'Azul',       pron:'ah-SOOL' },
+    { emoji:'🟡', en:'Yellow',    es:'Amarillo',   pron:'ah-mah-REE-yoh' },
+    { emoji:'🟢', en:'Green',     es:'Verde',      pron:'VER-deh' },
+    { emoji:'🟠', en:'Orange',    es:'Naranja',    pron:'nah-RAN-hah' },
+    { emoji:'🟣', en:'Purple',    es:'Morado',     pron:'moh-RAH-doh' },
+    { emoji:'⚪', en:'White',     es:'Blanco',     pron:'BLAN-koh' },
+    { emoji:'⚫', en:'Black',     es:'Negro',      pron:'NEH-groh' },
+    { emoji:'🩷', en:'Pink',      es:'Rosa',       pron:'ROH-sah' },
+  ],
+  food: [
+    { emoji:'🍎', en:'Apple',     es:'Manzana',    pron:'man-SAH-nah' },
+    { emoji:'🍌', en:'Banana',    es:'Plátano',    pron:'PLAH-tah-noh' },
+    { emoji:'🍊', en:'Orange',    es:'Naranja',    pron:'nah-RAN-hah' },
+    { emoji:'🍓', en:'Strawberry',es:'Fresa',      pron:'FREH-sah' },
+    { emoji:'🍕', en:'Pizza',     es:'Pizza',      pron:'PEE-tsah' },
+    { emoji:'🍦', en:'Ice cream', es:'Helado',     pron:'eh-LAH-doh' },
+    { emoji:'🥛', en:'Milk',      es:'Leche',      pron:'LEH-cheh' },
+    { emoji:'🍞', en:'Bread',     es:'Pan',        pron:'PAHN' },
+    { emoji:'🥕', en:'Carrot',    es:'Zanahoria',  pron:'sah-nah-OH-ryah' },
+    { emoji:'🍫', en:'Chocolate', es:'Chocolate',  pron:'choh-koh-LAH-teh' },
+  ],
+  body: [
+    { emoji:'👁️', en:'Eye',      es:'Ojo',        pron:'OH-hoh' },
+    { emoji:'👃', en:'Nose',      es:'Nariz',      pron:'nah-REES' },
+    { emoji:'👄', en:'Mouth',     es:'Boca',       pron:'BOH-kah' },
+    { emoji:'👂', en:'Ear',       es:'Oreja',      pron:'oh-REH-hah' },
+    { emoji:'✋', en:'Hand',      es:'Mano',       pron:'MAH-noh' },
+    { emoji:'🦶', en:'Foot',      es:'Pie',        pron:'PYE-eh' },
+    { emoji:'💪', en:'Arm',       es:'Brazo',      pron:'BRAH-soh' },
+    { emoji:'🦷', en:'Tooth',     es:'Diente',     pron:'DYEH-nteh' },
+  ],
+  numbers: [
+    { emoji:'1️⃣', en:'One',      es:'Uno',        pron:'OO-noh' },
+    { emoji:'2️⃣', en:'Two',      es:'Dos',        pron:'DOHS' },
+    { emoji:'3️⃣', en:'Three',    es:'Tres',       pron:'TREHS' },
+    { emoji:'4️⃣', en:'Four',     es:'Cuatro',     pron:'KWAH-troh' },
+    { emoji:'5️⃣', en:'Five',     es:'Cinco',      pron:'SEEN-koh' },
+    { emoji:'6️⃣', en:'Six',      es:'Seis',       pron:'SAY-ss' },
+    { emoji:'7️⃣', en:'Seven',    es:'Siete',      pron:'SYEH-teh' },
+    { emoji:'8️⃣', en:'Eight',    es:'Ocho',       pron:'OH-choh' },
+    { emoji:'9️⃣', en:'Nine',     es:'Nueve',      pron:'NWEH-veh' },
+    { emoji:'🔟', en:'Ten',       es:'Diez',       pron:'DYEHS' },
+  ],
+};
+
+const CATS = Object.keys(WORDS);
+let activeCat = 'animals';
+let currentCards = [];
+let index = 0;
+let revealed = false;
+let starsCount = 0;
+let seenCount = 0;
+
+// Build category pills
+const catRow = document.getElementById('catRow');
+CATS.forEach(cat => {
+  const pill = document.createElement('button');
+  pill.className = 'cat-pill' + (cat === activeCat ? ' active' : '');
+  pill.textContent = cat.charAt(0).toUpperCase() + cat.slice(1) + ' ' + getCatEmoji(cat);
+  pill.onclick = () => switchCat(cat);
+  catRow.appendChild(pill);
+});
+
+function getCatEmoji(cat) {
+  const map = { animals:'🐾', colors:'🎨', food:'🍎', body:'👤', numbers:'🔢' };
+  return map[cat] || '';
+}
+
+function switchCat(cat) {
+  activeCat = cat;
+  currentCards = shuffle([...WORDS[cat]]);
+  index = 0;
+  document.querySelectorAll('.cat-pill').forEach((p, i) => {
+    p.classList.toggle('active', CATS[i] === cat);
+  });
+  showCard(true);
+}
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function showCard(animate) {
+  const card = currentCards[index];
+  if (!card) return;
+
+  revealed = false;
+  document.getElementById('cardEmoji').textContent = card.emoji;
+  document.getElementById('cardEnglish').textContent = card.en;
+  document.getElementById('cardSpanish').textContent = card.es;
+  document.getElementById('cardPronun').textContent = '/' + card.pron + '/';
+  document.getElementById('tapHint').style.display = '';
+  document.getElementById('spanishReveal').classList.remove('show');
+
+  // Update progress
+  const pct = ((index + 1) / currentCards.length * 100).toFixed(0);
+  document.getElementById('progressFill').style.width = pct + '%';
+
+  if (animate) {
+    const c = document.getElementById('card');
+    c.classList.remove('flipped');
+    void c.offsetWidth;
+    c.classList.add('flipped');
+  }
+}
+
+function revealOrNext() {
+  if (!revealed) {
+    revealed = true;
+    document.getElementById('tapHint').style.display = 'none';
+    document.getElementById('spanishReveal').classList.add('show');
+    starsCount++;
+    seenCount++;
+    document.getElementById('stars').textContent = starsCount;
+    document.getElementById('seen').textContent = seenCount;
+
+    // Celebrate
+    celebrate();
+  } else {
+    nextCard();
+  }
+}
+
+function nextCard() {
+  index = (index + 1) % currentCards.length;
+  showCard(true);
+}
+
+function prevCard() {
+  index = (index - 1 + currentCards.length) % currentCards.length;
+  showCard(true);
+}
+
+function celebrate() {
+  const c = document.getElementById('celebration');
+  const emojis = ['⭐','🌟','✨','🎉','🎊'];
+  c.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+  c.classList.remove('pop');
+  void c.offsetWidth;
+  c.classList.add('pop');
+}
+
+function speakWord(e) {
+  e.stopPropagation();
+  const word = document.getElementById('cardSpanish').textContent;
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const utt = new SpeechSynthesisUtterance(word);
+    utt.lang = 'es-MX';
+    utt.rate = 0.8;
+    utt.pitch = 1.1;
+    window.speechSynthesis.speak(utt);
+  }
+}
+
+// Keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' || e.code === 'ArrowRight') { e.preventDefault(); revealOrNext(); }
+  if (e.code === 'ArrowLeft') prevCard();
+});
+
+// Init
+switchCat('animals');
+</script>
+
+</body>
+</html>

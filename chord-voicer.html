@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chord Voicer — Deep House Edition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+
+  :root {
+    --bg: #0a0b0e;
+    --surface: #111318;
+    --surface2: #191c23;
+    --border: #232733;
+    --cyan: #00e5ff;
+    --magenta: #ff00aa;
+    --amber: #ffb300;
+    --mint: #00ff88;
+    --text: #e0e0ec;
+    --dim: #44485a;
+    --text-dim: #6a6d80;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, #0d0e14 0%, var(--bg) 100%);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: var(--cyan);
+    text-transform: uppercase;
+  }
+
+  .logo em { color: var(--magenta); font-style: normal; }
+
+  .header-center {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .bpm-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+  }
+
+  .bpm-ctrl label {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .bpm-ctrl input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--amber);
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    padding: 5px 10px;
+    width: 62px;
+    text-align: center;
+    outline: none;
+  }
+
+  .bpm-ctrl input:focus { border-color: var(--amber); }
+
+  /* ─── MAIN ─── */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    min-height: calc(100vh - 61px);
+    background: var(--border);
+    gap: 1px;
+  }
+
+  /* ─── CHORD AREA ─── */
+  #chord-area {
+    background: var(--bg);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.22em;
+    color: var(--dim);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ─── ROOT SELECTOR ─── */
+  .root-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .root-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .root-btn:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0, 229, 255, 0.06);
+  }
+
+  .root-btn.active {
+    background: rgba(0, 229, 255, 0.15);
+    border-color: var(--cyan);
+    color: var(--cyan);
+    box-shadow: 0 0 18px rgba(0, 229, 255, 0.3);
+  }
+
+  /* ─── CHORD TYPE ─── */
+  .chord-type-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ctype-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .ctype-btn:hover {
+    border-color: var(--magenta);
+    color: var(--magenta);
+    background: rgba(255, 0, 170, 0.06);
+  }
+
+  .ctype-btn.active {
+    background: rgba(255, 0, 170, 0.15);
+    border-color: var(--magenta);
+    color: var(--magenta);
+    box-shadow: 0 0 18px rgba(255, 0, 170, 0.25);
+  }
+
+  /* ─── VOICING SELECTOR ─── */
+  .voicing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+
+  .voicing-btn {
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    transition: all 0.14s;
+    text-align: left;
+  }
+
+  .voicing-btn:hover {
+    border-color: var(--mint);
+    background: rgba(0, 255, 136, 0.05);
+  }
+
+  .voicing-btn.active {
+    border-color: var(--mint);
+    background: rgba(0, 255, 136, 0.1);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+  }
+
+  .voicing-btn .v-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--mint);
+    margin-bottom: 4px;
+    letter-spacing: 0.05em;
+  }
+
+  .voicing-btn .v-desc {
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  .voicing-btn .v-intervals {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    margin-top: 4px;
+  }
+
+  /* ─── PIANO ─── */
+  .piano-wrap {
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+
+  .piano {
+    display: flex;
+    position: relative;
+    width: fit-content;
+    margin: 0 auto;
+  }
+
+  .piano .key {
+    position: relative;
+    cursor: pointer;
+    transition: background 0.08s;
+  }
+
+  .piano .white {
+    width: 52px;
+    height: 180px;
+    background: #f0eeea;
+    border: 1px solid #c8c4bc;
+    border-radius: 0 0 6px 6px;
+    z-index: 1;
+  }
+
+  .piano .white:hover { background: #e8e4dc; }
+  .piano .white.pressed { background: var(--cyan); }
+
+  .piano .black {
+    width: 34px;
+    height: 115px;
+    background: #1a1a1a;
+    border-radius: 0 0 4px 4px;
+    margin-left: -17px;
+    margin-right: -17px;
+    z-index: 2;
+    position: relative;
+  }
+
+  .piano .black:hover { background: #2a2a2a; }
+  .piano .black.pressed { background: var(--magenta); }
+
+  .piano .key-label {
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: #888;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  .piano .black .key-label {
+    bottom: 6px;
+    color: #555;
+    font-size: 8px;
+  }
+
+  .piano .note-indicator {
+    position: absolute;
+    top: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 10px var(--cyan);
+    display: none;
+  }
+
+  .piano .key.active .note-indicator { display: block; }
+  .piano .black.active .note-indicator { background: var(--magenta); box-shadow: 0 0 10px var(--magenta); }
+
+  /* ─── CHORD DISPLAY ─── */
+  .chord-display {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    text-align: center;
+  }
+
+  .chord-name {
+    font-family: 'Space Mono', monospace;
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+
+  .chord-name .root { color: var(--cyan); }
+  .chord-name .ctype { color: var(--magenta); }
+
+  .chord-notes {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .note-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+
+  .note-badge.highlight {
+    background: rgba(0, 229, 255, 0.12);
+    border-color: var(--cyan);
+    color: var(--cyan);
+  }
+
+  .note-badge.bass {
+    background: rgba(255, 0, 170, 0.1);
+    border-color: var(--magenta);
+    color: var(--magenta);
+  }
+
+  /* ─── SEQUENCER ─── */
+  #sequencer-area {
+    background: var(--surface);
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+  }
+
+  .seq-controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .seq-btn {
+    flex: 1;
+    min-width: 80px;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .seq-btn:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0, 229, 255, 0.06);
+  }
+
+  .seq-btn.active {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: rgba(0, 229, 255, 0.1);
+    box-shadow: 0 0 14px rgba(0, 229, 255, 0.2);
+  }
+
+  .seq-btn.playing {
+    border-color: var(--mint);
+    color: var(--mint);
+    background: rgba(0, 255, 136, 0.1);
+    box-shadow: 0 0 14px rgba(0, 255, 136, 0.25);
+  }
+
+  .seq-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--dim);
+    transition: background 0.1s;
+  }
+
+  .seq-btn.active .seq-dot { background: var(--cyan); }
+  .seq-btn.playing .seq-dot {
+    background: var(--mint);
+    box-shadow: 0 0 8px var(--mint);
+  }
+
+  /* ─── PROGRESSION ─── */
+  .progression-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .progression-steps {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .step-chip {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    transition: all 0.12s;
+    min-width: 64px;
+    text-align: center;
+  }
+
+  .step-chip:hover { border-color: var(--amber); }
+
+  .step-chip.active {
+    border-color: var(--amber);
+    background: rgba(255, 179, 0, 0.12);
+    box-shadow: 0 0 14px rgba(255, 179, 0, 0.2);
+  }
+
+  .step-chip .step-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: var(--dim);
+    margin-bottom: 2px;
+  }
+
+  .step-chip .step-chord {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--amber);
+  }
+
+  .step-chip.editing {
+    border-color: var(--cyan);
+    background: rgba(0, 229, 255, 0.08);
+  }
+
+  /* ─── STEP EDITOR ─── */
+  .step-editor {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    display: none;
+  }
+
+  .step-editor.visible { display: block; }
+
+  .step-editor-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--cyan);
+    letter-spacing: 0.15em;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .step-editor .close-btn {
+    background: none;
+    border: none;
+    color: var(--dim);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+  }
+
+  .step-editor .close-btn:hover { color: var(--text); }
+
+  .mini-root-grid {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .mini-root {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.1s;
+  }
+
+  .mini-root:hover { border-color: var(--cyan); color: var(--cyan); }
+  .mini-root.selected { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,255,0.1); }
+
+  .mini-type-grid {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+
+  .mini-type {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+
+  .mini-type:hover { border-color: var(--magenta); color: var(--magenta); }
+  .mini-type.selected { border-color: var(--magenta); color: var(--magenta); background: rgba(255,0,170,0.1); }
+
+  /* ─── ADD STEP ─── */
+  .add-step-btn {
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px dashed var(--border);
+    background: transparent;
+    color: var(--dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.12s;
+    width: 100%;
+  }
+
+  .add-step-btn:hover {
+    border-color: var(--mint);
+    color: var(--mint);
+  }
+
+  /* ─── STATUS ─── */
+  .status {
+    font-family: 'Space Mono', monospace;
+    font-size: 10px;
+    color: var(--mint);
+    letter-spacing: 0.1em;
+    min-height: 14px;
+  }
+
+  /* ─── SHORTCUTS ─── */
+  .shortcuts {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--dim);
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .shortcuts kbd {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">CHORD<em>VOICER</em></div>
+  <div class="header-center">
+    <div class="bpm-ctrl">
+      <label>BPM</label>
+      <input type="number" id="bpmInput" value="124" min="80" max="200" />
+    </div>
+    <div class="shortcuts">
+      <span><kbd>Space</kbd> play/stop</span>
+      <span><kbd>←→</kbd> prev/next step</span>
+      <span><kbd>Enter</kbd> add step</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- CHORD AREA -->
+  <div id="chord-area">
+    <div class="section-label">Root Note</div>
+    <div class="root-grid" id="rootGrid"></div>
+
+    <div class="section-label">Chord Type</div>
+    <div class="chord-type-grid" id="ctypeGrid"></div>
+
+    <div class="section-label">Voicing</div>
+    <div class="voicing-grid" id="voicingGrid"></div>
+
+    <div class="section-label">Piano</div>
+    <div class="piano-wrap">
+      <div class="piano" id="piano"></div>
+    </div>
+
+    <div class="chord-display">
+      <div class="chord-name" id="chordName">
+        <span class="root">C</span><span class="ctype">maj7</span>
+      </div>
+      <div class="chord-notes" id="chordNotes"></div>
+    </div>
+
+    <div class="status" id="statusBar"></div>
+  </div>
+
+  <!-- SEQUENCER -->
+  <div id="sequencer-area">
+    <div class="section-label">Chord Sequencer</div>
+
+    <div class="seq-controls">
+      <button class="seq-btn" id="btnPlaySeq">
+        <span class="seq-dot"></span> Play
+      </button>
+      <button class="seq-btn" id="btnStopSeq">
+        <span class="seq-dot"></span> Stop
+      </button>
+      <button class="seq-btn" id="btnClearSeq">
+        <span class="seq-dot"></span> Clear
+      </button>
+    </div>
+
+    <div class="progression-label">Progression — click to edit</div>
+    <div class="progression-steps" id="progressionSteps">
+      <button class="add-step-btn" id="btnAddStep">+ Add Chord</button>
+    </div>
+
+    <div class="step-editor" id="stepEditor">
+      <div class="step-editor-title">
+        Edit Step <span id="editStepNum"></span>
+        <button class="close-btn" id="closeStepEditor">×</button>
+      </div>
+      <div class="mini-root-grid" id="miniRootGrid"></div>
+      <div class="mini-type-grid" id="miniTypeGrid"></div>
+      <button class="seq-btn" id="btnApplyStep" style="width:100%;margin-top:8px">Apply</button>
+    </div>
+  </div>
+</main>
+
+<script>
+'use strict';
+
+// ─── STATE ────────────────────────────────────────────────────
+let audioCtx = null;
+let masterGain = null;
+let reverbNode = null;
+let isPlaying = false;
+let currentStep = 0;
+let stepInterval = null;
+
+let selectedRoot = 0;  // 0=C
+let selectedType = 0; // 0=maj7
+let selectedVoicing = 0;
+
+let progression = [
+  {root: 0, type: 0}, // Cmaj7
+  {root: 5, type: 2}, // Fm7
+  {root: 7, type: 0}, // Gmaj7
+  {root: 4, type: 3}, // Em7b5
+];
+let editingStepIdx = null;
+
+// ─── MUSIC DATA ────────────────────────────────────────────────
+const ROOTS = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+
+const CHORD_TYPES = [
+  { name: 'maj7',   label: 'maj7',  intervals: [0,4,7,11] },
+  { name: 'min7',   label: 'min7',  intervals: [0,3,7,10] },
+  { name: '7',      label: 'dom7',  intervals: [0,4,7,10] },
+  { name: 'm7b5',   label: 'ø7',    intervals: [0,3,6,10] },
+  { name: 'dim7',   label: 'dim7',  intervals: [0,3,6,9]  },
+  { name: 'maj9',   label: 'maj9',  intervals: [0,4,7,11,14] },
+  { name: 'min9',   label: 'min9',  intervals: [0,3,7,10,14] },
+  { name: '7b9',    label: '7b9',   intervals: [0,4,7,10,13] },
+  { name: 'sus4',   label: 'sus4',  intervals: [0,5,7,10] },
+  { name: 'add9',   label: 'add9',  intervals: [0,4,7,14] },
+  { name: '6',      label: '6th',   intervals: [0,4,7,9]  },
+  { name: 'min6',   label: 'min6',  intervals: [0,3,7,9]  },
+];
+
+// Deep house voicings: left-hand spread, two-handed block, quartal, etc.
+const VOICINGS = [
+  {
+    name: 'LH Spread',
+    desc: 'Classic deep house left-hand voicing, root on bottom',
+    intervals: [0, 4, 7, 11],
+    bassOffset: -12,
+  },
+  {
+    name: 'Two-Hand Block',
+    desc: 'Stacked mid-range, tight and punchy',
+    intervals: [0, 4, 7, 11],
+    bassOffset: -12,
+    octShift: 1,
+  },
+  {
+    name: 'Quartal',
+    desc: 'Fourth-based voicing, jazz-adjacent, open',
+    intervals: [0, 5, 10, 14],
+    bassOffset: -12,
+  },
+  {
+    name: 'RH Cluster',
+    desc: 'Right-hand cluster over left root',
+    intervals: [0, 3, 7, 10],
+    bassOffset: -12,
+    octShift: 1,
+  },
+  {
+    name: 'Shell Voicing',
+    desc: '3rd + 7th only, leaves room for bass',
+    intervals: [0, 4, 10],
+    bassOffset: -12,
+  },
+  {
+    name: 'Solo Piano',
+    desc: 'Full voicing, octave spread, root doubled',
+    intervals: [0, 4, 7, 11, 12],
+    bassOffset: -12,
+  },
+  {
+    name: 'Upper Structure',
+    desc: 'Tritone substitution feel, #11 color',
+    intervals: [0, 6, 10, 14],
+    bassOffset: -12,
+  },
+  {
+    name: 'Drop-2 Voicing',
+    desc: 'Classic chord texture, second from top dropped an octave',
+    intervals: [0, 4, 7, 11],
+    bassOffset: -12,
+    octShift: 0,
+    drop2: true,
+  },
+];
+
+// Piano key map: C D E F G A B (white) and C# Eb F# Ab Bb (black)
+// Octave 4 starting, 2 octaves
+const PIANO_KEYS = [
+  {note:'C',  isBlack:false, midi:60},
+  {note:'C#', isBlack:true,  midi:61},
+  {note:'D',  isBlack:false, midi:62},
+  {note:'D#', isBlack:true,  midi:63},
+  {note:'E',  isBlack:false, midi:64},
+  {note:'F',  isBlack:false, midi:65},
+  {note:'F#', isBlack:true,  midi:66},
+  {note:'G',  isBlack:false, midi:67},
+  {note:'G#', isBlack:true,  midi:68},
+  {note:'A',  isBlack:false, midi:69},
+  {note:'A#', isBlack:true,  midi:70},
+  {note:'B',  isBlack:false, midi:71},
+  {note:'C',  isBlack:false, midi:72},
+  {note:'C#', isBlack:true,  midi:73},
+  {note:'D',  isBlack:false, midi:74},
+  {note:'D#', isBlack:true,  midi:75},
+  {note:'E',  isBlack:false, midi:76},
+  {note:'F',  isBlack:false, midi:77},
+  {note:'F#', isBlack:true,  midi:78},
+  {note:'G',  isBlack:false, midi:79},
+  {note:'G#', isBlack:true,  midi:80},
+  {note:'A',  isBlack:false, midi:81},
+  {note:'A#', isBlack:true,  midi:82},
+  {note:'B',  isBlack:false, midi:83},
+  {note:'C',  isBlack:false, midi:84},
+];
+
+// ─── AUDIO ────────────────────────────────────────────────────
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.65;
+  masterGain.connect(audioCtx.destination);
+
+  // Simple reverb via delay feedback
+  reverbNode = audioCtx.createDelay(1.5);
+  const fb = audioCtx.createGain();
+  fb.gain.value = 0.4;
+  reverbNode.connect(fb);
+  fb.connect(reverbNode);
+  reverbNode.connect(masterGain);
+  reverbNode.delayTime.value = 0.28;
+}
+
+function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+
+function playChord(rootMidi, intervals, octShift = 0, duration = 2.5) {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const now = audioCtx.currentTime;
+  intervals.forEach((interval, i) => {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.value = 2800 + Math.random() * 400;
+
+    // Slightly staggered attack for texture
+    const delay = i * 0.012;
+    osc.type = i === 0 ? 'triangle' : 'sine';
+    osc.frequency.value = midiToFreq(rootMidi + interval + octShift * 12);
+
+    osc.connect(filt);
+    filt.connect(g);
+    g.connect(masterGain);
+
+    // Add reverb to upper notes
+    if (i > 0) {
+      const revSend = audioCtx.createGain();
+      revSend.gain.value = 0.25;
+      filt.connect(revSend);
+      revSend.connect(reverbNode);
+    }
+
+    // Envelope
+    g.gain.setValueAtTime(0, now + delay);
+    g.gain.linearRampToValueAtTime(0.12 / intervals.length, now + delay + 0.025);
+    g.gain.setValueAtTime(0.12 / intervals.length, now + delay + 0.08);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + delay + duration);
+
+    osc.start(now + delay);
+    osc.stop(now + delay + duration + 0.05);
+  });
+}
+
+function playSingleNote(midi, duration = 1.5) {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const now = audioCtx.currentTime;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = midiToFreq(midi);
+  osc.connect(g);
+  g.connect(masterGain);
+  g.gain.setValueAtTime(0, now);
+  g.gain.linearRampToValueAtTime(0.4, now + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+  osc.start(now);
+  osc.stop(now + duration + 0.05);
+}
+
+// ─── BUILD UI ─────────────────────────────────────────────────
+function buildRootGrid() {
+  const grid = document.getElementById('rootGrid');
+  ROOTS.forEach((r, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'root-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = r;
+    btn.dataset.idx = i;
+    btn.addEventListener('click', () => selectRoot(i));
+    grid.appendChild(btn);
+  });
+}
+
+function buildCtypeGrid() {
+  const grid = document.getElementById('ctypeGrid');
+  CHORD_TYPES.forEach((ct, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'ctype-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = ct.label;
+    btn.dataset.idx = i;
+    btn.addEventListener('click', () => selectType(i));
+    grid.appendChild(btn);
+  });
+}
+
+function buildVoicingGrid() {
+  const grid = document.getElementById('voicingGrid');
+  grid.innerHTML = '';
+  VOICINGS.forEach((v, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'voicing-btn' + (i === 0 ? ' active' : '');
+    btn.dataset.idx = i;
+    btn.innerHTML = `
+      <div class="v-name">${v.name}</div>
+      <div class="v-desc">${v.desc}</div>
+      <div class="v-intervals">${v.intervals.map(x => '+' + x).join(' ')}</div>
+    `;
+    btn.addEventListener('click', () => selectVoicing(i));
+    grid.appendChild(btn);
+  });
+}
+
+function buildPiano() {
+  const piano = document.getElementById('piano');
+  piano.innerHTML = '';
+  PIANO_KEYS.forEach((pk, i) => {
+    const key = document.createElement('div');
+    key.className = 'key ' + (pk.isBlack ? 'black' : 'white');
+    key.dataset.midi = pk.midi;
+
+    const label = document.createElement('span');
+    label.className = 'key-label';
+    label.textContent = pk.note;
+    key.appendChild(label);
+
+    const indicator = document.createElement('span');
+    indicator.className = 'note-indicator';
+    key.appendChild(indicator);
+
+    key.addEventListener('mousedown', () => {
+      if (!audioCtx) initAudio();
+      playSingleNote(pk.midi, 1.5);
+      key.classList.add('pressed');
+      highlightActiveKeys();
+    });
+    key.addEventListener('mouseup', () => key.classList.remove('pressed'));
+    key.addEventListener('mouseleave', () => key.classList.remove('pressed'));
+
+    piano.appendChild(key);
+  });
+}
+
+function buildMiniGrids() {
+  const rootGrid = document.getElementById('miniRootGrid');
+  const typeGrid = document.getElementById('miniTypeGrid');
+  rootGrid.innerHTML = '';
+  typeGrid.innerHTML = '';
+
+  ROOTS.forEach((r, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'mini-root';
+    btn.textContent = r;
+    btn.dataset.idx = i;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#miniRootGrid .mini-root').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    rootGrid.appendChild(btn);
+  });
+
+  CHORD_TYPES.forEach((ct, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'mini-type';
+    btn.textContent = ct.label;
+    btn.dataset.idx = i;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#miniTypeGrid .mini-type').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    });
+    typeGrid.appendChild(btn);
+  });
+}
+
+// ─── SELECTION ─────────────────────────────────────────────────
+function selectRoot(idx) {
+  selectedRoot = idx;
+  document.querySelectorAll('.root-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+  updateChordDisplay();
+  playCurrentChord();
+  highlightActiveKeys();
+}
+
+function selectType(idx) {
+  selectedType = idx;
+  document.querySelectorAll('.ctype-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+  updateChordDisplay();
+  playCurrentChord();
+  highlightActiveKeys();
+}
+
+function selectVoicing(idx) {
+  selectedVoicing = idx;
+  document.querySelectorAll('.voicing-btn').forEach((b, i) => {
+    b.classList.toggle('active', i === idx);
+  });
+  updateChordDisplay();
+  playCurrentChord();
+  highlightActiveKeys();
+}
+
+function playCurrentChord() {
+  const voicing = VOICINGS[selectedVoicing];
+  const baseMidi = 60 + selectedRoot; // Middle C = root
+  const intervals = voicing.intervals;
+  const octShift = voicing.octShift || 0;
+  playChord(baseMidi, intervals, octShift, 2.5);
+}
+
+// ─── DISPLAY UPDATE ───────────────────────────────────────────
+function updateChordDisplay() {
+  const root = ROOTS[selectedRoot];
+  const ct = CHORD_TYPES[selectedType];
+  const voicing = VOICINGS[selectedVoicing];
+  const baseMidi = 60 + selectedRoot;
+  const notes = voicing.intervals.map(int => {
+    const midi = baseMidi + int + (voicing.octShift || 0) * 12;
+    return midiToNoteName(midi);
+  });
+
+  document.getElementById('chordName').innerHTML =
+    `<span class="root">${root}</span><span class="ctype">${ct.name}</span>`;
+
+  const notesEl = document.getElementById('chordNotes');
+  notesEl.innerHTML = '';
+  notes.forEach((n, i) => {
+    const badge = document.createElement('span');
+    badge.className = 'note-badge' + (i === 0 ? ' bass' : ' highlight');
+    badge.textContent = n;
+    notesEl.appendChild(badge);
+  });
+}
+
+function midiToNoteName(midi) {
+  const notes = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+  const octave = Math.floor(midi / 12) - 1;
+  const n = midi % 12;
+  return notes[n] + octave;
+}
+
+function highlightActiveKeys() {
+  const voicing = VOICINGS[selectedVoicing];
+  const baseMidi = 60 + selectedRoot;
+  const activeMidis = voicing.intervals.map(int =>
+    baseMidi + int + (voicing.octShift || 0) * 12
+  );
+
+  document.querySelectorAll('.piano .key').forEach(key => {
+    const m = parseInt(key.dataset.midi);
+    key.classList.toggle('active', activeMidis.includes(m));
+  });
+}
+
+// ─── PROGRESSION UI ───────────────────────────────────────────
+function renderProgression() {
+  const container = document.getElementById('progressionSteps');
+  container.innerHTML = '';
+
+  progression.forEach((step, i) => {
+    const chip = document.createElement('button');
+    chip.className = 'step-chip' + (i === currentStep && isPlaying ? ' active' : '');
+    if (editingStepIdx === i) chip.classList.add('editing');
+
+    const rootName = ROOTS[step.root];
+    const typeName = CHORD_TYPES[step.type].label;
+
+    chip.innerHTML = `
+      <div class="step-num">${i + 1}</div>
+      <div class="step-chord">${rootName}${typeName}</div>
+    `;
+    chip.addEventListener('click', () => editStep(i));
+    container.appendChild(chip);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'add-step-btn';
+  addBtn.textContent = '+ Add';
+  addBtn.addEventListener('click', addStep);
+  container.appendChild(addBtn);
+}
+
+function editStep(idx) {
+  editingStepIdx = idx;
+  const step = progression[idx];
+  document.getElementById('editStepNum').textContent = `#${idx + 1}`;
+  document.querySelectorAll('#miniRootGrid .mini-root').forEach((b, i) => {
+    b.classList.toggle('selected', i === step.root);
+  });
+  document.querySelectorAll('#miniTypeGrid .mini-type').forEach((b, i) => {
+    b.classList.toggle('selected', i === step.type);
+  });
+  document.getElementById('stepEditor').classList.add('visible');
+  renderProgression();
+}
+
+function addStep() {
+  // Copy last step as starting point
+  const last = progression[progression.length - 1] || {root: 0, type: 0};
+  progression.push({...last});
+  editingStepIdx = progression.length - 1;
+  const step = progression[editingStepIdx];
+  document.getElementById('editStepNum').textContent = `#${editingStepIdx + 1}`;
+  document.querySelectorAll('#miniRootGrid .mini-root').forEach((b, i) => {
+    b.classList.toggle('selected', i === step.root);
+  });
+  document.querySelectorAll('#miniTypeGrid .mini-type').forEach((b, i) => {
+    b.classList.toggle('selected', i === step.type);
+  });
+  document.getElementById('stepEditor').classList.add('visible');
+  renderProgression();
+}
+
+function applyStepEdit() {
+  if (editingStepIdx === null) return;
+  const selectedRootBtn = document.querySelector('#miniRootGrid .mini-root.selected');
+  const selectedTypeBtn = document.querySelector('#miniTypeGrid .mini-type.selected');
+  if (selectedRootBtn) progression[editingStepIdx].root = parseInt(selectedRootBtn.dataset.idx);
+  if (selectedTypeBtn) progression[editingStepIdx].type = parseInt(selectedTypeBtn.dataset.idx);
+  editingStepIdx = null;
+  document.getElementById('stepEditor').classList.remove('visible');
+  renderProgression();
+  setStatus('Step updated');
+}
+
+// ─── SEQUENCER ─────────────────────────────────────────────────
+function getStepInterval() { return (60 / parseInt(document.getElementById('bpmInput').value)) * 1000; }
+
+function startSequencer() {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (progression.length === 0) { setStatus('Add some chords first'); return; }
+
+  isPlaying = true;
+  currentStep = 0;
+  document.getElementById('btnPlaySeq').classList.add('playing');
+  renderProgression();
+  playStep(currentStep);
+  scheduleNext();
+}
+
+function scheduleNext() {
+  if (!isPlaying) return;
+  const interval = getStepInterval();
+  stepInterval = setTimeout(() => {
+    currentStep = (currentStep + 1) % progression.length;
+    renderProgression();
+    playStep(currentStep);
+    scheduleNext();
+  }, interval);
+}
+
+function playStep(idx) {
+  const step = progression[idx];
+  const voicing = VOICINGS[0]; // default voicing for seq
+  const baseMidi = 60 + step.root;
+  playChord(baseMidi, voicing.intervals, 0, (getStepInterval() / 1000) * 0.9);
+}
+
+function stopSequencer() {
+  isPlaying = false;
+  clearTimeout(stepInterval);
+  currentStep = 0;
+  document.getElementById('btnPlaySeq').classList.remove('playing');
+  renderProgression();
+}
+
+function setStatus(msg) {
+  document.getElementById('statusBar').textContent = msg;
+  if (msg) setTimeout(() => { document.getElementById('statusBar').textContent = ''; }, 2500);
+}
+
+// ─── KEYBOARD ──────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    isPlaying ? stopSequencer() : startSequencer();
+    return;
+  }
+  if (e.code === 'ArrowRight') {
+    if (editingStepIdx !== null && editingStepIdx < progression.length - 1) {
+      editingStepIdx++;
+      editStep(editingStepIdx);
+    }
+  }
+  if (e.code === 'ArrowLeft') {
+    if (editingStepIdx !== null && editingStepIdx > 0) {
+      editingStepIdx--;
+      editStep(editingStepIdx);
+    }
+  }
+  if (e.code === 'Enter' && editingStepIdx === null) {
+    addStep();
+  }
+});
+
+// ─── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildRootGrid();
+  buildCtypeGrid();
+  buildVoicingGrid();
+  buildPiano();
+  buildMiniGrids();
+  renderProgression();
+  updateChordDisplay();
+
+  document.getElementById('btnPlaySeq').addEventListener('click', () => {
+    isPlaying ? stopSequencer() : startSequencer();
+  });
+  document.getElementById('btnStopSeq').addEventListener('click', stopSequencer);
+  document.getElementById('btnClearSeq').addEventListener('click', () => {
+    stopSequencer();
+    progression = [];
+    editingStepIdx = null;
+    document.getElementById('stepEditor').classList.remove('visible');
+    renderProgression();
+    setStatus('Progression cleared');
+  });
+  document.getElementById('closeStepEditor').addEventListener('click', () => {
+    editingStepIdx = null;
+    document.getElementById('stepEditor').classList.remove('visible');
+    renderProgression();
+  });
+  document.getElementById('btnApplyStep').addEventListener('click', applyStepEdit);
+  document.getElementById('bpmInput').addEventListener('change', () => {
+    if (isPlaying) { stopSequencer(); startSequencer(); }
+  });
+});
+</script>
+</body>
+</html>

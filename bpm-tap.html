@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🥁 BPM Tap</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #ff6b35;
+    --accent2: #ff9f1c;
+    --beat-glow: rgba(255,107,53,0.4);
+    --text: #f0f0f8;
+    --dim: #6b7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', 'Courier New', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    user-select: none;
+    overflow: hidden;
+  }
+
+  /* Pulse ring background */
+  .pulse-ring {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 100vmax;
+    height: 100vmax;
+    border-radius: 50%;
+    border: 3px solid var(--accent);
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+
+  .pulse-ring.flash {
+    animation: ring-out 0.5s ease-out forwards;
+  }
+
+  @keyframes ring-out {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.3; }
+    100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+  }
+
+  .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding: 24px;
+    width: 100%;
+    max-width: 420px;
+  }
+
+  /* BPM Display */
+  .bpm-display {
+    text-align: center;
+    line-height: 1;
+  }
+
+  .bpm-number {
+    font-size: clamp(5rem, 25vw, 8rem);
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 30px var(--beat-glow), 0 0 60px rgba(255,107,53,0.2);
+    transition: color 0.1s;
+    letter-spacing: -4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bpm-number.flash {
+    color: var(--accent2);
+    text-shadow: 0 0 50px rgba(255,159,28,0.8), 0 0 100px rgba(255,159,28,0.3);
+  }
+
+  .bpm-label {
+    font-size: 1rem;
+    color: var(--dim);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .bpm-tempo {
+    font-size: 0.85rem;
+    color: var(--accent2);
+    letter-spacing: 3px;
+    margin-top: 8px;
+    height: 20px;
+    text-transform: uppercase;
+  }
+
+  /* Tap button */
+  .tap-btn {
+    width: min(220px, 60vw);
+    height: min(220px, 60vw);
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #2a1a0e, #0d0804);
+    border: 4px solid var(--accent);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    transition: all 0.08s;
+    box-shadow: 0 0 30px rgba(255,107,53,0.2), inset 0 0 30px rgba(255,107,53,0.05);
+    touch-action: manipulation;
+    flex-shrink: 0;
+  }
+
+  .tap-btn:active,
+  .tap-btn.pressed {
+    transform: scale(0.92);
+    background: radial-gradient(circle at 35% 35%, #3d2210, #1a0c06);
+    box-shadow: 0 0 50px rgba(255,107,53,0.5), inset 0 0 20px rgba(255,107,53,0.15);
+    border-color: var(--accent2);
+  }
+
+  /* Stats row */
+  .stats-row {
+    display: flex;
+    gap: 16px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stat-box {
+    flex: 1;
+    max-width: 120px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .stat-label {
+    font-size: 0.6rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 2px;
+  }
+
+  /* Tap dots visualizer */
+  .tap-dots {
+    display: flex;
+    gap: 6px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.1s, transform 0.1s;
+    flex-shrink: 0;
+  }
+
+  .dot.active {
+    background: var(--accent);
+    transform: scale(1.4);
+    box-shadow: 0 0 8px var(--beat-glow);
+  }
+
+  .dot.old {
+    background: rgba(255,107,53,0.3);
+    transform: scale(1);
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 10px;
+  }
+
+  .ctrl-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-family: inherit;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+    touch-action: manipulation;
+  }
+
+  .ctrl-btn:hover, .ctrl-btn:active {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Metronome mode */
+  .metro-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .metro-label {
+    font-size: 0.7rem;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .toggle-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    padding: 6px 14px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: inherit;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .toggle-btn.on {
+    background: rgba(255,107,53,0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .time-sig {
+    display: flex;
+    gap: 6px;
+  }
+
+  .ts-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: inherit;
+    transition: all 0.1s;
+  }
+
+  .ts-btn.active {
+    background: rgba(255,107,53,0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .hint {
+    font-size: 0.65rem;
+    color: var(--dim);
+    text-align: center;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<div class="pulse-ring" id="pulseRing"></div>
+
+<div class="container">
+
+  <div class="bpm-display">
+    <div class="bpm-number" id="bpmNum">---</div>
+    <div class="bpm-label">BPM</div>
+    <div class="bpm-tempo" id="tempoLabel"></div>
+  </div>
+
+  <div class="tap-dots" id="tapDots"></div>
+
+  <button class="tap-btn" id="tapBtn" onclick="tap()">TAP</button>
+
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-val" id="tapCount">0</div>
+      <div class="stat-label">Taps</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="minBpm">--</div>
+      <div class="stat-label">Min</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" id="maxBpm">--</div>
+      <div class="stat-label">Max</div>
+    </div>
+  </div>
+
+  <div class="metro-row">
+    <span class="metro-label">Metronome</span>
+    <button class="toggle-btn" id="metroToggle" onclick="toggleMetro()">OFF</button>
+    <div class="time-sig">
+      <button class="ts-btn active" onclick="setTimeSig(4)" data-sig="4">4/4</button>
+      <button class="ts-btn" onclick="setTimeSig(3)" data-sig="3">3/4</button>
+      <button class="ts-btn" onclick="setTimeSig(2)" data-sig="2">2/4</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" onclick="reset()">Reset</button>
+    <button class="ctrl-btn" onclick="tap()">Space</button>
+  </div>
+
+  <div class="hint">Tap to the beat • Spacebar also works • 8+ taps for accuracy</div>
+
+</div>
+
+<script>
+let taps = [];
+let metroOn = false;
+let metroTimer = null;
+let metroBeat = 0;
+let timeSig = 4;
+let currentBpm = 0;
+let audioCtx = null;
+
+const MAX_TAPS = 64;
+const TAP_TIMEOUT = 3000; // Reset if > 3s between taps
+const DOT_COUNT = 8;
+
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// Build dots
+const dotContainer = document.getElementById('tapDots');
+for (let i = 0; i < DOT_COUNT; i++) {
+  const d = document.createElement('div');
+  d.className = 'dot';
+  dotContainer.appendChild(d);
+}
+
+function tap() {
+  const now = performance.now();
+
+  // Reset if too long since last tap
+  if (taps.length > 0 && (now - taps[taps.length - 1]) > TAP_TIMEOUT) {
+    taps = [];
+  }
+
+  taps.push(now);
+  if (taps.length > MAX_TAPS) taps.shift();
+
+  flashUI();
+
+  if (taps.length >= 2) {
+    const intervals = [];
+    for (let i = 1; i < taps.length; i++) {
+      intervals.push(taps[i] - taps[i-1]);
+    }
+    // Use recent taps weighted average (last 8 get more weight)
+    const recent = intervals.slice(-8);
+    const avg = recent.reduce((a, b) => a + b, 0) / recent.length;
+    currentBpm = Math.round(60000 / avg);
+    currentBpm = Math.max(20, Math.min(300, currentBpm));
+
+    updateDisplay();
+    if (metroOn) restartMetro();
+  }
+
+  updateDots();
+  document.getElementById('tapCount').textContent = taps.length;
+
+  // Update min/max
+  if (currentBpm > 0) {
+    const minEl = document.getElementById('minBpm');
+    const maxEl = document.getElementById('maxBpm');
+    const curMin = minEl.textContent === '--' ? 9999 : parseInt(minEl.textContent);
+    const curMax = maxEl.textContent === '--' ? 0 : parseInt(maxEl.textContent);
+    if (currentBpm < curMin) minEl.textContent = currentBpm;
+    if (currentBpm > curMax) maxEl.textContent = currentBpm;
+  }
+}
+
+function flashUI() {
+  // Flash BPM number
+  const num = document.getElementById('bpmNum');
+  num.classList.remove('flash');
+  void num.offsetWidth;
+  num.classList.add('flash');
+  setTimeout(() => num.classList.remove('flash'), 100);
+
+  // Flash pulse ring
+  const ring = document.getElementById('pulseRing');
+  ring.classList.remove('flash');
+  void ring.offsetWidth;
+  ring.classList.add('flash');
+
+  // Flash tap button
+  const btn = document.getElementById('tapBtn');
+  btn.classList.add('pressed');
+  setTimeout(() => btn.classList.remove('pressed'), 80);
+}
+
+function updateDisplay() {
+  document.getElementById('bpmNum').textContent = currentBpm;
+  document.getElementById('tempoLabel').textContent = getTempoName(currentBpm);
+}
+
+function getTempoName(bpm) {
+  if (bpm < 40) return 'Grave';
+  if (bpm < 60) return 'Largo';
+  if (bpm < 66) return 'Larghetto';
+  if (bpm < 76) return 'Adagio';
+  if (bpm < 92) return 'Andante';
+  if (bpm < 108) return 'Moderato';
+  if (bpm < 120) return 'Allegretto';
+  if (bpm < 140) return 'Allegro';
+  if (bpm < 168) return 'Vivace';
+  if (bpm < 200) return 'Presto';
+  return 'Prestissimo';
+}
+
+function updateDots() {
+  const dots = document.querySelectorAll('.dot');
+  const recentCount = Math.min(taps.length, DOT_COUNT);
+  dots.forEach((dot, i) => {
+    dot.classList.remove('active', 'old');
+    if (i === DOT_COUNT - 1 && taps.length > 0) dot.classList.add('active');
+    else if (i >= DOT_COUNT - recentCount) dot.classList.add('old');
+  });
+}
+
+function reset() {
+  taps = [];
+  currentBpm = 0;
+  document.getElementById('bpmNum').textContent = '---';
+  document.getElementById('tempoLabel').textContent = '';
+  document.getElementById('tapCount').textContent = '0';
+  document.getElementById('minBpm').textContent = '--';
+  document.getElementById('maxBpm').textContent = '--';
+  document.querySelectorAll('.dot').forEach(d => d.classList.remove('active', 'old'));
+  if (metroOn) stopMetro();
+}
+
+// ── Metronome ─────────────────────────────────────────────────────────
+function playClick(isAccent) {
+  const ctx = getCtx();
+  const t = ctx.currentTime;
+  const freq = isAccent ? 880 : 660;
+  const gain = isAccent ? 0.35 : 0.2;
+
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = 'square';
+  osc.frequency.value = freq;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(gain, t + 0.002);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+  osc.connect(g);
+  g.connect(ctx.destination);
+  osc.start(t);
+  osc.stop(t + 0.07);
+}
+
+function toggleMetro() {
+  metroOn = !metroOn;
+  const btn = document.getElementById('metroToggle');
+  btn.textContent = metroOn ? 'ON' : 'OFF';
+  btn.classList.toggle('on', metroOn);
+
+  if (metroOn && currentBpm > 0) {
+    startMetro();
+  } else {
+    stopMetro();
+  }
+}
+
+function startMetro() {
+  metroBeat = 0;
+  const interval = 60000 / currentBpm;
+  metroTimer = setInterval(() => {
+    const isAccent = metroBeat % timeSig === 0;
+    playClick(isAccent);
+    flashDot(metroBeat % timeSig);
+    metroBeat++;
+  }, interval);
+}
+
+function stopMetro() {
+  clearInterval(metroTimer);
+  metroTimer = null;
+}
+
+function restartMetro() {
+  stopMetro();
+  if (metroOn) startMetro();
+}
+
+function flashDot(beatIndex) {
+  const dots = document.querySelectorAll('.dot');
+  const pos = Math.min(beatIndex, DOT_COUNT - 1);
+  dots.forEach((d, i) => {
+    d.classList.remove('active');
+    if (i === pos) d.classList.add('active');
+  });
+}
+
+function setTimeSig(sig) {
+  timeSig = sig;
+  document.querySelectorAll('.ts-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.sig) === sig);
+  });
+  if (metroOn) restartMetro();
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); tap(); }
+  if (e.key === 'r' || e.key === 'R') reset();
+  if (e.key === 'm' || e.key === 'M') toggleMetro();
+});
+</script>
+
+</body>
+</html>

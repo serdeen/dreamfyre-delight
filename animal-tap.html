@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>🐾 Animal Tap!</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Arial Rounded MT Bold', 'Helvetica Rounded', Arial, sans-serif;
+    overflow: hidden;
+    touch-action: manipulation;
+  }
+
+  h1 {
+    color: #fff;
+    font-size: 2rem;
+    margin: 16px 0 8px;
+    text-shadow: 0 2px 10px rgba(255,200,0,0.5);
+    letter-spacing: 2px;
+  }
+
+  .subtitle {
+    color: rgba(255,255,255,0.6);
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+    padding: 0 14px;
+    max-width: 500px;
+    width: 100%;
+  }
+
+  .animal-card {
+    aspect-ratio: 1;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+    border: 3px solid rgba(255,255,255,0.15);
+  }
+
+  .animal-card:active,
+  .animal-card.bounce {
+    transform: scale(0.88);
+  }
+
+  .animal-card.bounce {
+    animation: bounce 0.4s ease;
+  }
+
+  @keyframes bounce {
+    0% { transform: scale(1); }
+    30% { transform: scale(0.85); }
+    60% { transform: scale(1.1); }
+    80% { transform: scale(0.97); }
+    100% { transform: scale(1); }
+  }
+
+  .animal-emoji {
+    font-size: clamp(2.5rem, 10vw, 4rem);
+    line-height: 1;
+    filter: drop-shadow(0 3px 6px rgba(0,0,0,0.4));
+    transition: transform 0.2s;
+  }
+
+  .animal-card.bounce .animal-emoji {
+    animation: spin 0.4s ease;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(15deg) scale(1.2); }
+    100% { transform: rotate(0deg) scale(1); }
+  }
+
+  .animal-name {
+    color: #fff;
+    font-size: clamp(0.7rem, 3vw, 0.95rem);
+    font-weight: bold;
+    margin-top: 6px;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Ripple */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple-anim 0.5s linear;
+    background: rgba(255,255,255,0.35);
+    pointer-events: none;
+  }
+
+  @keyframes ripple-anim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* Name popup */
+  .popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -60%) scale(0.5);
+    background: rgba(0,0,0,0.85);
+    color: #fff;
+    padding: 12px 28px;
+    border-radius: 50px;
+    font-size: 1.6rem;
+    font-weight: bold;
+    pointer-events: none;
+    opacity: 0;
+    transition: all 0.2s;
+    z-index: 100;
+    white-space: nowrap;
+    border: 2px solid rgba(255,255,255,0.2);
+    text-align: center;
+  }
+
+  .popup.show {
+    opacity: 1;
+    transform: translate(-50%, -60%) scale(1);
+  }
+
+  /* Stars burst */
+  .star {
+    position: fixed;
+    font-size: 1.5rem;
+    pointer-events: none;
+    animation: star-fly 0.8s ease-out forwards;
+    z-index: 99;
+  }
+
+  @keyframes star-fly {
+    0% { transform: translate(0,0) scale(0); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.5); opacity: 0; }
+  }
+
+  /* Score */
+  .score-bar {
+    color: #fff;
+    font-size: 1.1rem;
+    margin: 0 0 14px;
+    letter-spacing: 2px;
+  }
+
+  .score-num {
+    color: #ffd700;
+    font-size: 1.4rem;
+    font-weight: bold;
+  }
+
+  /* Card colors */
+  .c0 { background: linear-gradient(135deg, #e74c3c, #c0392b); box-shadow: 0 6px 20px rgba(231,76,60,0.4); }
+  .c1 { background: linear-gradient(135deg, #e67e22, #d35400); box-shadow: 0 6px 20px rgba(230,126,34,0.4); }
+  .c2 { background: linear-gradient(135deg, #f1c40f, #e67e22); box-shadow: 0 6px 20px rgba(241,196,15,0.4); }
+  .c3 { background: linear-gradient(135deg, #2ecc71, #27ae60); box-shadow: 0 6px 20px rgba(46,204,113,0.4); }
+  .c4 { background: linear-gradient(135deg, #3498db, #2980b9); box-shadow: 0 6px 20px rgba(52,152,219,0.4); }
+  .c5 { background: linear-gradient(135deg, #9b59b6, #8e44ad); box-shadow: 0 6px 20px rgba(155,89,182,0.4); }
+  .c6 { background: linear-gradient(135deg, #1abc9c, #16a085); box-shadow: 0 6px 20px rgba(26,188,156,0.4); }
+  .c7 { background: linear-gradient(135deg, #e91e63, #c2185b); box-shadow: 0 6px 20px rgba(233,30,99,0.4); }
+  .c8 { background: linear-gradient(135deg, #00bcd4, #0097a7); box-shadow: 0 6px 20px rgba(0,188,212,0.4); }
+</style>
+</head>
+<body>
+
+<h1>🐾 Animal Tap!</h1>
+<div class="score-bar">Score: <span class="score-num" id="scoreNum">0</span> ⭐</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="popup" id="popup"></div>
+
+<script>
+const animals = [
+  { emoji: '🐱', name: 'Cat',       sound: [440, 550, 480], type: 'meow' },
+  { emoji: '🐶', name: 'Dog',       sound: [280, 350, 280], type: 'woof' },
+  { emoji: '🐸', name: 'Frog',      sound: [200, 250, 200], type: 'ribbit' },
+  { emoji: '🐮', name: 'Cow',       sound: [160, 180, 160], type: 'moo' },
+  { emoji: '🐷', name: 'Pig',       sound: [320, 400, 320], type: 'oink' },
+  { emoji: '🦁', name: 'Lion',      sound: [80, 90, 80],   type: 'roar' },
+  { emoji: '🐰', name: 'Bunny',     sound: [500, 600, 500], type: 'squeak' },
+  { emoji: '🐼', name: 'Panda',     sound: [220, 260, 220], type: 'growl' },
+  { emoji: '🐧', name: 'Penguin',   sound: [380, 440, 380], type: 'chirp' },
+];
+
+let score = 0;
+let audioCtx = null;
+
+function getCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+// Make animal-appropriate sounds with Web Audio API
+function playAnimalSound(animal) {
+  const ctx = getCtx();
+  const now = ctx.currentTime;
+  const freqs = animal.sound;
+  const type = animal.type;
+
+  if (type === 'meow') {
+    // Cat: rising then falling frequency glide
+    makeGlide(ctx, now, 300, 550, 0.15, 0.6, 'sine');
+    makeGlide(ctx, now + 0.15, 550, 380, 0.3, 0.8, 'sine');
+  } else if (type === 'woof') {
+    // Dog: two short barks
+    makeBurst(ctx, now, 200, 0.08, 0.25, 'sawtooth');
+    makeBurst(ctx, now + 0.25, 180, 0.07, 0.25, 'sawtooth');
+  } else if (type === 'ribbit') {
+    // Frog: quick low chirp
+    makeGlide(ctx, now, 150, 250, 0.05, 0.3, 'square');
+    makeGlide(ctx, now + 0.12, 250, 150, 0.05, 0.25, 'square');
+  } else if (type === 'moo') {
+    // Cow: long low moo
+    makeGlide(ctx, now, 120, 160, 0.1, 0.8, 'sawtooth');
+    makeGlide(ctx, now + 0.4, 160, 110, 0.05, 0.6, 'sawtooth');
+  } else if (type === 'oink') {
+    // Pig: snorty high squeal
+    makeGlide(ctx, now, 350, 500, 0.05, 0.3, 'square');
+    makeGlide(ctx, now + 0.18, 500, 300, 0.05, 0.3, 'square');
+  } else if (type === 'roar') {
+    // Lion: deep rumble + roar
+    makeNoise(ctx, now, 0.12, 0.7, 60, 150);
+    makeGlide(ctx, now + 0.1, 90, 120, 0.1, 0.8, 'sawtooth');
+  } else if (type === 'squeak') {
+    // Bunny: high quick squeak
+    makeGlide(ctx, now, 600, 800, 0.02, 0.25, 'sine');
+    makeGlide(ctx, now + 0.15, 750, 600, 0.02, 0.2, 'sine');
+  } else if (type === 'growl') {
+    // Panda: low growl
+    makeNoise(ctx, now, 0.08, 0.5, 80, 200);
+    makeGlide(ctx, now, 130, 100, 0.08, 0.5, 'sawtooth');
+  } else if (type === 'chirp') {
+    // Penguin: rapid chirping
+    for (let i = 0; i < 3; i++) {
+      makeGlide(ctx, now + i * 0.12, 380, 480, 0.03, 0.1, 'triangle');
+    }
+  }
+}
+
+function makeGlide(ctx, t, f1, f2, attack, decay, type) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(f1, t);
+  osc.frequency.linearRampToValueAtTime(f2, t + decay);
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.3, t + attack);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t);
+  osc.stop(t + decay + 0.05);
+}
+
+function makeBurst(ctx, t, freq, attack, decay, type) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.25, t + attack);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + decay);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(t);
+  osc.stop(t + decay + 0.05);
+}
+
+function makeNoise(ctx, t, attack, decay, loFreq, hiFreq) {
+  const bufferSize = ctx.sampleRate * decay;
+  const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+
+  const filter = ctx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = (loFreq + hiFreq) / 2;
+  filter.Q.value = 2;
+
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0, t);
+  gain.gain.linearRampToValueAtTime(0.2, t + attack);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + decay);
+
+  source.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+  source.start(t);
+  source.stop(t + decay + 0.05);
+}
+
+// Build the grid
+const grid = document.getElementById('grid');
+animals.forEach((animal, i) => {
+  const card = document.createElement('div');
+  card.className = `animal-card c${i}`;
+  card.innerHTML = `
+    <div class="animal-emoji">${animal.emoji}</div>
+    <div class="animal-name">${animal.name}</div>
+  `;
+
+  card.addEventListener('click', (e) => tap(card, animal, e));
+  card.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    tap(card, animal, e.touches[0]);
+  }, { passive: false });
+
+  grid.appendChild(card);
+});
+
+function tap(card, animal, event) {
+  // Play sound
+  playAnimalSound(animal);
+
+  // Bounce animation
+  card.classList.remove('bounce');
+  void card.offsetWidth; // reflow
+  card.classList.add('bounce');
+  setTimeout(() => card.classList.remove('bounce'), 400);
+
+  // Ripple effect
+  const ripple = document.createElement('div');
+  ripple.className = 'ripple';
+  const rect = card.getBoundingClientRect();
+  const size = Math.max(rect.width, rect.height);
+  ripple.style.width = ripple.style.height = size + 'px';
+  const x = (event.clientX || (rect.left + rect.width/2)) - rect.left - size/2;
+  const y = (event.clientY || (rect.top + rect.height/2)) - rect.top - size/2;
+  ripple.style.left = x + 'px';
+  ripple.style.top = y + 'px';
+  card.appendChild(ripple);
+  setTimeout(() => ripple.remove(), 600);
+
+  // Show name popup
+  showPopup(animal.emoji + ' ' + animal.name + '!');
+
+  // Stars burst
+  burstStars(event.clientX || window.innerWidth/2, event.clientY || window.innerHeight/2);
+
+  // Score
+  score++;
+  document.getElementById('scoreNum').textContent = score;
+}
+
+function showPopup(text) {
+  const popup = document.getElementById('popup');
+  popup.textContent = text;
+  popup.classList.add('show');
+  clearTimeout(popup._timer);
+  popup._timer = setTimeout(() => popup.classList.remove('show'), 900);
+}
+
+function burstStars(x, y) {
+  const starEmojis = ['⭐','✨','🌟','💫','🎉'];
+  for (let i = 0; i < 5; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.textContent = starEmojis[Math.floor(Math.random() * starEmojis.length)];
+    const angle = (i / 5) * Math.PI * 2 + Math.random() * 0.5;
+    const dist = 60 + Math.random() * 80;
+    star.style.left = x + 'px';
+    star.style.top = y + 'px';
+    star.style.setProperty('--dx', Math.cos(angle) * dist + 'px');
+    star.style.setProperty('--dy', Math.sin(angle) * dist + 'px');
+    star.style.animationDelay = (Math.random() * 0.1) + 's';
+    document.body.appendChild(star);
+    setTimeout(() => star.remove(), 900);
+  }
+}
+</script>
+
+</body>
+</html>

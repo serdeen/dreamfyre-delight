@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌀 Void Engine</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #000;
+    overflow: hidden;
+    font-family: 'SF Mono', monospace;
+  }
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+  /* UI overlay */
+  #ui {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 20px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    z-index: 10;
+  }
+  .ctrl {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-family: inherit;
+    letter-spacing: 1px;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .ctrl:hover, .ctrl.active {
+    background: rgba(255,255,255,0.15);
+    border-color: rgba(255,255,255,0.4);
+  }
+  .ctrl.mic-on { border-color: #ff6b35; color: #ff6b35; background: rgba(255,107,53,0.1); }
+  #title {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.3);
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #mode-label {
+    position: fixed;
+    top: 46px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.15);
+    font-size: 0.6rem;
+    letter-spacing: 3px;
+    pointer-events: none;
+    z-index: 10;
+  }
+  .spacer { flex: 1; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="title">🌀 VOID ENGINE</div>
+<div id="mode-label" id="modeLabel">PARTICLES</div>
+
+<div id="ui">
+  <button class="ctrl" onclick="setMode('particles')">Particles</button>
+  <button class="ctrl" onclick="setMode('lissajous')">Lissajous</button>
+  <button class="ctrl" onclick="setMode('spiral')">Spiral</button>
+  <button class="ctrl" onclick="setMode('kaleidoscope')">Kaleid.</button>
+  <button class="ctrl" onclick="setMode('waveform')">Waveform</button>
+  <div class="spacer"></div>
+  <button class="ctrl" id="micBtn" onclick="toggleMic()">🎤 MIC</button>
+  <button class="ctrl" onclick="cycleColor()">🎨 Color</button>
+  <button class="ctrl" onclick="canvas.requestFullscreen?.()">⛶ Full</button>
+</div>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+let W, H, cx, cy;
+let mode = 'particles';
+let colorScheme = 0;
+let frame = 0;
+let micActive = false;
+let analyser = null;
+let freqData = null;
+let waveData = null;
+let micLevel = 0;
+
+const COLOR_SCHEMES = [
+  (t) => `hsl(${(t * 360 + frame * 0.5) % 360}, 80%, 60%)`,
+  (t) => `hsl(${180 + t * 80}, 90%, ${40 + t * 30}%)`,
+  (t) => `hsl(${300 + t * 60}, 100%, ${50 + t * 20}%)`,
+  (t) => `rgb(${Math.floor(t*255)}, ${Math.floor((1-t)*200)}, ${Math.floor(t*128+127)})`,
+  (t) => `hsl(${60 + t * 40}, 95%, ${40 + t * 35}%)`,
+];
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  cx = W / 2; cy = H / 2;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Mic setup
+async function toggleMic() {
+  const btn = document.getElementById('micBtn');
+  if (micActive) {
+    micActive = false;
+    btn.classList.remove('mic-on');
+    btn.textContent = '🎤 MIC';
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 512;
+    src.connect(analyser);
+    freqData = new Uint8Array(analyser.frequencyBinCount);
+    waveData = new Uint8Array(analyser.fftSize);
+    micActive = true;
+    btn.classList.add('mic-on');
+    btn.textContent = '🎤 ON';
+  } catch(e) {
+    btn.textContent = '🎤 DENIED';
+  }
+}
+
+function getMicLevel() {
+  if (!micActive || !analyser) return 0;
+  analyser.getByteFrequencyData(freqData);
+  let sum = 0;
+  for (let i = 0; i < freqData.length; i++) sum += freqData[i];
+  return sum / (freqData.length * 255);
+}
+
+function setMode(m) {
+  mode = m;
+  document.getElementById('mode-label').textContent = m.toUpperCase();
+  // Clear canvas
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+}
+
+function cycleColor() {
+  colorScheme = (colorScheme + 1) % COLOR_SCHEMES.length;
+}
+
+const color = (t) => COLOR_SCHEMES[colorScheme](t);
+
+// ── Particle system ───────────────────────────────────────────────────
+const PARTICLE_COUNT = 300;
+const particles = [];
+for (let i = 0; i < PARTICLE_COUNT; i++) {
+  particles.push({
+    x: Math.random() * 2 - 1,
+    y: Math.random() * 2 - 1,
+    vx: (Math.random() - 0.5) * 0.002,
+    vy: (Math.random() - 0.5) * 0.002,
+    life: Math.random(),
+    size: Math.random() * 2 + 0.5,
+  });
+}
+
+function drawParticles(mic) {
+  ctx.fillStyle = 'rgba(0,0,0,0.04)';
+  ctx.fillRect(0, 0, W, H);
+
+  const speed = 1 + mic * 8;
+  const size = 1 + mic * 4;
+
+  particles.forEach((p, i) => {
+    // Attract toward center with a twist
+    const t = frame * 0.001 + p.life * Math.PI * 2;
+    const angle = Math.atan2(p.y, p.x) + 0.01 + mic * 0.1;
+    const dist = Math.sqrt(p.x * p.x + p.y * p.y);
+    const force = 0.0003 / (dist + 0.1);
+
+    p.vx += -p.x * force + Math.cos(angle) * 0.00005 * speed;
+    p.vy += -p.y * force + Math.sin(angle) * 0.00005 * speed;
+    p.vx *= 0.99;
+    p.vy *= 0.99;
+    p.x += p.vx * speed;
+    p.y += p.vy * speed;
+
+    // Wrap
+    if (Math.abs(p.x) > 1.2) p.x = -p.x * 0.8;
+    if (Math.abs(p.y) > 1.2) p.y = -p.y * 0.8;
+
+    const px = cx + p.x * Math.min(W, H) * 0.45;
+    const py = cy + p.y * Math.min(W, H) * 0.45;
+
+    ctx.beginPath();
+    ctx.arc(px, py, (p.size + size) * 0.5, 0, Math.PI * 2);
+    ctx.fillStyle = color(p.life);
+    ctx.fill();
+  });
+}
+
+// ── Lissajous ─────────────────────────────────────────────────────────
+let lissPoints = [];
+const LISS_POINTS = 2000;
+
+function drawLissajous(mic) {
+  ctx.fillStyle = 'rgba(0,0,0,0.02)';
+  ctx.fillRect(0, 0, W, H);
+
+  const a = 3 + Math.floor(mic * 5);
+  const b = 2 + Math.floor(mic * 3);
+  const delta = frame * 0.005;
+  const r = Math.min(W, H) * 0.38;
+
+  ctx.beginPath();
+  for (let i = 0; i <= LISS_POINTS; i++) {
+    const t = (i / LISS_POINTS) * Math.PI * 2;
+    const x = cx + r * Math.sin(a * t + delta);
+    const y = cy + r * Math.sin(b * t);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = color((Math.sin(frame * 0.01) + 1) * 0.5);
+  ctx.lineWidth = 1 + mic * 2;
+  ctx.stroke();
+}
+
+// ── Spiral ────────────────────────────────────────────────────────────
+function drawSpiral(mic) {
+  ctx.fillStyle = 'rgba(0,0,0,0.03)';
+  ctx.fillRect(0, 0, W, H);
+
+  const turns = 6 + mic * 10;
+  const r = Math.min(W, H) * 0.4;
+  const N = 2000;
+
+  ctx.beginPath();
+  for (let i = 0; i <= N; i++) {
+    const t = (i / N);
+    const angle = t * Math.PI * 2 * turns + frame * 0.02;
+    const radius = t * r;
+    const x = cx + radius * Math.cos(angle);
+    const y = cy + radius * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+
+    if (i % 100 === 0) {
+      ctx.strokeStyle = color(t);
+      ctx.lineWidth = 1 + t * (1 + mic * 3);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+  }
+  ctx.strokeStyle = color(1);
+  ctx.stroke();
+}
+
+// ── Kaleidoscope ──────────────────────────────────────────────────────
+function drawKaleidoscope(mic) {
+  ctx.fillStyle = 'rgba(0,0,0,0.06)';
+  ctx.fillRect(0, 0, W, H);
+
+  const segments = 8;
+  const r = Math.min(W, H) * 0.42;
+  const speed = 1 + mic * 3;
+
+  for (let s = 0; s < segments; s++) {
+    const baseAngle = (s / segments) * Math.PI * 2;
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(baseAngle + frame * 0.003 * speed);
+
+    for (let i = 0; i < 6; i++) {
+      const t = i / 6;
+      const angle = t * Math.PI * 0.25 + Math.sin(frame * 0.02 + s) * 0.1;
+      const radius = r * (0.2 + t * 0.8) * (1 + mic * 0.3);
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+
+      ctx.beginPath();
+      ctx.arc(x, y, 2 + t * 6 + mic * 8, 0, Math.PI * 2);
+      ctx.fillStyle = color(t + s / segments * 0.5);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// ── Waveform ──────────────────────────────────────────────────────────
+function drawWaveform(mic) {
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fillRect(0, 0, W, H);
+
+  if (micActive && waveData) {
+    analyser.getByteTimeDomainData(waveData);
+  }
+
+  const N = micActive && waveData ? waveData.length : 512;
+  const layers = 5;
+
+  for (let l = 0; l < layers; l++) {
+    const yOffset = (l - layers/2) * 30;
+    const yScale = 80 + mic * 200;
+    const shift = frame * (0.5 + l * 0.2);
+
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const t = i / N;
+      let v;
+      if (micActive && waveData) {
+        const idx = Math.floor(t * waveData.length);
+        v = (waveData[idx] / 128 - 1);
+      } else {
+        v = Math.sin(t * Math.PI * 8 + shift + l) * 0.5
+          + Math.sin(t * Math.PI * 3 + shift * 0.7) * 0.3;
+      }
+      const x = t * W;
+      const y = cy + yOffset + v * yScale;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = color(l / layers);
+    ctx.lineWidth = 1.5 - l * 0.15;
+    ctx.stroke();
+  }
+}
+
+// ── Main loop ─────────────────────────────────────────────────────────
+function draw() {
+  frame++;
+  const mic = getMicLevel();
+
+  switch(mode) {
+    case 'particles':    drawParticles(mic); break;
+    case 'lissajous':   drawLissajous(mic); break;
+    case 'spiral':      drawSpiral(mic); break;
+    case 'kaleidoscope': drawKaleidoscope(mic); break;
+    case 'waveform':    drawWaveform(mic); break;
+  }
+
+  requestAnimationFrame(draw);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  const modes = ['particles','lissajous','spiral','kaleidoscope','waveform'];
+  const idx = parseInt(e.key) - 1;
+  if (!isNaN(idx) && idx >= 0 && idx < modes.length) setMode(modes[idx]);
+  if (e.key === 'c' || e.key === 'C') cycleColor();
+});
+
+// Click to cycle modes on canvas
+canvas.addEventListener('click', () => {
+  const modes = ['particles','lissajous','spiral','kaleidoscope','waveform'];
+  setMode(modes[(modes.indexOf(mode) + 1) % modes.length]);
+});
+
+setMode('particles');
+draw();
+</script>
+
+</body>
+</html>
