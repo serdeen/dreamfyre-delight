@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Color Lab — Mix Colors!</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #fef9f3;
+    --surface: #fff;
+    --border: #e8ddd0;
+    --red: #ff4757;
+    --yellow: #ffc312;
+    --blue: #3742fa;
+    --orange: #ff7f50;
+    --green: #2ed573;
+    --purple: #8e44ad;
+    --text: #2d2d2d;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Fredoka', sans-serif;
+    min-height: 100vh;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    text-align: center;
+    padding: 20px;
+    background: linear-gradient(180deg, #fff 0%, transparent 100%);
+  }
+
+  h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+
+  h1 span { font-size: 38px; }
+
+  .subtitle {
+    font-size: 16px;
+    color: #999;
+    margin-top: 4px;
+    font-weight: 400;
+  }
+
+  /* ─── GAME AREA ─── */
+  .game-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    padding: 10px 20px 30px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  /* ─── COLOR WELLS ─── */
+  .wells-row {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .color-well {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 6px solid rgba(255,255,255,0.8);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15), inset 0 -4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .color-well::before {
+    content: '';
+    position: absolute;
+    top: 12%;
+    left: 18%;
+    width: 35%;
+    height: 25%;
+    background: rgba(255,255,255,0.5);
+    border-radius: 50%;
+    transform: rotate(-30deg);
+  }
+
+  .color-well.red { background: radial-gradient(circle at 35% 35%, #ff6b7a, var(--red)); }
+  .color-well.yellow { background: radial-gradient(circle at 35% 35%, #ffe066, var(--yellow)); }
+  .color-well.blue { background: radial-gradient(circle at 35% 35%, #6b75ff, var(--blue)); }
+
+  .color-well:hover {
+    transform: scale(1.08) translateY(-4px);
+    box-shadow: 0 16px 36px rgba(0,0,0,0.2), inset 0 -4px 12px rgba(0,0,0,0.1);
+  }
+
+  .color-well:active {
+    transform: scale(0.95);
+  }
+
+  .color-well.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+  }
+
+  .well-label {
+    font-size: 18px;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    letter-spacing: 0.02em;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ─── BOWL ─── */
+  .bowl-area {
+    position: relative;
+    width: 240px;
+    height: 140px;
+  }
+
+  .bowl {
+    width: 240px;
+    height: 140px;
+    background: var(--surface);
+    border: 5px solid var(--border);
+    border-radius: 0 0 120px 120px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1), inset 0 4px 16px rgba(0,0,0,0.05);
+    transition: background 0.4s, border-color 0.4s;
+  }
+
+  .bowl.mixed {
+    border-color: transparent;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  }
+
+  .bowl-fill {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 0%;
+    transition: height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.5s;
+    border-radius: 0 0 115px 115px;
+  }
+
+  .bowl-splash {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .splash-drop {
+    position: absolute;
+    border-radius: 50%;
+    animation: splashAnim 0.7s ease-out forwards;
+  }
+
+  @keyframes splashAnim {
+    0% { transform: scale(0) translateY(0); opacity: 1; }
+    100% { transform: scale(1) translateY(-60px); opacity: 0; }
+  }
+
+  .bowl-drip {
+    position: absolute;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    animation: dripDown 0.5s ease-in forwards;
+  }
+
+  @keyframes dripDown {
+    0% { transform: translateY(0) scaleY(1); opacity: 1; }
+    100% { transform: translateY(40px) scaleY(1.5); opacity: 0; }
+  }
+
+  /* Dropped colors shown as circles in the bowl */
+  .bowl-contents {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 0 30px 10px;
+    pointer-events: none;
+  }
+
+  .bowl-dot {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.7);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    flex-shrink: 0;
+  }
+
+  @keyframes popIn {
+    0% { transform: scale(0) translateY(-30px); }
+    100% { transform: scale(1) translateY(0); }
+  }
+
+  /* ─── RESULT ─── */
+  .result-area {
+    text-align: center;
+    min-height: 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .result-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.01em;
+    animation: resultPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes resultPop {
+    0% { transform: scale(0.5); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .result-hint {
+    font-size: 15px;
+    color: #aaa;
+    font-weight: 400;
+  }
+
+  /* ─── CONFETTI ─── */
+  .confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 100;
+  }
+
+  .confetti-piece {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    animation: confettiFall linear forwards;
+  }
+
+  @keyframes confettiFall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* ─── RESET BTN ─── */
+  .reset-btn {
+    padding: 14px 32px;
+    border-radius: 50px;
+    border: 3px solid var(--border);
+    background: var(--surface);
+    font-family: 'Fredoka', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  .reset-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+    border-color: #ccc;
+  }
+
+  .reset-btn:active { transform: scale(0.96); }
+
+  /* ─── MIX LOGIC ─── */
+  .mixed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 15px;
+    font-weight: 600;
+    animation: resultPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .mixed-badge .dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.6);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎨 Color <span>Lab</span></h1>
+  <p class="subtitle">Tap two colors to mix them!</p>
+</header>
+
+<div class="game-area">
+  <!-- Color Wells -->
+  <div class="wells-row">
+    <div class="color-well red" id="wellRed" onclick="addColor('red')">
+      <span class="well-label">Red</span>
+    </div>
+    <div class="color-well yellow" id="wellYellow" onclick="addColor('yellow')">
+      <span class="well-label">Yellow</span>
+    </div>
+    <div class="color-well blue" id="wellBlue" onclick="addColor('blue')">
+      <span class="well-label">Blue</span>
+    </div>
+  </div>
+
+  <!-- Bowl -->
+  <div class="bowl-area">
+    <div class="bowl" id="bowl">
+      <div class="bowl-fill" id="bowlFill"></div>
+      <div class="bowl-contents" id="bowlContents"></div>
+      <div class="bowl-splash" id="bowlSplash"></div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div class="result-area" id="resultArea">
+    <div class="result-hint">Your color will appear here!</div>
+  </div>
+
+  <!-- Reset -->
+  <button class="reset-btn" onclick="resetBowl()">🔄 Start Over</button>
+</div>
+
+<!-- Confetti container -->
+<div class="confetti-container" id="confettiContainer"></div>
+
+<script>
+'use strict';
+
+// ─── COLOR LOGIC ───────────────────────────────────────────────
+const COLORS = {
+  red:    { hex: '#ff4757', css: 'radial-gradient(circle at 40% 40%, #ff6b7a, #ff4757)' },
+  yellow: { hex: '#ffc312', css: 'radial-gradient(circle at 40% 40%, #ffe066, #ffc312)' },
+  blue:   { hex: '#3742fa', css: 'radial-gradient(circle at 40% 40%, #6b75ff, #3742fa)' },
+};
+
+const MIXES = {
+  'red,yellow':  { result: '#ff7f50', name: 'Orange',    emoji: '🍊' },
+  'yellow,red':  { result: '#ff7f50', name: 'Orange',    emoji: '🍊' },
+  'red,blue':    { result: '#8e44ad', name: 'Purple',    emoji: '🍇' },
+  'blue,red':    { result: '#8e44ad', name: 'Purple',    emoji: '🍇' },
+  'blue,yellow': { result: '#2ed573', name: 'Green',     emoji: '🍏' },
+  'yellow,blue':{ result: '#2ed573', name: 'Green',     emoji: '🍏' },
+  'red,red':     { result: '#ff4757', name: 'Red',       emoji: '❤️' },
+  'yellow,yellow':{ result: '#ffc312', name: 'Yellow',   emoji: '💛' },
+  'blue,blue':   { result: '#3742fa', name: 'Blue',      emoji: '💙' },
+  'red,yellow,blue': { result: '#8B6914', name: 'Brown', emoji: '🤎' },
+  'red,blue,yellow': { result: '#8B6914', name: 'Brown', emoji: '🤎' },
+  'yellow,red,blue': { result: '#8B6914', name: 'Brown', emoji: '🤎' },
+  'yellow,blue,red': { result: '#8B6914', name: 'Brown', emoji: '🤎' },
+  'blue,red,yellow': { result: '#8B6914', name: 'Brown', emoji: '🤎' },
+  'blue,yellow,red': { result: '#8B6914', name: 'Brown', emoji: '🤎' },
+};
+
+let bowlColors = [];
+
+// ─── AUDIO ─────────────────────────────────────────────────────
+let audioCtx = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playPour(color) {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const freq = color === 'red' ? 330 : color === 'yellow' ? 440 : 528;
+  const osc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  osc.frequency.linearRampToValueAtTime(freq * 1.5, audioCtx.currentTime + 0.15);
+  osc.frequency.linearRampToValueAtTime(freq * 0.8, audioCtx.currentTime + 0.3);
+
+  osc.connect(g);
+  g.connect(audioCtx.destination);
+
+  g.gain.setValueAtTime(0, audioCtx.currentTime);
+  g.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.4);
+
+  osc.start(audioCtx.currentTime);
+  osc.stop(audioCtx.currentTime + 0.45);
+}
+
+function playSplash() {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  const bufSize = audioCtx.sampleRate * 0.12;
+  const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / bufSize, 2);
+
+  const noise = audioCtx.createBufferSource();
+  noise.buffer = buf;
+
+  const filter = audioCtx.createBiquadFilter();
+  filter.type = 'bandpass';
+  filter.frequency.value = 2000;
+  filter.Q.value = 0.5;
+
+  const g = audioCtx.createGain();
+  noise.connect(filter);
+  filter.connect(g);
+  g.connect(audioCtx.destination);
+  g.gain.setValueAtTime(0.25, audioCtx.currentTime);
+  noise.start();
+}
+
+function playSuccess() {
+  if (!audioCtx) initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  const notes = [523, 659, 784, 1047];
+  notes.forEach((freq, i) => {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.frequency.value = freq;
+    osc.type = 'sine';
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    const t = audioCtx.currentTime + i * 0.1;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.2, t + 0.03);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+    osc.start(t);
+    osc.stop(t + 0.4);
+  });
+}
+
+// ─── GAME LOGIC ────────────────────────────────────────────────
+function addColor(color) {
+  if (!audioCtx) initAudio();
+  if (bowlColors.length >= 3) return;
+  if (bowlColors.includes(color)) return;
+
+  bowlColors.push(color);
+  playPour(color);
+
+  // Show dot in bowl
+  const contents = document.getElementById('bowlContents');
+  const dot = document.createElement('div');
+  dot.className = 'bowl-dot';
+  dot.style.background = COLORS[color].hex;
+  contents.appendChild(dot);
+
+  // Splash effect
+  makeSplash(color);
+
+  // Fill bowl
+  const fill = document.getElementById('bowlFill');
+  const height = Math.min(bowlColors.length * 30, 80);
+  const mixedColor = getMixedColor();
+  fill.style.height = height + '%';
+  fill.style.background = mixedColor || COLORS[color].hex;
+
+  // Disable well
+  document.getElementById('well' + color.charAt(0).toUpperCase() + color.slice(1)).classList.add('disabled');
+
+  // Check mix
+  if (bowlColors.length >= 2) {
+    const mix = getMixResult();
+    if (mix) {
+      setTimeout(() => {
+        playSuccess();
+        showResult(mix);
+        fireConfetti(mix.result);
+        fill.style.background = mix.result;
+        document.getElementById('bowl').classList.add('mixed');
+      }, 300);
+    }
+  }
+}
+
+function getMixedColor() {
+  const key = bowlColors.join(',');
+  const mix = MIXES[key];
+  return mix ? mix.result : null;
+}
+
+function getMixResult() {
+  const key = bowlColors.join(',');
+  return MIXES[key] || null;
+}
+
+function showResult(mix) {
+  const area = document.getElementById('resultArea');
+  area.innerHTML = `
+    <div class="result-name">${mix.emoji} ${mix.name}!</div>
+    <div class="mixed-badge" style="background:${mix.result}20;color:${mix.result};border:2px solid ${mix.result}40">
+      <div class="dot" style="background:${mix.result}"></div>
+      Mixed color!
+    </div>
+  `;
+}
+
+function makeSplash(color) {
+  const splash = document.getElementById('bowlSplash');
+  const hex = COLORS[color].hex;
+  for (let i = 0; i < 6; i++) {
+    const drop = document.createElement('div');
+    drop.className = 'splash-drop';
+    const size = 8 + Math.random() * 14;
+    drop.style.cssText = `
+      left: ${30 + Math.random() * 60}%;
+      top: ${10 + Math.random() * 30}%;
+      width: ${size}px;
+      height: ${size}px;
+      background: ${hex};
+    `;
+    splash.appendChild(drop);
+    setTimeout(() => drop.remove(), 700);
+  }
+}
+
+function resetBowl() {
+  bowlColors = [];
+  document.getElementById('bowlContents').innerHTML = '';
+  document.getElementById('bowlFill').style.height = '0%';
+  document.getElementById('bowlFill').style.background = 'transparent';
+  document.getElementById('bowl').classList.remove('mixed');
+  document.getElementById('resultArea').innerHTML = '<div class="result-hint">Your color will appear here!</div>';
+  document.querySelectorAll('.color-well').forEach(w => w.classList.remove('disabled'));
+  document.getElementById('bowlSplash').innerHTML = '';
+
+  // Play a little reset sound
+  if (audioCtx) {
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    osc.frequency.value = 200;
+    osc.type = 'triangle';
+    osc.connect(g);
+    g.connect(audioCtx.destination);
+    g.gain.setValueAtTime(0.15, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.35);
+  }
+}
+
+// ─── CONFETTI ───────────────────────────────────────────────────
+function fireConfetti(color) {
+  const container = document.getElementById('confettiContainer');
+  const confettiColors = ['#ff4757','#ffc312','#3742fa','#ff7f50','#2ed573','#8e44ad', color];
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.cssText = `
+      left: ${Math.random() * 100}%;
+      background: ${confettiColors[Math.floor(Math.random() * confettiColors.length)]};
+      animation-duration: ${1.5 + Math.random() * 2}s;
+      animation-delay: ${Math.random() * 0.3}s;
+      transform: rotate(${Math.random() * 360}deg);
+      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+    `;
+    container.appendChild(piece);
+    setTimeout(() => piece.remove(), 4000);
+  }
+}
+
+// ─── TOUCH ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Prevent double-tap zoom on mobile
+  document.addEventListener('touchstart', (e) => {
+    if (e.target.closest('.color-well')) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+});
+</script>
+</body>
+</html>

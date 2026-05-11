@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PULSE16 — Drum Pattern Generator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@400;700;900&display=swap');
+
+:root {
+  --bg: #0d0d14;
+  --surface: #13131f;
+  --surface2: #1a1a2e;
+  --primary: #6c5ce7;
+  --primary-glow: rgba(108,92,231,0.4);
+  --accent: #00cec9;
+  --accent-glow: rgba(0,206,201,0.35);
+  --hot: #fd79a8;
+  --kick: #e94560;
+  --snare: #f5a623;
+  --hihat: #00cec9;
+  --clap: #fd79a8;
+  --perc: #a29bfe;
+  --text: #e0e0ff;
+  --muted: #4a4a6a;
+  --border: rgba(108,92,231,0.25);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Space Mono', monospace;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  overflow-x: hidden;
+}
+
+header { text-align: center; margin-bottom: 32px; }
+
+h1 {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 900;
+  font-size: clamp(1.8rem, 5vw, 2.8rem);
+  letter-spacing: 0.15em;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 50%, var(--hot) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: titlePulse 3s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.2); }
+}
+
+.subtitle {
+  font-size: 0.65rem;
+  letter-spacing: 0.3em;
+  color: var(--muted);
+  margin-top: 6px;
+  text-transform: uppercase;
+}
+
+.transport {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.bpm-control {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 14px;
+}
+
+.bpm-label { font-size: 0.6rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+
+.bpm-value {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--accent);
+  min-width: 48px;
+  text-align: center;
+  text-shadow: 0 0 12px var(--accent-glow);
+  transition: all 0.15s;
+}
+
+.bpm-value.flash { color: #fff; text-shadow: 0 0 20px var(--accent); }
+
+.bpm-btn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.bpm-btn:hover {
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 0 12px var(--primary-glow);
+  transform: scale(1.1);
+}
+
+.bpm-btn:active { transform: scale(0.92); }
+
+.transport-btn {
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.transport-btn.play { border-color: var(--accent); color: var(--accent); }
+
+.transport-btn.play:hover, .transport-btn.play.active {
+  background: var(--accent);
+  color: var(--bg);
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.transport-btn.stop:hover {
+  background: var(--kick);
+  border-color: var(--kick);
+  color: #fff;
+  box-shadow: 0 0 16px rgba(233,69,96,0.4);
+}
+
+.transport-btn:active { transform: scale(0.95); }
+
+.mini-ctrl {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.mini-ctrl label { font-size: 0.55rem; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; }
+
+.mini-ctrl input[type=range] {
+  -webkit-appearance: none;
+  width: 80px; height: 4px;
+  background: var(--surface2);
+  border-radius: 2px;
+  outline: none;
+}
+
+.mini-ctrl input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 0 8px var(--primary-glow);
+  transition: all 0.15s;
+}
+
+.mini-ctrl input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+.mini-ctrl span { font-size: 0.65rem; color: var(--accent); text-align: center; }
+
+.pattern-select { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; }
+
+.pat-btn {
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  border-radius: 20px;
+  cursor: pointer;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  transition: all 0.15s;
+}
+
+.pat-btn:hover { border-color: var(--primary); color: var(--text); }
+
+.pat-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: 0 0 12px var(--primary-glow);
+}
+
+.grid-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  width: 100%;
+  max-width: 760px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.step-markers {
+  display: grid;
+  grid-template-columns: 80px repeat(16, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+  padding: 0 2px;
+}
+
+.step-marker { font-size: 0.5rem; color: var(--muted); text-align: center; letter-spacing: 0.05em; }
+.step-marker.downbeat { color: var(--accent); font-weight: 700; }
+
+.track {
+  display: grid;
+  grid-template-columns: 80px repeat(16, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+
+.track-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  padding-right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.track-label .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.kick .dot { background: var(--kick); box-shadow: 0 0 8px rgba(233,69,96,0.6); }
+.snare .dot { background: var(--snare); box-shadow: 0 0 8px rgba(245,166,35,0.6); }
+.hihat .dot { background: var(--hihat); box-shadow: 0 0 8px rgba(0,206,201,0.6); }
+.clap .dot { background: var(--clap); box-shadow: 0 0 8px rgba(253,121,168,0.6); }
+.perc .dot { background: var(--perc); box-shadow: 0 0 8px rgba(162,155,254,0.6); }
+
+.step {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.05);
+  background: var(--surface2);
+  cursor: pointer;
+  transition: all 0.1s;
+  min-width: 0;
+}
+
+.step:hover { border-color: rgba(255,255,255,0.2); transform: scale(1.08); }
+
+.kick .step.active { background: var(--kick); box-shadow: 0 0 10px rgba(233,69,96,0.5); }
+.snare .step.active { background: var(--snare); box-shadow: 0 0 10px rgba(245,166,35,0.5); }
+.hihat .step.active { background: var(--hihat); box-shadow: 0 0 10px rgba(0,206,201,0.5); }
+.clap .step.active { background: var(--clap); box-shadow: 0 0 10px rgba(253,121,168,0.5); }
+.perc .step.active { background: var(--perc); box-shadow: 0 0 10px rgba(162,155,254,0.5); }
+
+.step.playing { transform: scale(1.15); box-shadow: 0 0 20px rgba(255,255,255,0.25) !important; }
+.step.downbeat { border-left: 2px solid rgba(255,255,255,0.15); }
+
+.viz-wrap {
+  margin-top: 20px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 50px;
+  justify-content: center;
+}
+
+.viz-bar {
+  width: 6px;
+  background: var(--primary);
+  border-radius: 3px 3px 0 0;
+  transition: height 0.05s ease-out, background 0.15s;
+  box-shadow: 0 0 6px var(--primary-glow);
+  min-height: 3px;
+}
+
+.actions { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; justify-content: center; }
+
+.action-btn {
+  padding: 7px 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+
+.action-btn:hover { border-color: var(--primary); color: var(--primary); box-shadow: 0 0 12px var(--primary-glow); }
+.action-btn:active { transform: scale(0.95); }
+.action-btn.danger:hover { border-color: var(--kick); color: var(--kick); box-shadow: 0 0 12px rgba(233,69,96,0.3); }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  box-shadow: 0 0 20px var(--accent-glow);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  z-index: 100;
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+@media (max-width: 600px) {
+  .track { grid-template-columns: 60px repeat(16, 1fr); }
+  .step-markers { grid-template-columns: 60px repeat(16, 1fr); }
+  .step { border-radius: 4px; }
+  .grid-wrap { padding: 12px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PULSE16</h1>
+  <p class="subtitle">Drum Pattern Generator</p>
+</header>
+
+<div class="transport">
+  <div class="bpm-control">
+    <button class="bpm-btn" id="bpmDown">−</button>
+    <div>
+      <div class="bpm-label">BPM</div>
+      <div class="bpm-value" id="bpmDisplay">120</div>
+    </div>
+    <button class="bpm-btn" id="bpmUp">+</button>
+  </div>
+  <button class="transport-btn play" id="playBtn" onclick="togglePlay()">▶ PLAY</button>
+  <button class="transport-btn stop" onclick="stopPlayback()">■ STOP</button>
+  <div class="mini-ctrl">
+    <label>Swing</label>
+    <input type="range" min="0" max="100" value="0" id="swingSlider" oninput="updateSwing(this.value)">
+    <span id="swingVal">0%</span>
+  </div>
+  <div class="mini-ctrl">
+    <label>Volume</label>
+    <input type="range" min="0" max="100" value="80" id="volSlider" oninput="updateVolume(this.value)">
+    <span id="volVal">80%</span>
+  </div>
+</div>
+
+<div class="pattern-select">
+  <button class="pat-btn active" data-pat="basic4x4">4/4 Basic</button>
+  <button class="pat-btn" data-pat="trap">Trap</button>
+  <button class="pat-btn" data-pat="house">Deep House</button>
+  <button class="pat-btn" data-pat="breakbeat">Breakbeat</button>
+  <button class="pat-btn" data-pat="half-time">Half-Time</button>
+  <button class="pat-btn" data-pat="sparse">Sparse</button>
+</div>
+
+<div class="grid-wrap">
+  <div class="step-markers" id="stepMarkers"></div>
+  <div class="track kick">
+    <div class="track-label"><span class="dot"></span>KICK</div>
+  </div>
+  <div class="track snare">
+    <div class="track-label"><span class="dot"></span>SNARE</div>
+  </div>
+  <div class="track hihat">
+    <div class="track-label"><span class="dot"></span>HHAT</div>
+  </div>
+  <div class="track clap">
+    <div class="track-label"><span class="dot"></span>CLAP</div>
+  </div>
+  <div class="track perc">
+    <div class="track-label"><span class="dot"></span>PERC</div>
+  </div>
+  <div class="viz-wrap" id="vizWrap"></div>
+</div>
+
+<div class="actions">
+  <button class="action-btn" onclick="randomize()">⟳ RANDOMIZE</button>
+  <button class="action-btn" onclick="clearAll()">✕ CLEAR ALL</button>
+  <button class="action-btn" onclick="copyPattern()">⌘ COPY LINK</button>
+  <button class="action-btn danger" onclick="clearAll()">✖ CLEAR ALL</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STEPS = 16;
+const tracks = ['kick', 'snare', 'hihat', 'clap', 'perc'];
+
+let bpm = 120;
+let playing = false;
+let currentStep = 0;
+let swing = 0;
+let volume = 0.8;
+
+let pattern = {
+  kick:  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+  snare: [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+  hihat: [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+  clap:  [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0],
+  perc:  [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1],
+};
+
+const presets = {
+  'basic4x4': { kick:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], hihat:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], clap:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], perc:[0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1] },
+  'trap':     { kick:[1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0], snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], hihat:[1,0,1,0,1,0,1,0,1,0,1,0,1,1,1,1], clap:[0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1], perc:[0,0,0,1,0,0,1,0,0,1,0,0,1,0,0,1] },
+  'house':    { kick:[1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0], snare:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], hihat:[1,1,0,1,1,1,0,1,1,1,0,1,1,0,1,0], clap:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,1], perc:[0,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0] },
+  'breakbeat':{ kick:[1,0,0,1,0,0,1,0,0,0,1,0,0,1,0,0], snare:[0,0,0,0,1,0,0,0,1,0,0,0,0,1,0,0], hihat:[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1], clap:[0,0,0,0,1,0,0,1,0,0,0,0,1,0,0,1], perc:[1,0,0,1,0,1,0,0,1,0,0,1,0,0,0,1] },
+  'half-time':{ kick:[1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0], snare:[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0], hihat:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], clap:[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0], perc:[0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0] },
+  'sparse':   { kick:[1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], snare:[0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0], hihat:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], clap:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0], perc:[0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0] },
+};
+
+let vizLevels = Array(32).fill(0);
+
+// ── Audio ───────────────────────────────────────────────────────────────
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+let audioCtx = null;
+
+function getCtx() {
+  if (!audioCtx) audioCtx = new AudioContext();
+  return audioCtx;
+}
+
+function playSound(type, time) {
+  const ctx = getCtx();
+  const master = ctx.createGain();
+  master.gain.value = volume;
+  master.connect(ctx.destination);
+
+  if (type === 'kick') {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.frequency.setValueAtTime(150, time);
+    osc.frequency.exponentialRampToValueAtTime(30, time + 0.15);
+    gain.gain.setValueAtTime(1, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.3);
+    osc.connect(gain); gain.connect(master);
+    osc.start(time); osc.stop(time + 0.3);
+  } else if (type === 'snare') {
+    const bufSize = ctx.sampleRate * 0.2;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const filt = ctx.createBiquadFilter();
+    filt.type = 'highpass'; filt.frequency.value = 1200;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.8, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+    src.connect(filt); filt.connect(gain); gain.connect(master);
+    src.start(time); src.stop(time + 0.2);
+  } else if (type === 'hihat') {
+    const bufSize = ctx.sampleRate * 0.05;
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    const filt = ctx.createBiquadFilter();
+    filt.type = 'highpass'; filt.frequency.value = 7000;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.5, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.05);
+    src.connect(filt); filt.connect(master); gain.connect(master);
+    src.start(time); src.stop(time + 0.06);
+  } else if (type === 'clap') {
+    for (let n = 0; n < 3; n++) {
+      const delay = n * 0.012;
+      const bufSize = ctx.sampleRate * 0.15;
+      const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < bufSize; i++) d[i] = Math.random() * 2 - 1;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'bandpass'; filt.frequency.value = 2500; filt.Q.value = 0.5;
+      const g = ctx.createGain();
+      const t = time + delay;
+      g.gain.setValueAtTime(n === 2 ? 0.7 : 0.4, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+      src.connect(filt); filt.connect(g); g.connect(master);
+      src.start(t); src.stop(t + 0.16);
+    }
+  } else if (type === 'perc') {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const freq = 800 + Math.random() * 400;
+    osc.frequency.setValueAtTime(freq, time);
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.5, time + 0.08);
+    osc.type = 'triangle';
+    gain.gain.setValueAtTime(0.4, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.1);
+    osc.connect(gain); gain.connect(master);
+    osc.start(time); osc.stop(time + 0.1);
+  }
+}
+
+// ── UI Build ────────────────────────────────────────────────────────────
+function buildUI() {
+  // Markers
+  const markers = document.getElementById('stepMarkers');
+  markers.innerHTML = '<div class="step-marker"></div>';
+  for (let i = 0; i < STEPS; i++) {
+    const m = document.createElement('div');
+    m.className = 'step-marker' + ([0,4,8,12].includes(i) ? ' downbeat' : '');
+    m.textContent = i + 1;
+    m.id = 'marker-' + i;
+    markers.appendChild(m);
+  }
+
+  // Tracks
+  tracks.forEach(track => {
+    const row = document.querySelector('.track.' + track);
+    // Remove old step buttons
+    row.querySelectorAll('.step').forEach(b => b.remove());
+    for (let i = 0; i < STEPS; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'step' + ([0,4,8,12].includes(i) ? ' downbeat' : '');
+      if (pattern[track][i]) btn.classList.add('active');
+      btn.dataset.track = track;
+      btn.dataset.step = i;
+      btn.addEventListener('click', () => toggleStep(track, i));
+      btn.addEventListener('mouseenter', () => { if (playing) previewSound(track); });
+      row.appendChild(btn);
+    }
+  });
+
+  // Viz bars
+  const viz = document.getElementById('vizWrap');
+  viz.innerHTML = '';
+  for (let i = 0; i < 32; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'viz-bar';
+    viz.appendChild(bar);
+  }
+}
+
+function getStepBtns(track) {
+  return Array.from(document.querySelectorAll('.track.' + track + ' .step'));
+}
+
+// ── Playback ───────────────────────────────────────────────────────────
+let schedTimeout = null;
+
+function scheduleAhead() {
+  if (!playing) return;
+  const interval = (60 / bpm) / 4 * 1000;
+  const swingOffset = currentStep % 2 === 1 ? (swing / 100) * interval * 0.33 : 0;
+
+  schedTimeout = setTimeout(() => {
+    if (!playing) return;
+    const ctx = getCtx();
+    const now = ctx.currentTime;
+
+    tracks.forEach(track => {
+      if (pattern[track][currentStep]) playSound(track, now);
+    });
+
+    animateStep(currentStep);
+    updateViz(currentStep);
+    currentStep = (currentStep + 1) % STEPS;
+    scheduleAhead();
+  }, interval + swingOffset);
+}
+
+function animateStep(step) {
+  const bpmEl = document.getElementById('bpmDisplay');
+  bpmEl.classList.add('flash');
+  setTimeout(() => bpmEl.classList.remove('flash'), 80);
+
+  tracks.forEach(track => {
+    getStepBtns(track).forEach((b, i) => b.classList.toggle('playing', i === step));
+  });
+
+  document.querySelectorAll('.step-marker').forEach((m, i) => {
+    if (i === step) {
+      m.style.color = [0,4,8,12].includes(i) ? '#fff' : 'var(--accent)';
+      m.style.fontWeight = '700';
+    } else {
+      m.style.color = [0,4,8,12].includes(i) ? 'var(--accent)' : 'var(--muted)';
+      m.style.fontWeight = [0,4,8,12].includes(i) ? '700' : '400';
+    }
+  });
+}
+
+function updateViz(step) {
+  let level = 0;
+  tracks.forEach(t => { if (pattern[t][step]) level += 1; });
+  level = Math.min(1, level / 3);
+
+  vizLevels.push(level * 48 + 3);
+  if (vizLevels.length > 32) vizLevels.shift();
+
+  const bars = document.querySelectorAll('.viz-bar');
+  bars.forEach((bar, i) => {
+    const h = vizLevels[i] || 3;
+    bar.style.height = h + 'px';
+    const hue = 230 + (vizLevels[i] / 50) * 60;
+    bar.style.background = 'hsl(' + hue + ', 80%, 65%)';
+    bar.style.boxShadow = '0 0 6px hsla(' + hue + ', 80%, 65%, 0.4)';
+  });
+}
+
+function togglePlay() {
+  playing = !playing;
+  const btn = document.getElementById('playBtn');
+  if (playing) {
+    btn.textContent = '❚❚ PAUSE';
+    btn.classList.add('active');
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    scheduleAhead();
+  } else {
+    btn.textContent = '▶ PLAY';
+    btn.classList.remove('active');
+    clearTimeout(schedTimeout);
+    tracks.forEach(track => getStepBtns(track).forEach(b => b.classList.remove('playing')));
+  }
+}
+
+function stopPlayback() {
+  playing = false;
+  currentStep = 0;
+  clearTimeout(schedTimeout);
+  const btn = document.getElementById('playBtn');
+  btn.textContent = '▶ PLAY';
+  btn.classList.remove('active');
+  tracks.forEach(track => getStepBtns(track).forEach(b => b.classList.remove('playing')));
+  document.querySelectorAll('.step-marker').forEach((m, i) => {
+    m.style.color = [0,4,8,12].includes(i) ? 'var(--accent)' : 'var(--muted)';
+    m.style.fontWeight = [0,4,8,12].includes(i) ? '700' : '400';
+  });
+  vizLevels = Array(32).fill(0);
+  document.querySelectorAll('.viz-bar').forEach(bar => {
+    bar.style.height = '3px';
+    bar.style.background = 'var(--primary)';
+  });
+}
+
+// ── Interactions ────────────────────────────────────────────────────────
+function toggleStep(track, step) {
+  pattern[track][step] = !pattern[track][step];
+  const btns = getStepBtns(track);
+  btns[step].classList.toggle('active', pattern[track][step]);
+  if (pattern[track][step]) {
+    const btn = btns[step];
+    btn.style.transform = 'scale(1.3)';
+    setTimeout(() => { if (!playing) btn.style.transform = ''; }, 120);
+    previewSound(track);
+  }
+}
+
+function previewSound(track) {
+  try {
+    const ctx = getCtx();
+    if (ctx.state === 'suspended') ctx.resume();
+    playSound(track, ctx.currentTime);
+  } catch(e) {}
+}
+
+function randomize() {
+  tracks.forEach(track => {
+    for (let i = 0; i < STEPS; i++) {
+      const isDownbeat = [0,4,8,12].includes(i);
+      const prob = track === 'perc' ? 0.12 : track === 'hihat' ? 0.5 : isDownbeat ? 0.7 : 0.25;
+      pattern[track][i] = Math.random() < prob ? 1 : 0;
+    }
+  });
+  refreshGrid();
+  showToast('⟳ Pattern randomized');
+}
+
+function clearAll() {
+  stopPlayback();
+  tracks.forEach(track => { pattern[track] = Array(STEPS).fill(0); });
+  refreshGrid();
+  showToast('✖ All tracks cleared');
+}
+
+function refreshGrid() {
+  tracks.forEach(track => {
+    getStepBtns(track).forEach((btn, i) => {
+      btn.classList.toggle('active', !!pattern[track][i]);
+    });
+  });
+}
+
+// Pattern buttons
+document.querySelectorAll('.pat-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const name = btn.dataset.pat;
+    if (presets[name]) {
+      stopPlayback();
+      Object.assign(pattern, JSON.parse(JSON.stringify(presets[name])));
+      refreshGrid();
+    }
+    document.querySelectorAll('.pat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    showToast('♪ ' + name.replace('-', ' ') + ' loaded');
+  });
+});
+
+function updateSwing(val) {
+  swing = parseInt(val);
+  document.getElementById('swingVal').textContent = val + '%';
+}
+
+function updateVolume(val) {
+  volume = parseInt(val) / 100;
+  document.getElementById('volVal').textContent = val + '%';
+}
+
+// BPM controls
+document.getElementById('bpmDown').addEventListener('click', () => {
+  bpm = Math.max(60, bpm - 1);
+  document.getElementById('bpmDisplay').textContent = bpm;
+  flashBpm();
+});
+document.getElementById('bpmUp').addEventListener('click', () => {
+  bpm = Math.min(300, bpm + 1);
+  document.getElementById('bpmDisplay').textContent = bpm;
+  flashBpm();
+});
+
+let bpmHold = null;
+['bpmDown', 'bpmUp'].forEach(function(id) {
+  const btn = document.getElementById(id);
+  const dir = id === 'bpmDown' ? -1 : 1;
+  btn.addEventListener('mousedown', function() {
+    bpmHold = setInterval(function() {
+      bpm = Math.max(60, Math.min(300, bpm + dir));
+      document.getElementById('bpmDisplay').textContent = bpm;
+    }, 80);
+  });
+  btn.addEventListener('mouseup', function() { clearInterval(bpmHold); });
+  btn.addEventListener('mouseleave', function() { clearInterval(bpmHold); });
+});
+
+function flashBpm() {
+  const el = document.getElementById('bpmDisplay');
+  el.classList.add('flash');
+  setTimeout(function() { el.classList.remove('flash'); }, 100);
+}
+
+function copyPattern() {
+  const data = {};
+  tracks.forEach(function(t) { data[t] = pattern[t]; });
+  const encoded = btoa(JSON.stringify(data));
+  const url = window.location.origin + window.location.pathname + '?p=' + encoded;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(url).then(function() {
+      showToast('⌘ Pattern link copied!');
+    }).catch(function() { showToast('Copy failed — check console'); });
+  } else {
+    showToast('Clipboard not available');
+  }
+}
+
+// Load from URL
+function loadFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const p = params.get('p');
+  if (p) {
+    try {
+      const data = JSON.parse(atob(p));
+      tracks.forEach(function(t) {
+        if (data[t] && Array.isArray(data[t])) {
+          pattern[t] = data[t];
+        }
+      });
+      refreshGrid();
+      showToast('♪ Pattern loaded from link');
+    } catch(e) {}
+  }
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(function() { toast.classList.remove('show'); }, 2200);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  if (e.code === 'Escape') stopPlayback();
+  if (e.code === 'KeyR' && !e.metaKey && !e.ctrlKey) randomize();
+});
+
+// Init
+buildUI();
+loadFromUrl();
+</script>
+</body>
+</html>

@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Komplete Kontrol Synth — Dreamfyre Delight</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --surface: #13131a; --border: #1e1e2e;
+    --cyan: #00f5d4; --magenta: #f72585; --text: #e0e0e0; --dim: #666680;
+  }
+  body { background: var(--bg); color: var(--text); font-family: Inter, sans-serif; min-height: 100vh; display: flex; flex-direction: column; }
+  body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse 60% 50% at 20% 30%, rgba(247,37,133,0.08) 0%, transparent 70%), radial-gradient(ellipse 50% 60% at 80% 70%, rgba(0,245,212,0.06) 0%, transparent 70%); pointer-events: none; z-index: -1; }
+  /* ===== HEADER ===== */
+  .header { display: flex; align-items: center; gap: 1rem; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  h1 { font-family: 'Space Mono', monospace; font-size: 1rem; letter-spacing: 0.12em; color: var(--cyan); text-transform: uppercase; }
+  .midi-status { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--dim); }
+  .midi-status.connected { color: var(--cyan); }
+  .midi-status.connected::before { content: '🎹 '; }
+  /* ===== CONTROLS AREA — TOP THIRD ===== */
+  .controls-area { display: flex; flex-shrink: 0; padding: 0.75rem 1rem; gap: 1rem; border-bottom: 1px solid var(--border); align-items: stretch; min-height: 120px; }
+  .ctrl-section { display: flex; flex-direction: column; gap: 0.5rem; justify-content: center; }
+  .ctrl-label { font-size: 0.6rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.2rem; }
+  /* ===== TODDLER-SAFE BUTTONS ===== */
+  .btn { background: var(--border); color: var(--text); border: 2px solid var(--dim); border-radius: 10px; cursor: pointer; transition: all 0.12s; font-family: 'Space Mono', monospace; font-size: 0.75rem; display: flex; align-items: center; justify-content: center; user-select: none; }
+  .btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .btn.active { background: var(--cyan); color: var(--bg); border-color: var(--cyan); font-weight: 700; }
+  .btn:active { transform: scale(0.95); }
+  .btn-row { display: flex; gap: 0.35rem; }
+  .wave-btn { min-width: 64px; min-height: 52px; padding: 0.4rem 0.6rem; font-size: 0.7rem; }
+  .octave-btn { min-width: 52px; min-height: 48px; padding: 0.3rem 0.4rem; font-size: 0.7rem; }
+  .lfo-btn { min-width: 80px; min-height: 48px; }
+  /* ===== ADSR CANVAS ===== */
+  .adsr-canvas { background: var(--bg); border-radius: 8px; border: 1px solid var(--border); flex-shrink: 0; }
+  /* ===== KK DISPLAY PANEL — right side of controls ===== */
+  .kk-display-panel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 0.6rem 0.75rem; display: flex; flex-direction: column; gap: 0.25rem; min-width: 160px; }
+  .kk-display-title { font-family: 'Space Mono', monospace; font-size: 0.55rem; color: var(--magenta); letter-spacing: 0.1em; text-transform: uppercase; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem; margin-bottom: 0.15rem; }
+  .param-row { display: flex; justify-content: space-between; align-items: center; }
+  .param-name { font-size: 0.55rem; color: var(--dim); text-transform: uppercase; letter-spacing: 0.05em; }
+  .param-val { font-family: 'Space Mono', monospace; font-size: 0.6rem; color: var(--cyan); min-width: 38px; text-align: right; }
+  .param-val.highlight { color: var(--magenta); }
+  /* ===== PIANO AREA — LOWER 2/3 ===== */
+  .piano-area { flex: 1; display: flex; flex-direction: column; min-height: 0; user-select: none; touch-action: none; }
+  .piano-wrap { flex: 1; padding: 0.5rem 1rem 0.75rem; display: flex; align-items: stretch; }
+  .piano { display: flex; position: relative; height: 100%; width: 100%; }
+  .key { position: relative; cursor: pointer; border-radius: 0 0 6px 6px; transition: background 0.08s; }
+  .key.white { flex: 1; height: 100%; background: linear-gradient(180deg, #f0f0e8 0%, #d8d8cc 100%); border: 1px solid #bbb; margin-right: -1px; z-index: 1; box-shadow: inset 0 -4px 6px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.3); }
+  .key.white.pressed { background: linear-gradient(180deg, #e0e0d8 0%, #c0c0b4 100%); }
+  .key.black { position: absolute; height: 62%; background: linear-gradient(180deg, #2a2a2a 0%, #0a0a0a 100%); border: 1px solid #000; z-index: 2; pointer-events: auto; box-shadow: inset 0 -3px 5px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.5); }
+  .key.black.pressed { background: linear-gradient(180deg, #444 0%, #1a1a1a 100%); }
+  /* ===== LANDSCAPE / DESKTOP ===== */
+  @media (orientation: landscape) and (min-width: 768px) {
+    .controls-area { padding: 0.5rem 1rem; min-height: 100px; }
+    .piano-wrap { padding: 0.4rem 1rem 0.5rem; }
+  }
+  /* ===== MOBILE ===== */
+  @media (max-width: 600px) {
+    .controls-area { flex-wrap: wrap; min-height: auto; padding: 0.5rem; gap: 0.5rem; }
+    .wave-btn { min-width: 56px; min-height: 44px; }
+    .octave-btn { min-width: 44px; min-height: 40px; }
+    .lfo-btn { min-width: 64px; min-height: 40px; }
+    .kk-display-panel { min-width: 140px; }
+    .piano-wrap { padding: 0.25rem 0.25rem 0.4rem; }
+  }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>KK Synth</h1>
+  <div class="midi-status" id="midi-status">No MIDI device</div>
+</div>
+<!-- CONTROLS — top third -->
+<div class="controls-area">
+  <div class="ctrl-section">
+    <div class="ctrl-label">Wave</div>
+    <div class="btn-row">
+      <button class="btn wave-btn active" data-wave="sine">Sine</button>
+      <button class="btn wave-btn" data-wave="square">Square</button>
+      <button class="btn wave-btn" data-wave="sawtooth">Saw</button>
+      <button class="btn wave-btn" data-wave="triangle">Tri</button>
+    </div>
+  </div>
+  <div class="ctrl-section">
+    <div class="ctrl-label">Octave</div>
+    <div class="btn-row">
+      <button class="btn octave-btn" data-oct="-2">-2</button>
+      <button class="btn octave-btn" data-oct="-1">-1</button>
+      <button class="btn octave-btn active" data-oct="0">0</button>
+      <button class="btn octave-btn" data-oct="+1">+1</button>
+      <button class="btn octave-btn" data-oct="+2">+2</button>
+    </div>
+  </div>
+  <div class="ctrl-section">
+    <div class="ctrl-label">LFO</div>
+    <div class="btn-row">
+      <button class="btn lfo-btn" id="lfo-toggle">LFO Off</button>
+    </div>
+  </div>
+  <div class="ctrl-section" style="margin-left: auto;">
+    <div class="ctrl-label">Envelope</div>
+    <canvas class="adsr-canvas" id="adsr-canvas" width="240" height="56"></canvas>
+  </div>
+  <div class="kk-display-panel">
+    <div class="kk-display-title">KK MK2</div>
+    <div class="param-row"><span class="param-name">Cutoff</span><span class="param-val" id="p-cutoff">---</span></div>
+    <div class="param-row"><span class="param-name">Reso</span><span class="param-val" id="p-reso">---</span></div>
+    <div class="param-row"><span class="param-name">Attack</span><span class="param-val" id="p-attack">---</span></div>
+    <div class="param-row"><span class="param-name">Decay</span><span class="param-val" id="p-decay">---</span></div>
+    <div class="param-row"><span class="param-name">Sustain</span><span class="param-val" id="p-sustain">---</span></div>
+    <div class="param-row"><span class="param-name">Release</span><span class="param-val" id="p-release">---</span></div>
+    <div class="param-row"><span class="param-name">LFO Rate</span><span class="param-val" id="p-lfoRate">---</span></div>
+    <div class="param-row"><span class="param-name">LFO Depth</span><span class="param-val" id="p-lfoDepth">---</span></div>
+    <div class="param-row" style="margin-top:0.3rem; border-top: 1px solid var(--magenta); padding-top: 0.3rem;"><span class="param-name" style="color: var(--magenta)">Octave</span><span class="param-val" id="p-octave">0</span></div>
+  </div>
+</div>
+<!-- PIANO — lower 2/3 -->
+<div class="piano-area">
+  <div class="piano-wrap">
+    <div class="piano" id="piano"></div>
+  </div>
+</div>
+<script>
+(function() {
+  const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+  let audioCtx = null;
+  let masterGain, compressor, lfoOsc, lfoGain;
+  let currentWave = 'sine';
+  let octaveShift = 0;
+  let lfoEnabled = false;
+  let activeNotes = new Map();
+  const activeOscs = new Map();
+
+  const synthParams = {
+    cutoff: 2000, resonance: 1, attack: 0.05, decay: 0.3, sustain: 0.7, release: 0.4,
+    lfoRate: 2, lfoDepth: 200
+  };
+
+  function calcFreq(note, octave) {
+    const semitones = NOTES.indexOf(note) - 9 + (octave - 4) * 12;
+    return 440 * Math.pow(2, semitones / 12);
+  }
+
+  function calcMidiFreq(noteNum) {
+    return 440 * Math.pow(2, (noteNum - 69) / 12);
+  }
+
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.55;
+    compressor = audioCtx.createDynamicsCompressor();
+    compressor.threshold.value = -6;
+    compressor.ratio.value = 4;
+    compressor.knee.value = 3;
+    masterGain.connect(compressor);
+    compressor.connect(audioCtx.destination);
+    lfoOsc = audioCtx.createOscillator();
+    lfoOsc.frequency.value = synthParams.lfoRate;
+    lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = synthParams.lfoDepth;
+    lfoOsc.connect(lfoGain);
+    lfoOsc.start();
+    initMIDI();
+  }
+
+  function buildPiano() {
+    const piano = document.getElementById('piano');
+    piano.innerHTML = '';
+    const whiteKeys = [];
+    const blackKeyPositions = [1, 2, 4, 5, 6, 8, 9, 11, 13, 14]; // 2 octaves
+    const octaves = [4, 5];
+    let whiteIdx = 0;
+    for (let o = 0; o < octaves.length; o++) {
+      for (let i = 0; i < 12; i++) {
+        const note = NOTES[i];
+        const isBlack = note.includes('#');
+        if (!isBlack) {
+          const noteNum = (octaves[o] + 1) * 12 + i;
+          const key = document.createElement('div');
+          key.className = 'key white';
+          key.dataset.note = note;
+          key.dataset.octave = octaves[o];
+          key.dataset.noteNum = noteNum;
+          piano.appendChild(key);
+          whiteKeys.push({ el: key, note, octave: octaves[o], noteNum });
+          whiteIdx++;
+        }
+      }
+    }
+    // Black keys — pixel-based positioning for exact alignment
+    const whiteCount = 14;
+    piano.style.position = 'relative';
+    function positionBlackKeys() {
+      const pianoW = piano.getBoundingClientRect().width;
+      if (!pianoW) return;
+      const whiteW = pianoW / whiteCount;
+      const blackW = Math.round(whiteW * 0.60);
+      const offsets = { 'C#': 0.65, 'D#': 1.75, 'F#': 3.9, 'G#': 4.95, 'A#': 6.1 };
+      piano.querySelectorAll('.key.black').forEach(key => {
+        const note = key.dataset.note;
+        const octIdx = parseInt(key.dataset.octave) - 4;
+        const offset = offsets[note];
+        const leftPx = (octIdx * 7 + offset) * whiteW - blackW / 2;
+        key.style.left = leftPx + 'px';
+        key.style.width = blackW + 'px';
+      });
+    }
+    positionBlackKeys();
+    window.addEventListener('resize', positionBlackKeys);
+    // Event wiring
+    piano.querySelectorAll('.key').forEach(key => {
+      const noteNum = parseInt(key.dataset.noteNum);
+      key.addEventListener('mousedown', e => { e.preventDefault(); initAudio(); playNote(noteNum, 0.8); key.classList.add('pressed'); });
+      key.addEventListener('mouseup', () => { stopNote(noteNum); key.classList.remove('pressed'); });
+      key.addEventListener('mouseleave', () => { stopNote(noteNum); key.classList.remove('pressed'); });
+      key.addEventListener('touchstart', e => { e.preventDefault(); initAudio(); playNote(noteNum, 0.8); key.classList.add('pressed'); }, { passive: false });
+      key.addEventListener('touchend', () => { stopNote(noteNum); key.classList.remove('pressed'); });
+    });
+    // Touch move glissando
+    piano.addEventListener('touchmove', e => {
+      e.preventDefault();
+      for (const touch of e.changedTouches) {
+        const el = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (el && el.classList.contains('key')) {
+          const n = parseInt(el.dataset.noteNum);
+          initAudio();
+          if (!activeNotes.has(n)) playNote(n, 0.7);
+          piano.querySelectorAll('.key.pressed').forEach(k => k !== el && k.classList.remove('pressed'));
+          el.classList.add('pressed');
+        }
+      }
+    }, { passive: false });
+  }
+
+  function playNote(noteNum, velocity) {
+    initAudio();
+    if (activeNotes.has(noteNum)) return;
+    const osc = audioCtx.createOscillator();
+    const filter = audioCtx.createBiquadFilter();
+    const noteGain = audioCtx.createGain();
+    osc.type = currentWave;
+    osc.frequency.value = calcMidiFreq(noteNum);
+    filter.type = 'lowpass';
+    filter.frequency.value = synthParams.cutoff;
+    filter.Q.value = synthParams.resonance;
+    noteGain.gain.value = 0;
+    const now = audioCtx.currentTime;
+    noteGain.gain.setTargetAtTime(velocity * 0.15, now, synthParams.attack);
+    osc.connect(filter);
+    filter.connect(noteGain);
+    noteGain.connect(masterGain);
+    if (lfoEnabled) {
+      lfoGain.connect(filter.frequency);
+    }
+    osc.start();
+    activeNotes.set(noteNum, { osc, filter, noteGain });
+    activeOscs.set(noteNum, osc);
+    updateADSR();
+  }
+
+  function stopNote(noteNum) {
+    const node = activeNotes.get(noteNum);
+    if (!node) return;
+    const { osc, noteGain } = node;
+    const now = audioCtx.currentTime;
+    noteGain.gain.cancelScheduledValues(now);
+    noteGain.gain.setValueAtTime(noteGain.gain.value, now);
+    noteGain.gain.exponentialRampToValueAtTime(0.0001, now + synthParams.release);
+    setTimeout(() => { try { osc.stop(); } catch(e) {} }, (synthParams.release + 0.05) * 1000);
+    activeNotes.delete(noteNum);
+    activeOscs.delete(noteNum);
+    updateADSR();
+  }
+
+  // ADSR Canvas
+  const adsrCanvas = document.getElementById('adsr-canvas');
+  const adsrCtx = adsrCanvas.getContext('2d');
+  let adrRafId = null;
+  let isPlaying = false;
+
+  function drawADSR() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = adsrCanvas.clientWidth || 240;
+    const h = adsrCanvas.clientHeight || 56;
+    if (adsrCanvas.width !== Math.round(w * dpr) || adsrCanvas.height !== Math.round(h * dpr)) {
+      adsrCanvas.width = Math.round(w * dpr); adsrCanvas.height = Math.round(h * dpr);
+      adsrCtx.setTransform(1, 0, 0, 1, 0, 0);
+      adsrCtx.scale(dpr, dpr);
+    }
+    adsrCtx.clearRect(0, 0, w, h);
+    const { attack, decay, sustain, release } = synthParams;
+    const total = attack + decay + 0.3 + release;
+    const scale = w / (total + 0.5);
+    adsrCtx.strokeStyle = '#00f5d4';
+    adsrCtx.lineWidth = 2;
+    adsrCtx.beginPath();
+    adsrCtx.moveTo(0, h);
+    const ax = attack * scale;
+    const dx = ax + decay * scale;
+    const sx = dx + 0.3 * scale;
+    const rx = sx + release * scale;
+    adsrCtx.lineTo(ax, 10);
+    adsrCtx.lineTo(dx, h - (sustain * h * 0.9));
+    adsrCtx.lineTo(sx, h - (sustain * h * 0.9));
+    adsrCtx.lineTo(rx, h);
+    adsrCtx.stroke();
+    if (adrRafId) adrRafId = requestAnimationFrame(drawADSR);
+  }
+
+  function updateADSR() {
+    cancelAnimationFrame(adrRafId);
+    if (activeNotes.size > 0) {
+      isPlaying = true;
+      drawADSR();
+    } else {
+      isPlaying = false;
+      adrRafId = requestAnimationFrame(drawADSR);
+    }
+  }
+
+  // MIDI
+  async function initMIDI() {
+    if (!navigator.requestMIDIAccess) return;
+    try {
+      const midiAccess = await navigator.requestMIDIAccess({ sysex: false });
+      midiAccess.inputs.forEach(input => wireMIDI(input));
+      midiAccess.onstatechange = e => { if (e.port.state === 'connected') wireMIDI(e.port); };
+      updateMIDIStatus();
+    } catch(e) { updateMIDIStatus(); }
+  }
+
+  function wireMIDI(input) {
+    input.onmidimessage = handleMIDIMessage;
+  }
+
+  function handleMIDIMessage(event) {
+    const [status, d1, d2] = event.data;
+    const cmd = status & 0xf0;
+    const ch = status & 0x0f;
+    const port = event.target;
+    const isKK = port.name.toLowerCase().includes('komplete kontrol');
+
+    if (cmd === 0x90 && d2 > 0) {
+      // Note on
+      if (d1 === 116) { document.getElementById('lfo-toggle').click(); return; }
+      if (d1 === 117) { stopAll(); return; }
+      initAudio();
+      playNote(d1, d2 / 127);
+      updateMIDIStatus('🎹 ' + port.name + ' connected');
+    } else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) {
+      // Note off
+      if (d1 !== 116 && d1 !== 117) stopNote(d1);
+    } else if (cmd === 0xb0) {
+      // CC
+      if (isKK && d1 >= 21 && d1 <= 28) {
+        const names = ['cutoff', 'resonance', 'attack', 'decay', 'sustain', 'release', 'lfoRate', 'lfoDepth'];
+        const param = names[d1 - 21];
+        const raw = d2 / 127;
+        if (param === 'cutoff') {
+          synthParams.cutoff = 100 + raw * 9900;
+        } else if (param === 'resonance') {
+          synthParams.resonance = raw * 20;
+        } else if (param === 'attack') {
+          synthParams.attack = 0.005 + raw * 0.995;
+        } else if (param === 'decay') {
+          synthParams.decay = raw * 2;
+        } else if (param === 'sustain') {
+          synthParams.sustain = raw;
+        } else if (param === 'release') {
+          synthParams.release = 0.05 + raw * 2;
+        } else if (param === 'lfoRate') {
+          synthParams.lfoRate = 0.5 + raw * 15;
+          if (lfoOsc) lfoOsc.frequency.setTargetAtTime(synthParams.lfoRate, audioCtx.currentTime, 0.05);
+        } else if (param === 'lfoDepth') {
+          synthParams.lfoDepth = raw * 1000;
+          if (lfoGain) lfoGain.gain.setTargetAtTime(synthParams.lfoDepth, audioCtx.currentTime, 0.05);
+        }
+        updateKKDisplay(param, synthParams[param]);
+        updateADSR();
+      }
+      if (isKK && d1 >= 102 && d1 <= 105) {
+        const octs = [-2, -1, 0, 1, 2];
+        if (d1 === 102) setOctave(-1);
+        else if (d1 === 103) setOctave(1);
+        else if (d1 === 104) setOctave(-1);
+        else if (d1 === 105) setOctave(1);
+      }
+      if (d1 === 11 && isKK) {
+        // Light strip — visual feedback
+        const strip = d2 / 127;
+        document.getElementById('midi-status').textContent = `Light: ${Math.round(strip * 100)}%`;
+      }
+    }
+  }
+
+  function setOctave(dir) {
+    const btns = document.querySelectorAll('.octave-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    if (dir === 1) octaveShift = Math.min(octaveShift + 1, 2);
+    else if (dir === -1) octaveShift = Math.max(octaveShift - 1, -2);
+    document.querySelector(`.octave-btn[data-oct="${octaveShift}"]`).classList.add('active');
+    document.getElementById('p-octave').textContent = octaveShift >= 0 ? '+' + octaveShift : octaveShift;
+  }
+
+  function updateKKDisplay(param, val) {
+    const map = { cutoff: 'p-cutoff', resonance: 'p-reso', attack: 'p-attack', decay: 'p-decay', sustain: 'p-sustain', release: 'p-release', lfoRate: 'p-lfoRate', lfoDepth: 'p-lfoDepth' };
+    const el = document.getElementById(map[param]);
+    if (el) {
+      el.textContent = typeof val === 'number' ? (val < 100 ? val.toFixed(2) : Math.round(val)) : val;
+      el.classList.add('highlight');
+      setTimeout(() => el.classList.remove('highlight'), 300);
+    }
+  }
+
+  function updateMIDIStatus(msg) {
+    const el = document.getElementById('midi-status');
+    if (msg) { el.textContent = msg; el.classList.add('connected'); }
+    else { el.textContent = 'No MIDI device'; el.classList.remove('connected'); }
+  }
+
+  function stopAll() {
+    [...activeNotes.keys()].forEach(n => stopNote(n));
+  }
+
+  // Controls
+  document.querySelectorAll('.wave-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentWave = btn.dataset.wave;
+      document.querySelectorAll('.wave-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeOscs.forEach((osc, noteNum) => { try { osc.type = currentWave; } catch(e) {} });
+    });
+  });
+  document.querySelectorAll('.octave-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      octaveShift = parseInt(btn.dataset.oct);
+      document.querySelectorAll('.octave-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('p-octave').textContent = octaveShift >= 0 ? '+' + octaveShift : octaveShift;
+    });
+  });
+  document.getElementById('lfo-toggle').addEventListener('click', () => {
+    lfoEnabled = !lfoEnabled;
+    document.getElementById('lfo-toggle').textContent = lfoEnabled ? 'LFO On' : 'LFO Off';
+    document.getElementById('lfo-toggle').classList.toggle('active', lfoEnabled);
+    if (audioCtx) {
+      if (lfoEnabled) {
+        lfoGain.connect(activeNotes.size > 0 ? activeNotes.values().next().value.filter.frequency : masterGain);
+      } else {
+        try { lfoGain.disconnect(); } catch(e) {}
+      }
+    }
+  });
+
+  // Resize handler for canvas
+  window.addEventListener('resize', () => updateADSR());
+
+  buildPiano();
+  updateADSR();
+  // initMIDI called from initAudio on first user interaction
+})();
+</script>
+</body>
+</html>

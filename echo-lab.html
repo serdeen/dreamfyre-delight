@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Echo Lab — Dreamfyre Delight</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #1e1e2e;
+    --coral: #e76f51;
+    --coral-dim: rgba(231,111,81,0.12);
+    --text: #e0e0e0;
+    --text-dim: #666680;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem 1rem;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse 50% 40% at 50% 10%, rgba(231,111,81,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 50% 90%, rgba(231,111,81,0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: -1;
+  }
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.5rem;
+    letter-spacing: 0.2em;
+    color: var(--coral);
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 660px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+
+  /* Drop zone */
+  .drop-zone {
+    border: 2px dashed var(--text-dim);
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    font-size: 0.9rem;
+    color: var(--text-dim);
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--coral);
+    background: var(--coral-dim);
+  }
+  .drop-zone.loaded {
+    border-style: solid;
+    border-color: var(--coral);
+    color: var(--coral);
+  }
+  #file-input { display: none; }
+
+  /* Waveform */
+  #waveform-canvas {
+    width: 100%;
+    height: 100px;
+    background: var(--surface);
+    border-radius: 8px;
+    display: block;
+  }
+
+  /* Transport */
+  .transport {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+  }
+  .transport button {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.6rem 1.4rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    letter-spacing: 0.05em;
+  }
+  .transport button:hover {
+    border-color: var(--coral);
+    background: var(--coral-dim);
+  }
+  .transport button.active {
+    border-color: var(--coral);
+    color: var(--coral);
+  }
+
+  /* Delay controls */
+  .delay-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.2rem;
+  }
+  .delay-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .delay-row label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    min-width: 70px;
+  }
+  .delay-row input[type=range] {
+    flex: 1;
+    accent-color: var(--coral);
+  }
+  .delay-row .val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--coral);
+    min-width: 60px;
+    text-align: right;
+  }
+  .delay-row .pct { min-width: 40px; }
+
+  /* Feedback meter */
+  .feedback-meter-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-top: 0.3rem;
+  }
+  .feedback-meter-wrap label { font-size: 0.7rem; color: var(--text-dim); min-width: 70px; }
+  .meter-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  #feedback-fill {
+    height: 100%;
+    background: var(--coral);
+    width: 50%;
+    transition: width 0.1s;
+    border-radius: 4px;
+  }
+
+  /* Echo button */
+  .echo-btn-wrap {
+    display: flex;
+    justify-content: center;
+  }
+  #echo-btn {
+    background: var(--surface);
+    border: 2px solid var(--coral);
+    border-radius: 12px;
+    color: var(--coral);
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.9rem 2rem;
+    cursor: pointer;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+  #echo-btn:hover { background: var(--coral-dim); }
+  #echo-btn.active {
+    background: var(--coral);
+    color: var(--bg);
+    box-shadow: 0 0 20px rgba(231,111,81,0.4);
+  }
+
+  /* Master */
+  .master-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 0.5rem;
+  }
+  .master-row label {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    min-width: 60px;
+  }
+  .master-row input[type=range] {
+    flex: 1;
+    accent-color: var(--coral);
+  }
+</style>
+</head>
+<body>
+
+<h1>Echo Lab</h1>
+
+<div class="container">
+
+  <div class="drop-zone" id="drop-zone">Drop a WAV or MP3 file here — or click to browse</div>
+  <input type="file" id="file-input" accept="audio/*">
+
+  <canvas id="waveform-canvas"></canvas>
+
+  <div class="transport">
+    <button id="play-btn">▶ Play</button>
+    <button id="stop-btn">■ Stop</button>
+  </div>
+
+  <div class="delay-controls">
+    <div class="delay-row">
+      <label>Delay</label>
+      <input type="range" id="delay-slider" min="50" max="1000" step="10" value="320">
+      <span class="val" id="delay-val">320ms</span>
+    </div>
+    <div class="delay-row">
+      <label>Feedback</label>
+      <input type="range" id="feedback-slider" min="0" max="90" step="1" value="50">
+      <span class="val pct" id="feedback-val">50%</span>
+    </div>
+    <div class="feedback-meter-wrap">
+      <label>Meter</label>
+      <div class="meter-bar"><div id="feedback-fill"></div></div>
+    </div>
+    <div class="delay-row">
+      <label>Mix</label>
+      <input type="range" id="mix-slider" min="0" max="100" step="1" value="50">
+      <span class="val pct" id="mix-val">50%</span>
+    </div>
+  </div>
+
+  <div class="echo-btn-wrap">
+    <button id="echo-btn">✚ ECHO</button>
+  </div>
+
+  <div class="master-row">
+    <label>Master</label>
+    <input type="range" id="master-vol" min="0" max="1" value="0.7" step="0.01">
+  </div>
+
+</div>
+
+<script>
+(function() {
+  let audioCtx = null;
+  let masterGain = null;
+  let compressor = null;
+  let audioBuffer = null;
+  let currentSource = null;
+  let delayNode = null;
+  let feedbackGain = null;
+  let dryGain = null;
+  let wetGain = null;
+  let isPlaying = false;
+  let echoActive = false;
+  let startTime = 0;
+  let pauseOffset = 0;
+  let rafId = null;
+
+  const dropZone = document.getElementById('drop-zone');
+  const fileInput = document.getElementById('file-input');
+  const canvas = document.getElementById('waveform-canvas');
+  const playBtn = document.getElementById('play-btn');
+  const stopBtn = document.getElementById('stop-btn');
+  const delaySlider = document.getElementById('delay-slider');
+  const delayVal = document.getElementById('delay-val');
+  const feedbackSlider = document.getElementById('feedback-slider');
+  const feedbackVal = document.getElementById('feedback-val');
+  const feedbackFill = document.getElementById('feedback-fill');
+  const mixSlider = document.getElementById('mix-slider');
+  const mixVal = document.getElementById('mix-val');
+  const echoBtn = document.getElementById('echo-btn');
+  const masterVol = document.getElementById('master-vol');
+
+  // --- Init audio context on first interaction ---
+  function ensureAudioContext() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      compressor = audioCtx.createDynamicsCompressor();
+      compressor.threshold.value = -6;
+      compressor.ratio.value = 4;
+      compressor.connect(audioCtx.destination);
+
+      masterGain = audioCtx.createGain();
+      masterGain.gain.value = 0.7;
+      masterGain.connect(compressor);
+
+      // Create the delay/echo chain
+      delayNode = audioCtx.createDelay(1.0);
+      delayNode.delayTime.value = 0.32;
+
+      feedbackGain = audioCtx.createGain();
+      feedbackGain.gain.value = 0.5;
+
+      dryGain = audioCtx.createGain();
+      wetGain = audioCtx.createGain();
+
+      // Feedback loop: delay → feedbackGain → delay
+      delayNode.connect(feedbackGain);
+      feedbackGain.connect(delayNode);
+
+      // Dry path: source → dryGain → masterGain
+      dryGain.connect(masterGain);
+
+      // Wet path: source → delay → wetGain → masterGain
+      delayNode.connect(wetGain);
+      wetGain.connect(masterGain);
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  // --- File load ---
+  dropZone.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
+
+  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) loadFile(file);
+  });
+
+  function loadFile(file) {
+    if (!file) return;
+    ensureAudioCtx();
+    dropZone.textContent = file.name;
+    dropZone.classList.add('loaded');
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      audioCtx.decodeAudioData(ev.target.result).then((buf) => {
+        audioBuffer = buf;
+        drawWaveform();
+        playBtn.disabled = false;
+      }).catch((err) => {
+        dropZone.textContent = 'Error: ' + err.message;
+      });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  // --- Waveform ---
+  function drawWaveform() {
+    if (!audioBuffer) return;
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.offsetWidth;
+    const h = 100;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const data = audioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / 400);
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#1e1e2e';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.beginPath();
+    ctx.strokeStyle = '#e76f51';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 400 && i * step < data.length; i++) {
+      const x = (i / 400) * w;
+      const y = h / 2 + (data[i * step] * h * 0.8 / 2);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  window.addEventListener('resize', () => {
+    if (audioBuffer) drawWaveform();
+  });
+
+  // --- Playback ---
+  function stopPlayback() {
+    if (currentSource) {
+      try { currentSource.stop(); } catch(e) {}
+      currentSource = null;
+    }
+    cancelAnimationFrame(rafId);
+    isPlaying = false;
+  }
+
+  function playAudio() {
+    if (!audioBuffer) return;
+    stopPlayback();
+
+    const source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+
+    // Connect to delay chain
+    source.connect(dryGain);
+    source.connect(delayNode);
+
+    // Apply echo state
+    if (echoActive) {
+      dryGain.gain.setTargetAtTime((100 - +mixSlider.value) / 100, audioCtx.currentTime, 0.05);
+      wetGain.gain.setTargetAtTime(+mixSlider.value / 100, audioCtx.currentTime, 0.05);
+    } else {
+      dryGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.05);
+      wetGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+    }
+
+    source.start(0, pauseOffset);
+    isPlaying = true;
+    startTime = audioCtx.currentTime;
+    currentSource = source;
+
+    playBtn.textContent = '❚❚ Pause';
+    playBtn.classList.add('active');
+
+    source.onended = () => {
+      if (isPlaying && source === currentSource) {
+        isPlaying = false;
+        pauseOffset = 0;
+        playBtn.textContent = '▶ Play';
+        playBtn.classList.remove('active');
+        cancelAnimationFrame(rafId);
+        drawWaveform();
+      }
+    };
+
+    startPlayhead();
+  }
+
+  function startPlayhead() {
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const w = canvas.offsetWidth;
+    const h = 100;
+
+    function animate() {
+      if (!isPlaying) return;
+      rafId = requestAnimationFrame(animate);
+
+      const data = audioBuffer.getChannelData(0);
+      const step = Math.ceil(data.length / 400);
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#1e1e2e';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#e76f51';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 400 && i * step < data.length; i++) {
+        const x = (i / 400) * w;
+        const y = h / 2 + (data[i * step] * h * 0.8 / 2);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      const elapsed = audioCtx.currentTime - startTime;
+      const progress = Math.min((pauseOffset + elapsed) / audioBuffer.duration, 1);
+      const px = progress * w;
+
+      ctx.beginPath();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, h);
+      ctx.stroke();
+    }
+    animate();
+  }
+
+  playBtn.addEventListener('click', () => {
+    ensureAudioContext();
+    if (isPlaying) {
+      pauseOffset += audioCtx.currentTime - startTime;
+      stopPlayback();
+      playBtn.textContent = '▶ Play';
+      playBtn.classList.remove('active');
+      cancelAnimationFrame(rafId);
+    } else {
+      playAudio();
+    }
+  });
+
+  stopBtn.addEventListener('click', () => {
+    stopPlayback();
+    pauseOffset = 0;
+    playBtn.textContent = '▶ Play';
+    playBtn.classList.remove('active');
+    if (audioBuffer) drawWaveform();
+  });
+
+  // --- Delay slider ---
+  delaySlider.addEventListener('input', () => {
+    const ms = +delaySlider.value;
+    delayVal.textContent = ms + 'ms';
+    if (delayNode) {
+      delayNode.delayTime.setTargetAtTime(ms / 1000, audioCtx.currentTime, 0.05);
+    }
+  });
+
+  // --- Feedback slider ---
+  feedbackSlider.addEventListener('input', () => {
+    const pct = +feedbackSlider.value;
+    feedbackVal.textContent = pct + '%';
+    feedbackFill.style.width = pct + '%';
+    if (feedbackGain) {
+      feedbackGain.gain.setTargetAtTime(pct / 100, audioCtx.currentTime, 0.05);
+    }
+  });
+
+  // --- Mix slider ---
+  mixSlider.addEventListener('input', () => {
+    const pct = +mixSlider.value;
+    mixVal.textContent = pct + '%';
+    if (echoActive && dryGain && wetGain) {
+      dryGain.gain.setTargetAtTime((100 - pct) / 100, audioCtx.currentTime, 0.05);
+      wetGain.gain.setTargetAtTime(pct / 100, audioCtx.currentTime, 0.05);
+    }
+  });
+
+  // --- Echo toggle ---
+  echoBtn.addEventListener('click', () => {
+    ensureAudioContext();
+    echoActive = !echoActive;
+    echoBtn.classList.toggle('active', echoActive);
+    echoBtn.textContent = echoActive ? '✚ ECHO ON' : '✚ ECHO';
+
+    if (echoActive) {
+      dryGain.gain.setTargetAtTime((100 - +mixSlider.value) / 100, audioCtx.currentTime, 0.05);
+      wetGain.gain.setTargetAtTime(+mixSlider.value / 100, audioCtx.currentTime, 0.05);
+    } else {
+      dryGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.05);
+      wetGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+    }
+  });
+
+  // --- Master volume ---
+  masterVol.addEventListener('input', () => {
+    if (masterGain) masterGain.gain.setTargetAtTime(+masterVol.value, audioCtx.currentTime, 0.1);
+  });
+
+  // Disable play until file loaded
+  playBtn.disabled = true;
+
+  // Clean stop
+  window.addEventListener('beforeunload', () => {
+    if (masterGain) {
+      masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3);
+      setTimeout(() => { if (audioCtx) audioCtx.close(); }, 400);
+    }
+  });
+})();
+</script>
+</body>
+</html>
