@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Filter Sweep Lab</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #08080e;
+    --surface: #111119;
+    --border: #1e1e2e;
+    --text: #c8c8e8;
+    --muted: #5a5a7a;
+    --cyan: #00e5cc;
+    --pink: #ff2d78;
+    --gold: #ffc940;
+    --glow-cyan: rgba(0,229,204,0.35);
+    --glow-pink: rgba(255,45,120,0.35);
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    gap: 20px;
+  }
+  header {
+    width: 100%;
+    max-width: 640px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  .panel {
+    width: 100%;
+    max-width: 640px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .viz-canvas {
+    width: 100%;
+    height: 120px;
+    border-radius: 8px;
+    background: #0a0a12;
+    border: 1px solid var(--border);
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .ctrl { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .ctrl-row { display: flex; align-items: center; gap: 10px; }
+  input[type=range] {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--cyan);
+    box-shadow: 0 0 8px var(--glow-cyan);
+    cursor: pointer;
+    transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+  .val {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--cyan);
+    min-width: 40px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .btn-row { display: flex; gap: 10px; }
+  .btn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .btn.active { border-color: var(--pink); color: var(--pink); box-shadow: 0 0 12px var(--glow-pink); }
+  .btn.playing { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 12px var(--glow-cyan); }
+  .type-row { display: flex; gap: 8px; }
+  .type-btn {
+    flex: 1;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+  .type-btn.on { border-color: var(--gold); color: var(--gold); }
+  .freq-display {
+    font-size: clamp(28px, 8vw, 48px);
+    font-weight: 800;
+    color: var(--cyan);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -1px;
+    text-shadow: 0 0 20px var(--glow-cyan);
+    transition: color 0.3s;
+  }
+  .lfo-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .divider { height: 1px; background: var(--border); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Filter Sweep Lab</h1>
+  <span class="subtitle">deep house texture tool</span>
+</header>
+
+<div class="panel">
+  <canvas class="viz-canvas" id="viz"></canvas>
+  <div class="freq-display" id="freqDisplay">220 Hz</div>
+  
+  <div class="controls">
+    <div class="ctrl">
+      <span class="ctrl-label">Filter Freq</span>
+      <div class="ctrl-row">
+        <input type="range" id="freq" min="60" max="14000" value="220" step="1">
+        <span class="val" id="freqVal">220</span>
+      </div>
+    </div>
+    <div class="ctrl">
+      <span class="ctrl-label">Resonance Q</span>
+      <div class="ctrl-row">
+        <input type="range" id="q" min="0.1" max="20" value="1" step="0.1">
+        <span class="val" id="qVal">1.0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="type-row">
+    <button class="type-btn on" data-type="lowpass">LP</button>
+    <button class="type-btn" data-type="highpass">HP</button>
+    <button class="type-btn" data-type="bandpass">BP</button>
+    <button class="type-btn" data-type="notch">NOTCH</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="lfo-section">
+    <div class="ctrl">
+      <span class="ctrl-label">LFO Rate</span>
+      <div class="ctrl-row">
+        <input type="range" id="lfoRate" min="0.1" max="8" value="0" step="0.05">
+        <span class="val" id="lfoRateVal">0</span>
+      </div>
+    </div>
+    <div class="ctrl">
+      <span class="ctrl-label">LFO Depth</span>
+      <div class="ctrl-row">
+        <input type="range" id="lfoDepth" min="0" max="8000" value="0" step="100">
+        <span class="val" id="lfoDepthVal">0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn playing" id="playBtn">Play Drone</button>
+    <button class="btn" id="arpBtn">LFO Sweep</button>
+  </div>
+</div>
+
+<script>
+let audioCtx = null;
+let droneOsc = null, droneGain = null, filter = null, lfoOsc = null, lfoGain = null;
+let analyser = null, vizData = null;
+let isPlaying = false, isArping = false, arpInterval = null;
+let currentFreq = 220, currentQ = 1, filterType = 'lowpass';
+let lfoRate = 0, lfoDepth = 0;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  droneGain = audioCtx.createGain();
+  droneGain.gain.value = 0.18;
+  filter = audioCtx.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = currentFreq;
+  filter.Q.value = currentQ;
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  vizData = new Uint8Array(analyser.frequencyBinCount);
+  droneGain.connect(filter);
+  filter.connect(analyser);
+  analyser.connect(audioCtx.destination);
+}
+
+function startDrone() {
+  initAudio();
+  if (droneOsc) return;
+  droneOsc = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  g.gain.value = 0.6;
+  droneOsc.type = 'sawtooth';
+  droneOsc.frequency.value = currentFreq;
+  droneOsc.connect(g);
+  g.connect(droneGain);
+  droneOsc.start();
+  drawViz();
+}
+
+function stopDrone() {
+  if (droneOsc) { droneOsc.stop(); droneOsc.disconnect(); droneOsc = null; }
+}
+
+function setFilterFreq(f) {
+  currentFreq = f;
+  if (filter) filter.frequency.setTargetAtTime(f, audioCtx.currentTime, 0.01);
+  document.getElementById('freqDisplay').textContent = f < 1000 ? f.toFixed(0) + ' Hz' : (f/1000).toFixed(2) + ' kHz';
+}
+
+function setFilterQ(q) {
+  currentQ = q;
+  if (filter) filter.Q.setTargetAtTime(q, audioCtx.currentTime, 0.01);
+}
+
+function setFilterType(t) {
+  filterType = t;
+  if (filter) filter.type = t;
+}
+
+function startLFO() {
+  if (!audioCtx || !filter) return;
+  stopLFO();
+  if (lfoRate === 0 || lfoDepth === 0) return;
+  lfoOsc = audioCtx.createOscillator();
+  lfoGain = audioCtx.createGain();
+  lfoOsc.frequency.value = lfoRate;
+  lfoGain.gain.value = lfoDepth;
+  lfoOsc.connect(lfoGain);
+  lfoGain.connect(filter.frequency);
+  lfoOsc.start();
+}
+
+function stopLFO() {
+  if (lfoOsc) { lfoOsc.stop(); lfoOsc.disconnect(); lfoOsc = null; lfoGain = null; }
+}
+
+function drawViz() {
+  if (!analyser || !isPlaying) return;
+  requestAnimationFrame(drawViz);
+  analyser.getByteFrequencyData(vizData);
+  const canvas = document.getElementById('viz');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width = canvas.offsetWidth * 2;
+  const H = canvas.height = canvas.offsetHeight * 2;
+  ctx.clearRect(0, 0, W, H);
+  const barW = W / vizData.length;
+  for (let i = 0; i < vizData.length; i++) {
+    const h = (vizData[i] / 255) * H * 0.9;
+    const hue = 170 + (i / vizData.length) * 80;
+    ctx.fillStyle = `hsla(${hue}, 90%, 60%, 0.8)`;
+    ctx.fillRect(i * barW, H - h, barW - 1, h);
+  }
+}
+
+// Events
+document.getElementById('playBtn').addEventListener('click', () => {
+  initAudio();
+  isPlaying = !isPlaying;
+  const btn = document.getElementById('playBtn');
+  if (isPlaying) {
+    startDrone();
+    btn.textContent = 'Stop Drone';
+    btn.classList.add('playing');
+    drawViz();
+  } else {
+    stopDrone();
+    stopLFO();
+    btn.textContent = 'Play Drone';
+    btn.classList.remove('playing');
+    document.getElementById('viz').getContext('2d').clearRect(0,0,9999,9999);
+  }
+});
+
+document.getElementById('arpBtn').addEventListener('click', () => {
+  initAudio();
+  isArping = !isArping;
+  const btn = document.getElementById('arpBtn');
+  if (isArping) {
+    if (!isPlaying) startDrone();
+    btn.classList.add('active');
+    const notes = [110, 138.6, 164.8, 196, 220, 261.6, 293.7, 329.6, 392, 440];
+    let ni = 0;
+    arpInterval = setInterval(() => {
+      setFilterFreq(notes[ni % notes.length]);
+      document.getElementById('freq').value = notes[ni % notes.length];
+      ni++;
+    }, 120);
+  } else {
+    clearInterval(arpInterval);
+    btn.classList.remove('active');
+  }
+});
+
+document.getElementById('freq').addEventListener('input', (e) => {
+  const v = parseFloat(e.target.value);
+  document.getElementById('freqVal').textContent = v < 1000 ? v.toFixed(0) : (v/1000).toFixed(2);
+  setFilterFreq(v);
+});
+
+document.getElementById('q').addEventListener('input', (e) => {
+  const v = parseFloat(e.target.value);
+  document.getElementById('qVal').textContent = v.toFixed(1);
+  setFilterQ(v);
+});
+
+document.querySelectorAll('.type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    setFilterType(btn.dataset.type);
+  });
+});
+
+document.getElementById('lfoRate').addEventListener('input', (e) => {
+  lfoRate = parseFloat(e.target.value);
+  document.getElementById('lfoRateVal').textContent = lfoRate.toFixed(2);
+  if (isPlaying) startLFO();
+});
+
+document.getElementById('lfoDepth').addEventListener('input', (e) => {
+  lfoDepth = parseFloat(e.target.value);
+  document.getElementById('lfoDepthVal').textContent = lfoDepth.toFixed(0);
+  if (isPlaying) startLFO();
+});
+</script>
+</body>
+</html>
