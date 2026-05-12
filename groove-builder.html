@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Groove Builder</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #06060c;
+    --surface: #0e0e18;
+    --border: #1a1a2e;
+    --text: #b8b8d0;
+    --muted: #4a4a6a;
+    --cyan: #00e5cc;
+    --amber: #ffb830;
+    --rose: #ff2d78;
+    --violet: #9b59f0;
+    --glow-cyan: rgba(0,229,204,0.3);
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 12px;
+    gap: 16px;
+  }
+  header {
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 { font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+  .subtitle { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+
+  .main-panel {
+    width: 100%;
+    max-width: 700px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* BPM Section */
+  .bpm-section { display: flex; align-items: center; gap: 14px; }
+  .bpm-disp {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--cyan);
+    font-variant-numeric: tabular-nums;
+    text-shadow: 0 0 16px var(--glow-cyan);
+    min-width: 80px;
+    letter-spacing: -1px;
+  }
+  .bpm-disp span { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 2px; }
+  .bpm-controls { display: flex; gap: 6px; }
+  .bpm-btn {
+    width: 32px; height: 32px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bpm-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .bpm-btn:active { transform: scale(0.92); }
+  .bpm-slider { flex: 1; }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+    background: var(--cyan); box-shadow: 0 0 8px var(--glow-cyan); cursor: pointer; transition: transform 0.1s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+  /* Step Grid */
+  .step-header {
+    display: grid;
+    grid-template-columns: 60px repeat(16, 1fr);
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+  .step-num { font-size: 9px; color: var(--muted); text-align: center; font-weight: 600; letter-spacing: 1px; }
+  .track { display: grid; grid-template-columns: 60px repeat(16, 1fr); gap: 4px; align-items: center; margin-bottom: 6px; }
+  .track-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .track-label.k { color: var(--cyan); }
+  .track-label.s { color: var(--rose); }
+  .track-label.c { color: var(--amber); }
+  .track-label.o { color: var(--violet); }
+  .step {
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #0c0c18;
+    cursor: pointer;
+    transition: all 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+  .step::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.1s;
+  }
+  .step.on.k { background: var(--cyan); box-shadow: 0 0 10px var(--glow-cyan); border-color: var(--cyan); }
+  .step.on.s { background: var(--rose); box-shadow: 0 0 10px rgba(255,45,120,0.3); border-color: var(--rose); }
+  .step.on.c { background: var(--amber); box-shadow: 0 0 10px rgba(255,184,48,0.3); border-color: var(--amber); }
+  .step.on.o { background: var(--violet); box-shadow: 0 0 10px rgba(155,89,240,0.3); border-color: var(--violet); }
+  .step.playhead { border-color: #fff !important; opacity: 0.8; }
+
+  /* Transport */
+  .transport { display: flex; gap: 8px; align-items: center; }
+  .play-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .play-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .play-btn.active { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 16px var(--glow-cyan); background: rgba(0,229,204,0.06); }
+  .play-btn:active { transform: scale(0.97); }
+
+  /* Pattern buttons */
+  .pat-btn {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .pat-btn.on { border-color: var(--amber); color: var(--amber); }
+  .pat-btn:hover { border-color: var(--muted); color: var(--text); }
+
+  .clear-btn {
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .clear-btn:hover { border-color: var(--rose); color: var(--rose); }
+
+  /* Beat indicator */
+  .beat-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 0.05s;
+  }
+  .beat-dot.hit { background: var(--cyan); box-shadow: 0 0 8px var(--glow-cyan); }
+  .beat-row { display: flex; gap: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Groove Builder</h1>
+  <span class="subtitle">808 drum sequencer</span>
+</header>
+
+<div class="main-panel">
+  <div class="bpm-section">
+    <div class="bpm-disp" id="bpmDisp">122<span>BPM</span></div>
+    <div class="bpm-controls">
+      <button class="bpm-btn" id="bpmDown">−</button>
+      <button class="bpm-btn" id="bpmUp">+</button>
+    </div>
+    <div class="bpm-slider">
+      <input type="range" id="bpmSlider" min="80" max="140" value="122" step="1">
+    </div>
+  </div>
+
+  <div class="beat-row" id="beatRow"></div>
+
+  <div class="step-header" id="stepHeader"></div>
+
+  <div id="tracks">
+    <div class="track" data-track="k">
+      <span class="track-label k">KICK</span>
+      <div class="step k" data-step="0"></div><div class="step k" data-step="1"></div>
+      <div class="step k" data-step="2"></div><div class="step k" data-step="3"></div>
+      <div class="step k" data-step="4"></div><div class="step k" data-step="5"></div>
+      <div class="step k" data-step="6"></div><div class="step k" data-step="7"></div>
+      <div class="step k" data-step="8"></div><div class="step k" data-step="9"></div>
+      <div class="step k" data-step="10"></div><div class="step k" data-step="11"></div>
+      <div class="step k" data-step="12"></div><div class="step k" data-step="13"></div>
+      <div class="step k" data-step="14"></div><div class="step k" data-step="15"></div>
+    </div>
+    <div class="track" data-track="s">
+      <span class="track-label s">SNARE</span>
+      <div class="step s" data-step="0"></div><div class="step s" data-step="1"></div>
+      <div class="step s" data-step="2"></div><div class="step s" data-step="3"></div>
+      <div class="step s" data-step="4"></div><div class="step s" data-step="5"></div>
+      <div class="step s" data-step="6"></div><div class="step s" data-step="7"></div>
+      <div class="step s" data-step="8"></div><div class="step s" data-step="9"></div>
+      <div class="step s" data-step="10"></div><div class="step s" data-step="11"></div>
+      <div class="step s" data-step="12"></div><div class="step s" data-step="13"></div>
+      <div class="step s" data-step="14"></div><div class="step s" data-step="15"></div>
+    </div>
+    <div class="track" data-track="c">
+      <span class="track-label c">CHAT</span>
+      <div class="step c" data-step="0"></div><div class="step c" data-step="1"></div>
+      <div class="step c" data-step="2"></div><div class="step c" data-step="3"></div>
+      <div class="step c" data-step="4"></div><div class="step c" data-step="5"></div>
+      <div class="step c" data-step="6"></div><div class="step c" data-step="7"></div>
+      <div class="step c" data-step="8"></div><div class="step c" data-step="9"></div>
+      <div class="step c" data-step="10"></div><div class="step c" data-step="11"></div>
+      <div class="step c" data-step="12"></div><div class="step c" data-step="13"></div>
+      <div class="step c" data-step="14"></div><div class="step c" data-step="15"></div>
+    </div>
+    <div class="track" data-track="o">
+      <span class="track-label o">OHAT</span>
+      <div class="step o" data-step="0"></div><div class="step o" data-step="1"></div>
+      <div class="step o" data-step="2"></div><div class="step o" data-step="3"></div>
+      <div class="step o" data-step="4"></div><div class="step o" data-step="5"></div>
+      <div class="step o" data-step="6"></div><div class="step o" data-step="7"></div>
+      <div class="step o" data-step="8"></div><div class="step o" data-step="9"></div>
+      <div class="step o" data-step="10"></div><div class="step o" data-step="11"></div>
+      <div class="step o" data-step="12"></div><div class="step o" data-step="13"></div>
+      <div class="step o" data-step="14"></div><div class="step o" data-step="15"></div>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button class="play-btn" id="playBtn">▶ Play</button>
+    <button class="pat-btn on" id="patABtn">PAT A</button>
+    <button class="pat-btn" id="patBBtn">PAT B</button>
+    <button class="clear-btn" id="clearBtn">CLR</button>
+  </div>
+</div>
+
+<script>
+let audioCtx = null;
+let bpm = 122;
+let playing = false;
+let stepIdx = 0;
+let nextStepTime = 0;
+let schedulerTimer = null;
+const LOOKAHEAD = 0.1;
+const STEP_DIV = 16;
+let currentPat = 'a';
+let patterns = {
+  a: { k:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], s:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], c:[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], o:[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1] },
+  b: { k:[1,0,0,0,0,0,1,0,1,0,0,0,0,0,1,0], s:[0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0], c:[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], o:[0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0] }
+};
+
+// Beat dots
+const beatRow = document.getElementById('beatRow');
+for (let i = 0; i < 16; i++) {
+  const d = document.createElement('div');
+  d.className = 'beat-dot';
+  d.dataset.step = i;
+  beatRow.appendChild(d);
+}
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function kick(time) {
+  const ctx = getAudio();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const osc2 = ctx.createOscillator();
+  osc.frequency.setValueAtTime(150, time);
+  osc.frequency.exponentialRampToValueAtTime(30, time + 0.3);
+  osc2.frequency.setValueAtTime(60, time);
+  osc2.frequency.exponentialRampToValueAtTime(20, time + 0.25);
+  gain.gain.setValueAtTime(0.9, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.4);
+  osc.connect(gain); osc2.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(time); osc2.start(time);
+  osc.stop(time + 0.4); osc2.stop(time + 0.4);
+}
+
+function snare(time) {
+  const ctx = getAudio();
+  const buf = ctx.createBuffer(1, ctx.sampleRate * 0.2, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'bandpass'; filt.frequency.value = 3000; filt.Q.value = 1;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.5, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
+  src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+  src.start(time); src.stop(time + 0.2);
+  // Tone
+  const osc = ctx.createOscillator();
+  const og = ctx.createGain();
+  osc.frequency.value = 200;
+  og.gain.setValueAtTime(0.3, time);
+  og.gain.exponentialRampToValueAtTime(0.001, time + 0.08);
+  osc.connect(og); og.connect(ctx.destination);
+  osc.start(time); osc.stop(time + 0.08);
+}
+
+function hat(time, isOpen) {
+  const ctx = getAudio();
+  const dur = isOpen ? 0.25 : 0.06;
+  const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1);
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  const filt = ctx.createBiquadFilter();
+  filt.type = 'highpass'; filt.frequency.value = isOpen ? 8000 : 9000;
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(isOpen ? 0.22 : 0.18, time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
+  src.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+  src.start(time); src.stop(time + dur + 0.01);
+}
+
+function scheduleStep(idx, time) {
+  const pat = patterns[currentPat];
+  if (pat.k[idx]) kick(time);
+  if (pat.s[idx]) snare(time);
+  if (pat.c[idx]) hat(time, false);
+  if (pat.o[idx]) hat(time, true);
+}
+
+function advanceStep() {
+  document.querySelectorAll('.beat-dot').forEach((d, i) => {
+    d.classList.toggle('hit', i === stepIdx);
+  });
+  document.querySelectorAll('.step').forEach(s => {
+    s.classList.toggle('playhead', parseInt(s.dataset.step) === stepIdx);
+  });
+  stepIdx = (stepIdx + 1) % 16;
+}
+
+function scheduler() {
+  const ctx = getAudio();
+  const secondsPerStep = (60 / bpm) / (STEP_DIV / 4);
+  while (nextStepTime < ctx.currentTime + LOOKAHEAD) {
+    scheduleStep(stepIdx, nextStepTime);
+    advanceStep();
+    nextStepTime += secondsPerStep;
+  }
+  schedulerTimer = setTimeout(scheduler, 25);
+}
+
+function start() {
+  const ctx = getAudio();
+  nextStepTime = ctx.currentTime + 0.05;
+  scheduler();
+}
+
+function stop() {
+  clearTimeout(schedulerTimer);
+  stepIdx = 0;
+  document.querySelectorAll('.beat-dot').forEach(d => d.classList.remove('hit'));
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('playhead'));
+}
+
+// UI
+const playBtn = document.getElementById('playBtn');
+playBtn.addEventListener('click', () => {
+  getAudio();
+  playing = !playing;
+  if (playing) {
+    start();
+    playBtn.textContent = '■ Stop';
+    playBtn.classList.add('active');
+  } else {
+    stop();
+    playBtn.textContent = '▶ Play';
+    playBtn.classList.remove('active');
+  }
+});
+
+function setBpm(v) {
+  bpm = v;
+  document.getElementById('bpmDisp').innerHTML = v + '<span>BPM</span>';
+  document.getElementById('bpmSlider').value = v;
+}
+
+document.getElementById('bpmUp').addEventListener('click', () => setBpm(Math.min(140, bpm + 1)));
+document.getElementById('bpmDown').addEventListener('click', () => setBpm(Math.max(80, bpm - 1)));
+document.getElementById('bpmSlider').addEventListener('input', e => setBpm(parseInt(e.target.value)));
+
+document.querySelectorAll('.step').forEach(step => {
+  step.addEventListener('click', () => {
+    const track = step.parentElement.dataset.track;
+    const idx = parseInt(step.dataset.step);
+    const pat = patterns[currentPat];
+    pat[track][idx] = pat[track][idx] ? 0 : 1;
+    step.classList.toggle('on');
+  });
+});
+
+function syncStepsFromPat() {
+  const pat = patterns[currentPat];
+  document.querySelectorAll('.step').forEach(step => {
+    const track = step.parentElement.dataset.track;
+    const idx = parseInt(step.dataset.step);
+    step.classList.toggle('on', pat[track][idx] === 1);
+  });
+}
+
+document.getElementById('patABtn').addEventListener('click', () => {
+  currentPat = 'a';
+  document.getElementById('patABtn').classList.add('on');
+  document.getElementById('patBBtn').classList.remove('on');
+  syncStepsFromPat();
+});
+document.getElementById('patBBtn').addEventListener('click', () => {
+  currentPat = 'b';
+  document.getElementById('patBBtn').classList.add('on');
+  document.getElementById('patABtn').classList.remove('on');
+  syncStepsFromPat();
+});
+document.getElementById('clearBtn').addEventListener('click', () => {
+  const pat = patterns[currentPat];
+  ['k','s','c','o'].forEach(t => { pat[t] = pat[t].map(() => 0); });
+  document.querySelectorAll(`.track[data-track="${currentPat}"] .step, .track .step`).forEach(s => s.classList.remove('on'));
+  syncStepsFromPat();
+});
+
+// Init with pattern A active steps highlighted
+document.querySelectorAll('.step').forEach(step => {
+  const track = step.parentElement.dataset.track;
+  const idx = parseInt(step.dataset.step);
+  if (patterns.a[track][idx]) step.classList.add('on');
+});
+</script>
+</body>
+</html>
