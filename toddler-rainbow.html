@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Rainbow Xylophone</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; }
+  body { 
+    background: #0a0a0f; 
+    min-height: 100vh; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    overflow: hidden;
+    gap: 16px;
+    padding: 20px;
+    user-select: none;
+  }
+  h1 { 
+    color: #fff; 
+    font-size: clamp(18px, 5vw, 28px); 
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    opacity: 0.9;
+  }
+  .xyname { 
+    display: flex; 
+    gap: 6px; 
+    width: 100%; 
+    max-width: 600px;
+  }
+  .bar { 
+    flex: 1; 
+    height: clamp(50px, 15vh, 90px); 
+    border-radius: 8px 8px 12px 12px; 
+    cursor: pointer; 
+    display: flex; 
+    align-items: flex-end; 
+    justify-content: center;
+    padding-bottom: 8px;
+    font-size: clamp(10px, 3vw, 14px);
+    font-weight: 700;
+    color: rgba(0,0,0,0.5);
+    text-shadow: 0 1px 0 rgba(255,255,255,0.3);
+    transition: transform 0.08s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+  }
+  .bar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.25) 0%, transparent 50%);
+    border-radius: inherit;
+  }
+  .bar:active, .bar.active { 
+    transform: scaleY(0.93) scaleX(1.03); 
+  }
+  .bar-0 { background: #ff3b3b; box-shadow: 0 0 20px #ff3b3b55; }
+  .bar-1 { background: #ff8c3b; box-shadow: 0 0 20px #ff8c3b55; }
+  .bar-2 { background: #ffd83b; box-shadow: 0 0 20px #ffd83b55; }
+  .bar-3 { background: #3bff6e; box-shadow: 0 0 20px #3bff6e55; }
+  .bar-4 { background: #3bfff0; box-shadow: 0 0 20px #3bfff055; }
+  .bar-5 { background: #3b7aff; box-shadow: 0 0 20px #3b7aff55; }
+  .bar-6 { background: #a03bff; box-shadow: 0 0 20px #a03bff55; }
+  .bar-7 { background: #ff3bf0; box-shadow: 0 0 20px #ff3bf055; }
+  .volume-wrap { display: flex; align-items: center; gap: 12px; }
+  .vol-label { color: rgba(255,255,255,0.5); font-size: 12px; font-weight: 600; letter-spacing: 1px; }
+  .vol-toggle { 
+    background: #1a1a2e; 
+    border: 2px solid #333; 
+    border-radius: 20px; 
+    padding: 6px 18px; 
+    color: #888; 
+    font-size: 12px; 
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 1px;
+  }
+  .vol-toggle.soft { border-color: #3b7aff; color: #3b7aff; }
+  .vol-toggle.loud { border-color: #ff3b3b; color: #ff3b3b; }
+  .sparkle {
+    position: fixed;
+    pointer-events: none;
+    font-size: 20px;
+    animation: sparkle-fly 0.7s ease-out forwards;
+    z-index: 100;
+  }
+  @keyframes sparkle-fly {
+    0% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%,-200%) scale(0); opacity: 0; }
+  }
+  .ambient-orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.15;
+    animation: orb-drift 8s ease-in-out infinite alternate;
+    pointer-events: none;
+  }
+  @keyframes orb-drift {
+    0% { transform: translate(0,0) scale(1); }
+    100% { transform: translate(40px, -30px) scale(1.2); }
+  }
+</style>
+</head>
+<body>
+<div class="ambient-orb" style="width:300px;height:300px;background:#a03bff;top:10%;left:10%;"></div>
+<div class="ambient-orb" style="width:200px;height:200px;background:#3b7aff;bottom:10%;right:10%;animation-delay:-3s;"></div>
+<h1>Rainbow Xylophone</h1>
+<div class="xyname">
+  <div class="bar bar-0" data-n="0" data-note="261.63">DO</div>
+  <div class="bar bar-1" data-n="1" data-note="293.66">RE</div>
+  <div class="bar bar-2" data-n="2" data-note="329.63">MI</div>
+  <div class="bar bar-3" data-n="3" data-note="349.23">FA</div>
+  <div class="bar bar-4" data-n="4" data-note="392.00">SOL</div>
+  <div class="bar bar-5" data-n="5" data-note="440.00">LA</div>
+  <div class="bar bar-6" data-n="6" data-note="493.88">TI</div>
+  <div class="bar bar-7" data-n="7" data-note="523.25">DO</div>
+</div>
+<div class="volume-wrap">
+  <span class="vol-label">VOL</span>
+  <button class="vol-toggle loud" id="volBtn">LOUD</button>
+</div>
+<script>
+let audioCtx = null;
+let volume = 0.5;
+const bars = document.querySelectorAll('.bar');
+const volBtn = document.getElementById('volBtn');
+const sparkles = ['✦','✧','★','✶','❋','⋆','✴'];
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playNote(freq) {
+  const ctx = getAudio();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(volume, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start();
+  osc.stop(ctx.currentTime + 1.2);
+}
+
+function sparkle(x, y) {
+  const el = document.createElement('div');
+  el.className = 'sparkle';
+  el.textContent = sparkles[Math.floor(Math.random() * sparkles.length)];
+  el.style.left = x + (Math.random() - 0.5) * 60 + 'px';
+  el.style.top = y + 'px';
+  el.style.color = ['#ff3b3b','#ffd83b','#3bff6e','#3bfff0','#ff3bf0'][Math.floor(Math.random()*5)];
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 700);
+}
+
+bars.forEach(bar => {
+  const handler = (e) => {
+    e.preventDefault();
+    bar.classList.add('active');
+    setTimeout(() => bar.classList.remove('active'), 150);
+    const freq = parseFloat(bar.dataset.note);
+    playNote(freq);
+    const rect = bar.getBoundingClientRect();
+    for (let i = 0; i < 5; i++) {
+      setTimeout(() => sparkle(rect.left + rect.width/2, rect.top), i * 30);
+    }
+  };
+  bar.addEventListener('mousedown', handler);
+  bar.addEventListener('touchstart', handler, { passive: false });
+});
+
+volBtn.addEventListener('click', () => {
+  if (volBtn.classList.contains('loud')) {
+    volume = 0.15;
+    volBtn.className = 'vol-toggle soft';
+    volBtn.textContent = 'SOFT';
+  } else {
+    volume = 0.5;
+    volBtn.className = 'vol-toggle loud';
+    volBtn.textContent = 'LOUD';
+  }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Texture Studio</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #04040c;
+    --surface: #0a0a18;
+    --surface2: #10102a;
+    --border: #1a1a35;
+    --border2: #252560;
+    --text: #e0e4f0;
+    --text-dim: #4a5080;
+    --cyan: #22d3ee;
+    --cyan-dim: #164e5a;
+    --purple: #a78bfa;
+    --purple-dim: #3b2a6a;
+    --pink: #f472b6;
+    --amber: #fbbf24;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 12px 48px;
+    gap: 16px;
+  }
+  h1 { font-size: 10px; letter-spacing: 0.35em; text-transform: uppercase; color: var(--cyan); opacity: 0.7; }
+
+  /* OSCILLATOR BANK */
+  .osc-bank {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 20px;
+  }
+  .osc-unit {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 12px 16px; min-width: 120px;
+  }
+  .osc-title {
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .wave-btns { display: flex; gap: 4px; }
+  .wave-btn {
+    padding: 4px 8px; border-radius: 4px; cursor: pointer;
+    font-size: 9px; letter-spacing: 0.1em; font-weight: 600;
+    background: var(--surface); border: 1px solid var(--border2); color: var(--text-dim);
+    transition: all 0.12s;
+  }
+  .wave-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .wave-btn.active-sine { background: var(--cyan-dim); border-color: var(--cyan); color: var(--cyan); }
+  .wave-btn.active-saw { background: var(--purple-dim); border-color: var(--purple); color: var(--purple); }
+  .wave-btn.active-tri { background: #1a3a4a; border-color: #22d3ee; color: var(--cyan); }
+
+  .osc-note {
+    font-family: ui-monospace, monospace; font-size: 20px; font-weight: 700;
+    color: var(--text); text-align: center; width: 60px;
+  }
+  .osc-vol {
+    -webkit-appearance: none; width: 80px; height: 4px;
+    background: var(--border2); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  .osc-vol::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--cyan); cursor: pointer;
+  }
+  .vol-label { font-size: 9px; color: var(--text-dim); }
+
+  /* FILTER + ENVELOPE */
+  .mod-section {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    width: 100%; max-width: 720px;
+  }
+  .mod-panel {
+    flex: 1; min-width: 200px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .mod-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
+  .mod-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .mod-label { font-size: 9px; color: var(--text-dim); width: 36px; letter-spacing: 0.05em; flex-shrink: 0; }
+  .mod-slider {
+    -webkit-appearance: none; flex: 1; height: 4px;
+    background: var(--border2); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  .mod-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--purple); cursor: pointer;
+  }
+  .mod-val { font-family: ui-monospace, monospace; font-size: 11px; color: var(--purple); min-width: 40px; text-align: right; }
+
+  /* DELAY + REVERB */
+  .fx-section {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    width: 100%; max-width: 720px;
+  }
+  .fx-panel {
+    flex: 1; min-width: 200px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .fx-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
+  .fx-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .fx-label { font-size: 9px; color: var(--text-dim); width: 48px; flex-shrink: 0; }
+  .fx-slider {
+    -webkit-appearance: none; flex: 1; height: 4px;
+    background: var(--border2); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  .fx-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--pink); cursor: pointer;
+  }
+  .fx-val { font-family: ui-monospace, monospace; font-size: 11px; color: var(--pink); min-width: 40px; text-align: right; }
+
+  /* VISUALIZER */
+  .viz-container {
+    width: 100%; max-width: 720px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px;
+  }
+  #vizCanvas { width: 100%; height: 80px; display: block; border-radius: 6px; background: #03030a; }
+
+  /* TRANSPORT */
+  .transport {
+    display: flex; gap: 10px; align-items: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 20px;
+  }
+  .trans-btn {
+    width: 48px; height: 42px; border-radius: 10px; cursor: pointer; font-size: 18px;
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s;
+  }
+  .trans-btn:hover { border-color: var(--cyan); background: var(--cyan-dim); }
+  .trans-btn:active { transform: scale(0.9); }
+  .trans-btn.active { background: var(--cyan-dim); border-color: var(--cyan); color: var(--cyan); }
+
+  /* PRESETS */
+  .presets {
+    display: flex; gap: 6px; flex-wrap: wrap; justify-content: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 16px;
+  }
+  .preset-btn {
+    padding: 5px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text-dim);
+    transition: all 0.12s;
+  }
+  .preset-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .preset-btn:active { transform: scale(0.93); }
+</style>
+</head>
+<body>
+
+<h1>Texture Studio</h1>
+
+<div class="osc-bank">
+  <div class="osc-unit">
+    <div class="osc-title">Osc 1 — Pad</div>
+    <div class="wave-btns">
+      <button class="wave-btn active-sine" data-osc="0" data-wave="sine">SIN</button>
+      <button class="wave-btn" data-osc="0" data-wave="sawtooth">SAW</button>
+      <button class="wave-btn" data-osc="0" data-wave="triangle">TRI</button>
+    </div>
+    <div class="osc-note" id="note0">C3</div>
+    <input type="range" class="osc-vol" id="vol0" min="0" max="100" value="60">
+    <div class="vol-label">vol</div>
+  </div>
+  <div class="osc-unit">
+    <div class="osc-title">Osc 2 — Shimmer</div>
+    <div class="wave-btns">
+      <button class="wave-btn" data-osc="1" data-wave="sine">SIN</button>
+      <button class="wave-btn active-saw" data-osc="1" data-wave="sawtooth">SAW</button>
+      <button class="wave-btn" data-osc="1" data-wave="triangle">TRI</button>
+    </div>
+    <div class="osc-note" id="note1">G3</div>
+    <input type="range" class="osc-vol" id="vol1" min="0" max="100" value="30">
+    <div class="vol-label">vol</div>
+  </div>
+  <div class="osc-unit">
+    <div class="osc-title">Osc 3 — Sub</div>
+    <div class="wave-btns">
+      <button class="wave-btn active-sine" data-osc="2" data-wave="sine">SIN</button>
+      <button class="wave-btn" data-osc="2" data-wave="sawtooth">SAW</button>
+      <button class="wave-btn" data-osc="2" data-wave="triangle">TRI</button>
+    </div>
+    <div class="osc-note" id="note2">C2</div>
+    <input type="range" class="osc-vol" id="vol2" min="0" max="100" value="80">
+    <div class="vol-label">vol</div>
+  </div>
+</div>
+
+<div class="mod-section">
+  <div class="mod-panel">
+    <div class="mod-title">Filter</div>
+    <div class="mod-row">
+      <div class="mod-label">Cutoff</div>
+      <input type="range" class="mod-slider" id="filterFreq" min="100" max="8000" value="2000">
+      <div class="mod-val" id="filterFreqVal">2000Hz</div>
+    </div>
+    <div class="mod-row">
+      <div class="mod-label">Res</div>
+      <input type="range" class="mod-slider" id="filterRes" min="0" max="20" value="2">
+      <div class="mod-val" id="filterResVal">2.0</div>
+    </div>
+    <div class="mod-row">
+      <div class="mod-label">Envelope</div>
+      <input type="range" class="mod-slider" id="filterEnv" min="0" max="100" value="30">
+      <div class="mod-val" id="filterEnvVal">30%</div>
+    </div>
+    <div class="mod-row">
+      <div class="mod-label">LFO Amt</div>
+      <input type="range" class="mod-slider" id="lpfLfoAmt" min="0" max="100" value="0">
+      <div class="mod-val" id="lpfLfoAmtVal">0%</div>
+    </div>
+    <div class="mod-row">
+      <div class="mod-label">LFO Rate</div>
+      <input type="range" class="mod-slider" id="lpfLfoRate" min="1" max="200" value="30">
+      <div class="mod-val" id="lpfLfoRateVal">30</div>
+    </div>
+  </div>
+
+  <div class="mod-panel">
+    <div class="mod-title">Amplitude Envelope</div>
+    <div class="mod-row">
+      <div class="mod-label">Attack</div>
+      <input type="range" class="mod-slider" id="atk" min="0" max="5000" value="800">
+      <div class="mod-val" id="atkVal">0.8s</div>
+    </div>
+    <div class="mod-row">
+      <div class="mod-label">Decay</div>
+      <input type="range" class="mod-slider" id="dec" min="0" max="3000" value="500">
+      <div class="mod-val" id="decVal">0.5s</div>
+    </div>
+    <div class="mod-row">
+      <div class="mod-label">Sustain</div>
+      <input type="range" class="mod-slider" id="sus" min="0" max="100" value="70">
+      <div class="mod-val" id="susVal">70%</div>
+    </div>
+    <div class="mod-row">
+      <div class="mod-label">Release</div>
+      <input type="range" class="mod-slider" id="rel" min="100" max="8000" value="3000">
+      <div class="mod-val" id="relVal">3.0s</div>
+    </div>
+  </div>
+</div>
+
+<div class="fx-section">
+  <div class="fx-panel">
+    <div class="fx-title">Delay</div>
+    <div class="fx-row">
+      <div class="fx-label">Time</div>
+      <input type="range" class="fx-slider" id="delayTime" min="50" max="800" value="250">
+      <div class="fx-val" id="delayTimeVal">250ms</div>
+    </div>
+    <div class="fx-row">
+      <div class="fx-label">Feedback</div>
+      <input type="range" class="fx-slider" id="delayFb" min="0" max="90" value="40">
+      <div class="fx-val" id="delayFbVal">40%</div>
+    </div>
+    <div class="fx-row">
+      <div class="fx-label">Mix</div>
+      <input type="range" class="fx-slider" id="delayMix" min="0" max="100" value="25">
+      <div class="fx-val" id="delayMixVal">25%</div>
+    </div>
+    <div class="fx-row">
+      <div class="fx-label">Sync</div>
+      <input type="range" class="fx-slider" id="delaySync" min="0" max="100" value="0">
+      <div class="fx-val" id="delaySyncVal">free</div>
+    </div>
+  </div>
+
+  <div class="fx-panel">
+    <div class="fx-title">Reverb (Convolution)</div>
+    <div class="fx-row">
+      <div class="fx-label">Room</div>
+      <input type="range" class="fx-slider" id="revRoom" min="0" max="100" value="60">
+      <div class="fx-val" id="revRoomVal">60%</div>
+    </div>
+    <div class="fx-row">
+      <div class="fx-label">Damping</div>
+      <input type="range" class="fx-slider" id="revDamp" min="0" max="100" value="50">
+      <div class="fx-val" id="revDampVal">50%</div>
+    </div>
+    <div class="fx-row">
+      <div class="fx-label">Mix</div>
+      <input type="range" class="fx-slider" id="revMix" min="0" max="100" value="30">
+      <div class="fx-val" id="revMixVal">30%</div>
+    </div>
+  </div>
+</div>
+
+<div class="viz-container">
+  <canvas id="vizCanvas"></canvas>
+</div>
+
+<div class="presets">
+  <button class="preset-btn" data-preset="warm-pad">Warm Pad</button>
+  <button class="preset-btn" data-preset="shimmer">Shimmer</button>
+  <button class="preset-btn" data-preset="deep-brass">Deep Brass</button>
+  <button class="preset-btn" data-preset="sweep-pad">Sweep Pad</button>
+  <button class="preset-btn" data-preset="atmospheric">Atmospheric</button>
+  <button class="preset-btn" data-preset="dark-drone">Dark Drone</button>
+</div>
+
+<div class="transport">
+  <button class="trans-btn" id="playBtn">&#9654;</button>
+  <button class="trans-btn" id="stopBtn">&#9632;</button>
+</div>
+
+<script>
+(function() {
+  let audioCtx = null;
+  let analyser = null;
+  let isPlaying = false;
+  let activeOscs = [];
+  let lfoNode = null;
+  let currentPreset = null;
+
+  const NOTE_HZ = {
+    'C2':65.41,'D2':73.42,'E2':82.41,'F2':87.31,'G2':98.00,'A2':110.00,'B2':123.47,
+    'C3':130.81,'D3':146.83,'E3':164.81,'F3':174.61,'G3':196.00,'A3':220.00,'B3':246.94,
+    'C4':261.63,'D4':293.66,'E4':329.63
+  };
+  const notes = ['C2','G3','C3'];
+
+  // Params
+  const params = {
+    waves: ['sine','sawtooth','sine'],
+    vols: [0.6, 0.3, 0.8],
+    filterFreq: 2000,
+    filterRes: 2,
+    filterEnv: 0.3,
+    lpfLfoAmt: 0,
+    lpfLfoRate: 30,
+    atk: 0.8, dec: 0.5, sus: 0.7, rel: 3.0,
+    delayTime: 0.25, delayFb: 0.4, delayMix: 0.25,
+    revRoom: 0.6, revDamp: 0.5, revMix: 0.3
+  };
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!analyser) {
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.connect(audioCtx.destination);
+      drawViz();
+    }
+  }
+
+  function buildImpulse(duration, decay) {
+    const length = audioCtx.sampleRate * duration;
+    const impulse = audioCtx.createBuffer(2, length, audioCtx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = impulse.getChannelData(ch);
+      for (let i = 0; i < length; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay);
+      }
+    }
+    return impulse;
+  }
+
+  function createOscillator(wave, hz, vol) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+
+    osc.type = wave;
+    osc.frequency.value = hz;
+
+    filter.type = 'lowpass';
+    filter.frequency.value = params.filterFreq;
+    filter.Q.value = params.filterRes;
+
+    const now = audioCtx.currentTime;
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(vol, now + params.atk);
+    gain.gain.linearRampToValueAtTime(vol * params.sus, now + params.atk + params.dec);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(analyser);
+
+    osc.start();
+    return { osc, gain, filter };
+  }
+
+  function createDelay() {
+    const delay = audioCtx.createDelay(1.0);
+    delay.delayTime.value = params.delayTime;
+    const fb = audioCtx.createGain();
+    fb.gain.value = params.delayFb;
+    const wet = audioCtx.createGain();
+    wet.gain.value = params.delayMix;
+    const dry = audioCtx.createGain();
+    dry.gain.value = 1 - params.delayMix;
+    delay.connect(fb); fb.connect(delay);
+    delay.connect(wet); wet.connect(analyser);
+    return { delay, fb, wet, dry };
+  }
+
+  function createReverb() {
+    const conv = audioCtx.createConvolver();
+    conv.buffer = buildImpulse(params.revRoom * 4 + 0.5, params.revDamp * 3 + 0.5);
+    const wet = audioCtx.createGain();
+    wet.gain.value = params.revMix;
+    const dry = audioCtx.createGain();
+    dry.gain.value = 1 - params.revMix;
+    conv.connect(wet); wet.connect(analyser);
+    return { conv, wet, dry };
+  }
+
+  let oscs = [], delayNode = null, reverbNode = null, lfo = null, masterGain = null;
+
+  function stop() {
+    if (!isPlaying) return;
+    isPlaying = false;
+    const now = audioCtx.currentTime;
+    oscs.forEach(o => {
+      o.gain.gain.cancelScheduledValues(now);
+      o.gain.gain.setValueAtTime(o.gain.gain.value, now);
+      o.gain.gain.linearRampToValueAtTime(0, now + params.rel);
+      o.osc.stop(now + params.rel + 0.1);
+    });
+    if (lfo) { lfo.stop(now + params.rel); lfo = null; }
+    setTimeout(() => { oscs = []; }, (params.rel + 0.2) * 1000);
+  }
+
+  function play() {
+    initAudio();
+    if (isPlaying) { stop(); return; }
+    isPlaying = true;
+
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.8;
+    masterGain.connect(analyser);
+
+    const { delay, fb, wet, dry } = createDelay();
+    delayNode = delay;
+    const { conv, wet: revWet, dry: revDry } = createReverb();
+    reverbNode = conv;
+
+    oscs = notes.map((n, i) => {
+      const hz = NOTE_HZ[n] || 130.81;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+
+      osc.type = params.waves[i];
+      osc.frequency.value = hz;
+
+      filter.type = 'lowpass';
+      filter.frequency.value = params.filterFreq;
+      filter.Q.value = params.filterRes;
+
+      const now = audioCtx.currentTime;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(params.vols[i], now + params.atk);
+      gain.gain.linearRampToValueAtTime(params.vols[i] * params.sus, now + params.atk + params.dec);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(dry);
+      gain.connect(delay);
+      gain.connect(conv);
+      gain.connect(revDry);
+      osc.start();
+
+      return { osc, gain, filter };
+    });
+
+    // Connect delay/reverb to master
+    dry.connect(masterGain);
+    revDry.connect(masterGain);
+    wet.connect(masterGain);
+    revWet.connect(masterGain);
+
+    // LFO for filter
+    if (params.lpfLfoAmt > 0) {
+      lfo = audioCtx.createOscillator();
+      const lfoGain = audioCtx.createGain();
+      lfo.frequency.value = params.lpfLfoRate / 10;
+      lfoGain.gain.value = params.lpfLfoAmt * params.filterFreq / 100;
+      lfo.connect(lfoGain);
+      oscs.forEach(o => lfoGain.connect(o.filter.frequency));
+      lfo.start();
+    }
+
+    document.getElementById('playBtn').classList.add('active');
+  }
+
+  // ---- Visualizer ----
+  function drawViz() {
+    if (!analyser) return;
+    const canvas = document.getElementById('vizCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.offsetWidth * dpr;
+    canvas.height = canvas.offsetHeight * dpr;
+    ctx.scale(dpr, dpr);
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+
+    function draw() {
+      requestAnimationFrame(draw);
+      analyser.getByteFrequencyData(buf);
+      ctx.fillStyle = '#03030a';
+      ctx.fillRect(0, 0, w, h);
+
+      const barW = w / buf.length;
+      const gradient = ctx.createLinearGradient(0, 0, w, 0);
+      gradient.addColorStop(0, '#22d3ee');
+      gradient.addColorStop(0.5, '#a78bfa');
+      gradient.addColorStop(1, '#f472b6');
+      ctx.fillStyle = gradient;
+
+      for (let i = 0; i < buf.length; i++) {
+        const barH = (buf[i] / 255) * h * 0.9;
+        ctx.fillRect(i * barW, h - barH, barW - 1, barH);
+      }
+    }
+    draw();
+  }
+
+  // ---- UI ----
+  function updateVal(id, val, suffix) {
+    document.getElementById(id).textContent = val + suffix;
+  }
+
+  function bindSlider(sliderId, valId, param, suffix, factor=1) {
+    const slider = document.getElementById(sliderId);
+    const val = document.getElementById(valId);
+    slider.addEventListener('input', e => {
+      const v = parseFloat(e.target.value) * factor;
+      params[param] = v;
+      val.textContent = e.target.value + suffix;
+    });
+  }
+
+  bindSlider('filterFreq', 'filterFreqVal', 'filterFreq', 'Hz', 1);
+  bindSlider('filterRes', 'filterResVal', 'filterRes', '', 0.1);
+  bindSlider('filterEnv', 'filterEnvVal', 'filterEnv', '%', 0.01);
+  bindSlider('lpfLfoAmt', 'lpfLfoAmtVal', 'lpfLfoAmt', '%');
+  bindSlider('lpfLfoRate', 'lpfLfoRateVal', 'lpfLfoRate', '');
+  bindSlider('atk', 'atkVal', 'atk', 's', 0.001);
+  bindSlider('dec', 'decVal', 'dec', 's', 0.001);
+  bindSlider('sus', 'susVal', 'sus', '%', 0.01);
+  bindSlider('rel', 'relVal', 'rel', 's', 0.001);
+  bindSlider('delayTime', 'delayTimeVal', 'delayTime', 'ms', 1);
+  bindSlider('delayFb', 'delayFbVal', 'delayFb', '%', 0.01);
+  bindSlider('delayMix', 'delayMixVal', 'delayMix', '%', 0.01);
+  bindSlider('revRoom', 'revRoomVal', 'revRoom', '%', 0.01);
+  bindSlider('revDamp', 'revDampVal', 'revDamp', '%', 0.01);
+  bindSlider('revMix', 'revMixVal', 'revMix', '%', 0.01);
+
+  // Vol sliders
+  ['vol0','vol1','vol2'].forEach((id, i) => {
+    document.getElementById(id).addEventListener('input', e => {
+      params.vols[i] = parseInt(e.target.value) / 100;
+    });
+  });
+
+  // Wave buttons
+  document.querySelectorAll('.wave-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const oscIdx = parseInt(btn.dataset.osc);
+      const wave = btn.dataset.wave;
+      params.waves[oscIdx] = wave;
+      document.querySelectorAll(`[data-osc="${oscIdx}"]`).forEach(b => {
+        b.className = 'wave-btn';
+      });
+      btn.className = 'wave-btn active-' + (wave === 'sine' ? 'sine' : wave === 'sawtooth' ? 'saw' : 'tri');
+    });
+  });
+
+  // Transport
+  document.getElementById('playBtn').addEventListener('click', play);
+  document.getElementById('stopBtn').addEventListener('click', () => { stop(); document.getElementById('playBtn').classList.remove('active'); });
+
+  // Presets
+  const presets = {
+    'warm-pad':    { waves:['sine','sine','sine'], vols:[0.7,0.3,0.6], filterFreq:1200, filterRes:1.5, atk:1.5, dec:0.8, sus:0.75, rel:3.5, revMix:0.45, delayMix:0.15 },
+    'shimmer':     { waves:['sine','sawtooth','sine'], vols:[0.4,0.4,0.5], filterFreq:4000, filterRes:3, atk:0.3, dec:1.0, sus:0.6, rel:4, revMix:0.65, delayMix:0.3, lpfLfoAmt:20, lpfLfoRate:15 },
+    'deep-brass':  { waves:['sawtooth','sawtooth','sine'], vols:[0.5,0.4,0.7], filterFreq:800, filterRes:4, atk:0.05, dec:0.3, sus:0.8, rel:1.5, revMix:0.2, delayMix:0.1 },
+    'sweep-pad':   { waves:['sawtooth','sawtooth','sine'], vols:[0.5,0.3,0.6], filterFreq:4000, filterRes:6, atk:2.0, dec:1.5, sus:0.5, rel:4, revMix:0.5, delayMix:0.2, lpfLfoAmt:60, lpfLfoRate:8 },
+    'atmospheric': { waves:['sine','triangle','sine'], vols:[0.3,0.4,0.5], filterFreq:600, filterRes:1, atk:3.0, dec:2.0, sus:0.4, rel:5, revMix:0.7, delayMix:0.4, delayFb:0.6 },
+    'dark-drone':  { waves:['sine','sawtooth','sine'], vols:[0.6,0.2,0.8], filterFreq:300, filterRes:2, atk:4.0, dec:2.0, sus:0.3, rel:6, revMix:0.8, delayMix:0.5, delayFb:0.7 },
+  };
+
+  function applyPreset(name) {
+    const p = presets[name];
+    if (!p) return;
+    Object.assign(params, p);
+    // Update UI
+    document.getElementById('filterFreq').value = params.filterFreq;
+    updateVal('filterFreqVal', Math.round(params.filterFreq), 'Hz');
+    document.getElementById('filterRes').value = params.filterRes / 0.1;
+    updateVal('filterResVal', params.filterRes.toFixed(1), '');
+    document.getElementById('atk').value = params.atk / 0.001;
+    updateVal('atkVal', (params.atk).toFixed(1), 's');
+    document.getElementById('sus').value = params.sus / 0.01;
+    updateVal('susVal', Math.round(params.sus * 100), '%');
+    document.getElementById('rel').value = params.rel / 0.001;
+    updateVal('relVal', (params.rel / 1000).toFixed(1), 's');
+    document.getElementById('revMix').value = params.revMix / 0.01;
+    updateVal('revMixVal', Math.round(params.revMix * 100), '%');
+    document.getElementById('delayMix').value = params.delayMix / 0.01;
+    updateVal('delayMixVal', Math.round(params.delayMix * 100), '%');
+    document.getElementById('lpfLfoAmt').value = params.lpfLfoAmt;
+    updateVal('lpfLfoAmtVal', Math.round(params.lpfLfoAmt), '%');
+    document.getElementById('lpfLfoRate').value = params.lpfLfoRate;
+    updateVal('lpfLfoRateVal', Math.round(params.lpfLfoRate), '');
+    params.vols.forEach((v, i) => {
+      document.getElementById('vol' + i).value = v * 100;
+    });
+    params.waves.forEach((w, i) => {
+      document.querySelectorAll(`[data-osc="${i}"]`).forEach(b => {
+        b.className = 'wave-btn';
+        if (b.dataset.wave === w) {
+          b.className = 'wave-btn active-' + (w === 'sine' ? 'sine' : w === 'sawtooth' ? 'saw' : 'tri');
+        }
+      });
+    });
+    currentPreset = name;
+  }
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); play(); }
+    if (e.code === 'Escape') { stop(); document.getElementById('playBtn').classList.remove('active'); }
+  });
+})();
+</script>
+</body>
+</html>
