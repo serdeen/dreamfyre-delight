@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vhagar 808 Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d14;
+    --surface: #12121f;
+    --surface2: #1a1a2e;
+    --primary: #6c5ce7;
+    --primary-glow: #a29bfe;
+    --accent: #00cec9;
+    --accent2: #fd79a8;
+    --text: #e0e0ff;
+    --text-dim: #6b6b8a;
+    --grid: rgba(108,92,231,0.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+      linear-gradient(var(--grid) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+  }
+  header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 900;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    letter-spacing: 0.08em;
+    background: linear-gradient(135deg, var(--primary-glow), var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 40px rgba(108,92,231,0.4);
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid rgba(108,92,231,0.2);
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .panel-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+    font-weight: 700;
+  }
+  .transport {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .transport-btn {
+    background: var(--surface2);
+    border: 1px solid rgba(108,92,231,0.3);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    transition: all 0.18s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .transport-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary-glow);
+    box-shadow: 0 0 20px rgba(108,92,231,0.4);
+    transform: translateY(-1px);
+  }
+  .transport-btn.active {
+    background: var(--primary);
+    border-color: var(--primary-glow);
+    box-shadow: 0 0 24px rgba(108,92,231,0.5);
+  }
+  .transport-btn.stop-btn:hover {
+    background: #e94560;
+    border-color: #ff6b8a;
+    box-shadow: 0 0 20px rgba(233,69,96,0.4);
+  }
+  .bpm-display {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .bpm-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,206,201,0.5);
+    min-width: 90px;
+    text-align: center;
+    transition: color 0.2s;
+  }
+  .bpm-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .bpm-btn {
+    background: var(--surface2);
+    border: 1px solid rgba(0,206,201,0.3);
+    color: var(--accent);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .bpm-btn:hover {
+    background: var(--accent);
+    color: var(--bg);
+    box-shadow: 0 0 16px rgba(0,206,201,0.5);
+  }
+  .seq-grid {
+    display: grid;
+    grid-template-columns: 100px repeat(16, 1fr);
+    gap: 4px;
+    align-items: center;
+  }
+  .seq-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    padding-right: 8px;
+  }
+  .seq-label.drum-label {
+    color: var(--accent2);
+    font-weight: 700;
+    font-size: 0.65rem;
+  }
+  .step {
+    aspect-ratio: 1;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    border: 1px solid rgba(255,255,255,0.05);
+    background: var(--surface2);
+    position: relative;
+  }
+  .step:hover {
+    border-color: rgba(108,92,231,0.5);
+    transform: scale(1.1);
+  }
+  .step.on {
+    background: var(--primary);
+    border-color: var(--primary-glow);
+    box-shadow: 0 0 12px rgba(108,92,231,0.5);
+  }
+  .step.beat-1 {
+    background: rgba(108,92,231,0.3);
+    border-color: rgba(108,92,231,0.2);
+  }
+  .step.beat-1.on {
+    background: var(--primary);
+    box-shadow: 0 0 16px rgba(108,92,231,0.6);
+  }
+  .step.playing {
+    box-shadow: 0 0 20px rgba(0,206,201,0.7), 0 0 8px rgba(0,206,201,0.4);
+    border-color: var(--accent);
+  }
+  .step.playing.on {
+    background: var(--accent);
+    border-color: #fff;
+    box-shadow: 0 0 24px rgba(0,206,201,0.8), 0 0 8px rgba(255,255,255,0.3);
+  }
+  .step-nums {
+    display: grid;
+    grid-template-columns: 100px repeat(16, 1fr);
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .step-num {
+    text-align: center;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    font-family: 'Orbitron', sans-serif;
+  }
+  .step-num.beat-1 { color: var(--primary-glow); font-weight: 700; }
+  .sounds-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .sound-btn {
+    background: var(--surface2);
+    border: 1px solid rgba(108,92,231,0.25);
+    color: var(--text-dim);
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    transition: all 0.15s ease;
+  }
+  .sound-btn:hover {
+    color: var(--text);
+    border-color: var(--primary);
+  }
+  .sound-btn.active {
+    background: rgba(108,92,231,0.2);
+    border-color: var(--primary-glow);
+    color: var(--primary-glow);
+    box-shadow: 0 0 12px rgba(108,92,231,0.2);
+  }
+  .controls-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 600px) {
+    .controls-row { grid-template-columns: 1fr; }
+    .seq-grid { grid-template-columns: 70px repeat(16, 1fr); overflow-x: auto; }
+    .step-nums { grid-template-columns: 70px repeat(16, 1fr); overflow-x: auto; }
+  }
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .knob-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .knob-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+  .knob {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: conic-gradient(from 135deg, var(--surface2) 0%, var(--surface2) 100%);
+    border: 2px solid rgba(108,92,231,0.3);
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  }
+  .knob:hover {
+    border-color: var(--primary);
+    box-shadow: 0 0 16px rgba(108,92,231,0.3);
+  }
+  .knob::after {
+    content: '';
+    position: absolute;
+    width: 3px;
+    height: 14px;
+    background: var(--accent);
+    border-radius: 2px;
+    top: 8px;
+    left: 50%;
+    transform-origin: bottom center;
+    transform: translateX(-50%);
+    box-shadow: 0 0 6px rgba(0,206,201,0.6);
+    transition: transform 0.1s ease;
+  }
+  .knob-label {
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .knob-val {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.7rem;
+    color: var(--accent);
+  }
+  .pat-btn {
+    background: var(--surface2);
+    border: 1px solid rgba(253,121,168,0.3);
+    color: var(--accent2);
+    padding: 9px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    transition: all 0.18s ease;
+  }
+  .pat-btn:hover {
+    background: var(--accent2);
+    color: var(--bg);
+    box-shadow: 0 0 20px rgba(253,121,168,0.4);
+    transform: translateY(-1px);
+  }
+  .pat-btn:active { transform: translateY(0) scale(0.97); }
+  .clear-btn {
+    background: var(--surface2);
+    border: 1px solid rgba(233,69,96,0.3);
+    color: #e94560;
+    padding: 9px 18px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    transition: all 0.18s ease;
+  }
+  .clear-btn:hover {
+    background: #e94560;
+    color: #fff;
+    box-shadow: 0 0 20px rgba(233,69,96,0.4);
+  }
+  .action-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .beat-indicator {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .beat-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid rgba(108,92,231,0.2);
+    transition: all 0.08s ease;
+  }
+  .beat-dot.active {
+    background: var(--accent);
+    border-color: #fff;
+    box-shadow: 0 0 10px rgba(0,206,201,0.7);
+  }
+  .beat-dot.quarter {
+    background: var(--primary);
+    border-color: var(--primary-glow);
+    box-shadow: 0 0 8px rgba(108,92,231,0.5);
+  }
+  .punchy-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle-track {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--surface2);
+    border: 1px solid rgba(108,92,231,0.3);
+    position: relative;
+    transition: all 0.2s ease;
+  }
+  .toggle-track.on {
+    background: rgba(108,92,231,0.3);
+    border-color: var(--primary);
+    box-shadow: 0 0 10px rgba(108,92,231,0.2);
+  }
+  .toggle-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: all 0.2s ease;
+  }
+  .toggle-track.on .toggle-thumb {
+    left: 18px;
+    background: var(--primary-glow);
+    box-shadow: 0 0 6px rgba(162,155,254,0.6);
+  }
+  .toggle-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  .footer-note {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    margin-top: 8px;
+  }
+  .vol-meter {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--surface2);
+    margin-top: 8px;
+    overflow: hidden;
+  }
+  .vol-meter-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.05s ease;
+    box-shadow: 0 0 8px rgba(0,206,201,0.4);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Vhagar 808 Studio</h1>
+    <div class="subtitle">16-Step Drum Sequencer · Web Audio</div>
+  </header>
+
+  <div class="panel">
+    <div class="panel-label">Transport</div>
+    <div class="beat-indicator" id="beatIndicator"></div>
+    <div class="transport">
+      <button class="transport-btn" id="playBtn" onclick="togglePlay()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><polygon points="2,1 11,6 2,11"/></svg>
+        PLAY
+      </button>
+      <button class="transport-btn stop-btn" onclick="stopAll()">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="2" y="2" width="8" height="8" rx="1"/></svg>
+        STOP
+      </button>
+      <div class="bpm-display">
+        <button class="bpm-btn" onclick="adjustBpm(-1)">−</button>
+        <div>
+          <div class="bpm-value" id="bpmDisplay">120</div>
+          <div class="bpm-label">BPM</div>
+        </div>
+        <button class="bpm-btn" onclick="adjustBpm(1)">+</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">Sounds</div>
+    <div class="sounds-row">
+      <button class="sound-btn active" onclick="selectBank(0, this)">808 KICK</button>
+      <button class="sound-btn" onclick="selectBank(1, this)">808 SNARE</button>
+      <button class="sound-btn" onclick="selectBank(2, this)">808 HAT</button>
+      <button class="sound-btn" onclick="selectBank(3, this)">PERC</button>
+      <button class="sound-btn" onclick="selectBank(4, this)">808 BASS</button>
+    </div>
+    <div class="knob-row" id="knobRow">
+      <div class="knob-item">
+        <div class="knob" id="knob0" onclick="turnKnob(0, 1)" oncontextmenu="turnKnob(0,-1); return false;"></div>
+        <div class="knob-label">TONE</div>
+        <div class="knob-val" id="knobVal0">64</div>
+      </div>
+      <div class="knob-item">
+        <div class="knob" id="knob1" onclick="turnKnob(1, 1)" oncontextmenu="turnKnob(1,-1); return false;"></div>
+        <div class="knob-label">DECAY</div>
+        <div class="knob-val" id="knobVal1">64</div>
+      </div>
+      <div class="knob-item">
+        <div class="knob" id="knob2" onclick="turnKnob(2, 1)" oncontextmenu="turnKnob(2,-1); return false;"></div>
+        <div class="knob-label">PITCH</div>
+        <div class="knob-val" id="knobVal2">64</div>
+      </div>
+      <div class="knob-item">
+        <div class="knob" id="knob3" onclick="turnKnob(3, 1)" oncontextmenu="turnKnob(3,-1); return false;"></div>
+        <div class="knob-label">DRIVE</div>
+        <div class="knob-val" id="knobVal3">0</div>
+      </div>
+      <div class="knob-item">
+        <div class="knob" id="knob4" onclick="turnKnob(4, 1)" oncontextmenu="turnKnob(4,-1); return false;"></div>
+        <div class="knob-label">VOLUME</div>
+        <div class="knob-val" id="knobVal4">80</div>
+      </div>
+    </div>
+    <div class="vol-meter"><div class="vol-meter-fill" id="volMeter" style="width:0%"></div></div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">Sequencer — <span id="bankName">808 KICK</span></div>
+    <div class="seq-grid" id="seqGrid"></div>
+    <div class="step-nums" id="stepNums"></div>
+    <div class="action-row">
+      <button class="pat-btn" onclick="randomPattern()">⚄ RANDOMIZE</button>
+      <button class="pat-btn" onclick="classicBoomBap()">◉ BOOM BAP</button>
+      <button class="pat-btn" onclick="halfTime()">◈ HALF-TIME</button>
+      <button class="clear-btn" onclick="clearPattern()">✕ CLEAR</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-label">Mixer</div>
+    <div class="controls-row">
+      <div class="knob-group">
+        <div class="knob-row">
+          <div class="knob-item">
+            <div class="knob" id="mk0" onclick="turnMixer(0,1)" oncontextmenu="turnMixer(0,-1);return false;"></div>
+            <div class="knob-label">KICK</div>
+            <div class="knob-val" id="mkVal0">75</div>
+          </div>
+          <div class="knob-item">
+            <div class="knob" id="mk1" onclick="turnMixer(1,1)" oncontextmenu="turnMixer(1,-1);return false;"></div>
+            <div class="knob-label">SNARE</div>
+            <div class="knob-val" id="mkVal1">75</div>
+          </div>
+          <div class="knob-item">
+            <div class="knob" id="mk2" onclick="turnMixer(2,1)" oncontextmenu="turnMixer(2,-1);return false;"></div>
+            <div class="knob-label">HAT</div>
+            <div class="knob-val" id="mkVal2">60</div>
+          </div>
+          <div class="knob-item">
+            <div class="knob" id="mk3" onclick="turnMixer(3,1)" oncontextmenu="turnMixer(3,-1);return false;"></div>
+            <div class="knob-label">PERC</div>
+            <div class="knob-val" id="mkVal3">50</div>
+          </div>
+          <div class="knob-item">
+            <div class="knob" id="mk4" onclick="turnMixer(4,1)" oncontextmenu="turnMixer(4,-1);return false;"></div>
+            <div class="knob-label">BASS</div>
+            <div class="knob-val" id="mkVal4">80</div>
+          </div>
+        </div>
+      </div>
+      <div class="knob-group">
+        <div class="punchy-toggle" onclick="togglePunchy()">
+          <div class="toggle-track" id="punchyTrack"></div>
+          <div class="toggle-label">PUNCHY MODE</div>
+        </div>
+        <div class="punchy-toggle" onclick="toggleSwing()">
+          <div class="toggle-track" id="swingTrack"></div>
+          <div class="toggle-label">SWING</div>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="pat-btn" onclick="reversePattern()">↩ REVERSE</button>
+          <button class="pat-btn" onclick="shufflePattern()">⤴ SHUFFLE</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note">VHAGAR 808 STUDIO · BUILT WITH WEB AUDIO API</div>
+</div>
+
+<script>
+const ctx = new (window.AudioContext || window.webkitAudioContext)();
+let masterGain = ctx.createGain();
+masterGain.gain.value = 0.85;
+masterGain.connect(ctx.destination);
+
+const compressor = ctx.createDynamicsCompressor();
+compressor.threshold.value = -12;
+compressor.knee.value = 8;
+compressor.ratio.value = 4;
+compressor.attack.value = 0.003;
+compressor.release.value = 0.12;
+compressor.connect(masterGain);
+
+let analyser = ctx.createAnalyser();
+analyser.fftSize = 64;
+compressor.connect(analyser);
+
+let isPlaying = false;
+let currentStep = 0;
+let bpm = 120;
+let nextNoteTime = 0;
+let schedulerTimer = null;
+let punchy = false;
+let swing = false;
+
+const NUM_STEPS = 16;
+const NUM_BANKS = 5;
+const patterns = Array.from({length: NUM_BANKS}, () => new Array(NUM_STEPS).fill(false));
+let currentBank = 0;
+const bankNames = ['808 KICK', '808 SNARE', '808 HAT', 'PERC', '808 BASS'];
+const bankColors = ['#6c5ce7', '#fd79a8', '#00cec9', '#f5a623', '#a29bfe'];
+const mixerLevels = [0.75, 0.75, 0.60, 0.50, 0.80];
+const knobValues = [64, 64, 64, 0, 80];
+
+function initBeatDots() {
+  const el = document.getElementById('beatIndicator');
+  el.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'beat-dot';
+    dot.id = 'bdot' + i;
+    el.appendChild(dot);
+  }
+}
+
+function updateBeatDots(step) {
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('bdot' + i);
+    dot.className = 'beat-dot';
+  }
+  const q = Math.floor(step / 4) % 4;
+  const dot = document.getElementById('bdot' + q);
+  if (dot) {
+    dot.className = 'beat-dot active' + ((step % 4) === 0 ? ' quarter' : '');
+  }
+}
+
+function buildGrid() {
+  const grid = document.getElementById('seqGrid');
+  grid.innerHTML = '';
+  for (let b = 0; b < NUM_BANKS; b++) {
+    const label = document.createElement('div');
+    label.className = 'seq-label' + (b === 0 ? ' drum-label' : '');
+    label.textContent = bankNames[b];
+    label.style.color = bankColors[b];
+    grid.appendChild(label);
+    for (let s = 0; s < NUM_STEPS; s++) {
+      const step = document.createElement('div');
+      step.className = 'step' + (s % 4 === 0 ? ' beat-1' : '') + (patterns[b][s] ? ' on' : '');
+      step.dataset.bank = b;
+      step.dataset.step = s;
+      step.onclick = () => toggleStep(b, s);
+      grid.appendChild(step);
+    }
+  }
+  const nums = document.getElementById('stepNums');
+  nums.innerHTML = '';
+  const spacer = document.createElement('div');
+  spacer.className = 'step-num';
+  nums.appendChild(spacer);
+  for (let s = 0; s < NUM_STEPS; s++) {
+    const n = document.createElement('div');
+    n.className = 'step-num' + (s % 4 === 0 ? ' beat-1' : '');
+    n.textContent = s + 1;
+    nums.appendChild(n);
+  }
+}
+
+function toggleStep(bank, step) {
+  patterns[bank][step] = !patterns[bank][step];
+  updateGrid();
+}
+
+function updateGrid() {
+  const steps = document.querySelectorAll('.step');
+  steps.forEach(el => {
+    const b = parseInt(el.dataset.bank);
+    const s = parseInt(el.dataset.step);
+    el.className = 'step' + (s % 4 === 0 ? ' beat-1' : '') + (patterns[b][s] ? ' on' : '') + (s === currentStep && isPlaying ? ' playing' : '');
+  });
+}
+
+function selectBank(idx, btn) {
+  currentBank = idx;
+  document.querySelectorAll('.sound-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('bankName').textContent = bankNames[idx];
+  updateGrid();
+}
+
+function turnKnob(idx, dir) {
+  knobValues[idx] = Math.max(0, Math.min(127, knobValues[idx] + dir * 4));
+  document.getElementById('knobVal' + idx).textContent = knobValues[idx];
+  updateKnobVisual(idx);
+}
+
+function updateKnobVisual(idx) {
+  const knob = document.getElementById('knob' + idx);
+  const val = knobValues[idx];
+  const angle = -135 + (val / 127) * 270;
+  knob.style.setProperty('--knob-angle', angle + 'deg');
+  knob.querySelector;
+  knob.style.background = `conic-gradient(from ${-135 + (val/127)*270}deg, var(--primary) 0%, var(--surface2) ${(val/127)*270}deg)`;
+}
+
+function turnMixer(idx, dir) {
+  mixerLevels[idx] = Math.max(0, Math.min(1, mixerLevels[idx] + dir * 0.05));
+  document.getElementById('mkVal' + idx).textContent = Math.round(mixerLevels[idx] * 100);
+  updateMixerVisual(idx);
+}
+
+function updateMixerVisual(idx) {
+  const knob = document.getElementById('mk' + idx);
+  const val = mixerLevels[idx];
+  knob.style.background = `conic-gradient(from ${-135 + val*270}deg, var(--accent) 0%, var(--surface2) ${val*270}deg)`;
+}
+
+function buildKnobs() {
+  for (let i = 0; i < 5; i++) updateKnobVisual(i);
+  for (let i = 0; i < 5; i++) updateMixerVisual(i);
+}
+
+function playSample(bank, time) {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const dist = ctx.createWaveShaper();
+
+  const tone = knobValues[0] / 127;
+  const decay = knobValues[1] / 127;
+  const pitch = (knobValues[2] - 64) / 64;
+  const drive = knobValues[3] / 127;
+  const vol = knobValues[4] / 127;
+
+  let freq = 55;
+  let duration = 0.5;
+  let gainAmt = 0.9;
+
+  if (bank === 0) {
+    freq = 55 + pitch * 30;
+    duration = 0.2 + decay * 0.8;
+    gainAmt = 0.9;
+  } else if (bank === 1) {
+    freq = 180 + pitch * 40;
+    duration = 0.1 + decay * 0.3;
+    gainAmt = 0.8;
+  } else if (bank === 2) {
+    freq = 800 + pitch * 400;
+    duration = 0.03 + decay * 0.15;
+    gainAmt = 0.5;
+  } else if (bank === 3) {
+    freq = 600 + pitch * 200;
+    duration = 0.02 + decay * 0.08;
+    gainAmt = 0.6;
+  } else if (bank === 4) {
+    freq = 40 + pitch * 20;
+    duration = 0.3 + decay * 0.6;
+    gainAmt = 0.9;
+  }
+
+  osc.type = bank === 4 ? 'sawtooth' : bank === 2 ? 'square' : 'sine';
+  osc.frequency.setValueAtTime(freq, time);
+  if (bank === 0) {
+    osc.frequency.exponentialRampToValueAtTime(freq * 0.3, time + duration);
+  }
+
+  gain.gain.setValueAtTime(gainAmt * vol * mixerLevels[bank], time);
+  gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+  if (drive > 0.05) {
+    const curve = new Float32Array(256);
+    for (let i = 0; i < 256; i++) {
+      const x = (i * 2) / 256 - 1;
+      curve[i] = (Math.PI + drive * 200) * x / (Math.PI + drive * 200 * Math.abs(x));
+    }
+    dist.curve = curve;
+    osc.connect(dist);
+    dist.connect(gain);
+  } else {
+    osc.connect(gain);
+  }
+
+  gain.connect(compressor);
+  osc.start(time);
+  osc.stop(time + duration + 0.05);
+}
+
+function scheduler() {
+  const lookahead = 0.1;
+  const scheduleAhead = 0.08;
+  while (nextNoteTime < ctx.currentTime + lookahead) {
+    let step = currentStep;
+    let time = nextNoteTime;
+    if (swing && currentStep % 2 === 1) {
+      time += (60 / bpm) / 4;
+    }
+    for (let b = 0; b < NUM_BANKS; b++) {
+      if (patterns[b][step]) {
+        playSample(b, time);
+      }
+    }
+    currentStep = (currentStep + 1) % NUM_STEPS;
+    const secPerBeat = 60.0 / bpm;
+    const secPerStep = secPerBeat / 4;
+    nextNoteTime += secPerStep;
+  }
+  schedulerTimer = setTimeout(scheduler, scheduleAhead * 1000);
+}
+
+function togglePlay() {
+  if (ctx.state === 'suspended') ctx.resume();
+  if (isPlaying) {
+    clearTimeout(schedulerTimer);
+    isPlaying = false;
+    currentStep = 0;
+    document.getElementById('playBtn').classList.remove('active');
+    updateGrid();
+  } else {
+    isPlaying = true;
+    currentStep = 0;
+    nextNoteTime = ctx.currentTime;
+    document.getElementById('playBtn').classList.add('active');
+    scheduler();
+  }
+}
+
+function stopAll() {
+  clearTimeout(schedulerTimer);
+  isPlaying = false;
+  currentStep = 0;
+  document.getElementById('playBtn').classList.remove('active');
+  updateGrid();
+}
+
+function adjustBpm(dir) {
+  bpm = Math.max(60, Math.min(200, bpm + dir));
+  document.getElementById('bpmDisplay').textContent = bpm;
+  document.getElementById('bpmDisplay').style.color = bpm > 140 ? '#fd79a8' : bpm < 90 ? '#00cec9' : 'var(--accent)';
+}
+
+function togglePunchy() {
+  punchy = !punchy;
+  document.getElementById('punchyTrack').className = 'toggle-track' + (punchy ? ' on' : '');
+  if (punchy) {
+    masterGain.gain.value = 0.7;
+    compressor.ratio.value = 8;
+  } else {
+    masterGain.gain.value = 0.85;
+    compressor.ratio.value = 4;
+  }
+}
+
+function toggleSwing() {
+  swing = !swing;
+  document.getElementById('swingTrack').className = 'toggle-track' + (swing ? ' on' : '');
+}
+
+function randomPattern() {
+  for (let b = 0; b < NUM_BANKS; b++) {
+    for (let s = 0; s < NUM_STEPS; s++) {
+      patterns[b][s] = Math.random() < 0.2;
+    }
+    if (currentBank === b) patterns[b][0] = true;
+  }
+  updateGrid();
+}
+
+function classicBoomBap() {
+  for (let b = 0; b < NUM_BANKS; b++) {
+    for (let s = 0; s < NUM_STEPS; s++) patterns[b][s] = false;
+  }
+  patterns[0][0] = true;
+  patterns[0][6] = true;
+  patterns[0][10] = true;
+  patterns[1][4] = true;
+  patterns[1][12] = true;
+  patterns[2][2] = true;
+  patterns[2][5] = true;
+  patterns[2][8] = true;
+  patterns[2][11] = true;
+  patterns[2][14] = true;
+  updateGrid();
+}
+
+function halfTime() {
+  for (let b = 0; b < NUM_BANKS; b++) {
+    for (let s = 0; s < NUM_STEPS; s += 2) {
+      patterns[b][s] = false;
+    }
+  }
+  updateGrid();
+}
+
+function clearPattern() {
+  for (let b = 0; b < NUM_BANKS; b++) {
+    for (let s = 0; s < NUM_STEPS; s++) patterns[b][s] = false;
+  }
+  updateGrid();
+}
+
+function reversePattern() {
+  for (let b = 0; b < NUM_BANKS; b++) {
+    patterns[b].reverse();
+  }
+  updateGrid();
+}
+
+function shufflePattern() {
+  for (let b = 0; b < NUM_BANKS; b++) {
+    const on = [];
+    const off = [];
+    for (let s = 0; s < NUM_STEPS; s++) {
+      if (patterns[b][s]) on.push(s); else off.push(s);
+    }
+    for (let s = 0; s < NUM_STEPS; s++) patterns[b][s] = false;
+    const total = Math.floor(NUM_STEPS * 0.35);
+    for (let i = 0; i < total && i < on.length; i++) {
+      patterns[b][Math.floor(Math.random() * NUM_STEPS)] = true;
+    }
+  }
+  updateGrid();
+}
+
+function animateVolMeter() {
+  if (analyser) {
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    analyser.getByteFrequencyData(data);
+    const avg = data.reduce((a, b) => a + b, 0) / data.length;
+    const pct = Math.min(100, (avg / 128) * 100);
+    const el = document.getElementById('volMeter');
+    if (el) el.style.width = pct + '%';
+  }
+  requestAnimationFrame(animateVolMeter);
+}
+
+function animateBeat() {
+  if (isPlaying) updateBeatDots(currentStep);
+  setTimeout(animateBeat, 50);
+}
+
+initBeatDots();
+buildGrid();
+buildKnobs();
+animateVolMeter();
+animateBeat();
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+  if (e.code === 'KeyR') randomPattern();
+  if (e.code === 'KeyC') clearPattern();
+  if (e.code === 'ArrowUp') adjustBpm(1);
+  if (e.code === 'ArrowDown') adjustBpm(-1);
+});
+</script>
+</body>
+</html>
