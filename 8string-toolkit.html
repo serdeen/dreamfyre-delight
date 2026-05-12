@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>8-String Guitar Toolkit — for Christian</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0d0d;
+    color: #e0e0e0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 2rem;
+  }
+  h1 {
+    text-align: center;
+    font-size: 1.8rem;
+    color: #ff6b35;
+    margin-bottom: 0.3rem;
+    letter-spacing: 0.05em;
+  }
+  .subtitle {
+    text-align: center;
+    color: #888;
+    font-size: 0.85rem;
+    margin-bottom: 2rem;
+  }
+  .subtitle code {
+    background: #1a1a1a;
+    color: #ff9f6b;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  .controls label {
+    font-size: 0.8rem;
+    color: #aaa;
+  }
+  select, button {
+    background: #1a1a1a;
+    color: #e0e0e0;
+    border: 1px solid #333;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+  select:hover, button:hover { border-color: #ff6b35; }
+  button.active {
+    background: #ff6b35;
+    color: #0d0d0d;
+    border-color: #ff6b35;
+  }
+  .fretboard-wrap {
+    overflow-x: auto;
+    padding-bottom: 1rem;
+  }
+  .fretboard {
+    display: grid;
+    grid-template-columns: 60px repeat(15, 1fr);
+    gap: 0;
+    min-width: 700px;
+    border: 2px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .fret-num {
+    background: #1a1a1a;
+    color: #666;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    border-right: 1px solid #333;
+  }
+  .fret-num.dot { color: #ff6b35; }
+  .fret-num.double-dot { color: #ff6b35; }
+  .string-row {
+    display: contents;
+  }
+  .string-label {
+    background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    border-right: 1px solid #333;
+    font-size: 0.7rem;
+    gap: 2px;
+  }
+  .string-label .note { color: #ff9f6b; font-weight: 700; }
+  .string-label .oct { color: #555; font-size: 0.6rem; }
+  .fret-cell {
+    height: 38px;
+    border-right: 1px solid #222;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+  .fret-cell:hover { background: #1f1f1f; }
+  .fret-cell.active {
+    color: #0d0d0d;
+  }
+  .fret-cell.root { color: #ff6b35; font-weight: 800; }
+  .fret-cell.root.active { background: #ff6b35; }
+  .fret-cell.chord-tone.active { background: #2a4a2a; color: #6fcf6f; }
+  .fret-cell.chord-tone.root { background: #4a2a1a; color: #ff9f6b; border: 1px solid #ff6b35; }
+  .fret-marker {
+    position: absolute;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #2a2a2a;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .fret-cell:nth-child(12n+6) .fret-marker,
+  .fret-cell:nth-child(12n+9) .fret-marker { background: #3a3a3a; }
+  .chord-info {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: #1a1a1a;
+    border-radius: 8px;
+    border: 1px solid #333;
+    max-width: 500px;
+    margin-left: auto; margin-right: auto;
+  }
+  .chord-info h2 { color: #ff6b35; font-size: 1.2rem; }
+  .chord-info .notes { color: #aaa; font-size: 0.85rem; margin-top: 0.4rem; }
+  .chord-info .pos { color: #6fcf6f; font-size: 0.75rem; margin-top: 0.3rem; }
+  .chord-buttons { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1rem; }
+  .legend {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 1rem;
+    font-size: 0.75rem;
+  }
+  .legend span { display: flex; align-items: center; gap: 6px; }
+  .legend .dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+  }
+  .legend .root-dot { background: #ff6b35; }
+  .legend .chord-dot { background: #6fcf6f; }
+</style>
+</head>
+<body>
+
+<h1>🎸 8-String Guitar Toolkit</h1>
+<p class="subtitle">Standard tuning: <code>F# B E A D G# C# F#</code> — built for Christian</p>
+
+<div class="controls">
+  <div>
+    <label>Scale / Chord:</label>
+    <select id="chordSelect">
+      <option value="cm">C Minor</option>
+      <option value="am">A Minor</option>
+      <option value="em">E Minor</option>
+      <option value="dm">D Minor</option>
+      <option value="fm">F Minor</option>
+      <option value="cmin">C Minor (Natural)</option>
+      <option value="amin">A Minor (Natural)</option>
+      <option value="emin">E Minor (Natural)</option>
+      <option value="dmin">D Minor (Natural)</option>
+      <option value="fmin">F Minor (Natural)</option>
+      <option value="c5">C Power Chord (5)</option>
+      <option value="g5">G Power Chord (5)</option>
+      <option value="f5">F# Power Chord (5)</option>
+      <option value="a5">A Power Chord (5)</option>
+      <option value="d5">D Power Chord (5)</option>
+      <option value="cpenta">C Minor Pentatonic</option>
+      <option value="apenta">A Minor Pentatonic</option>
+      <option value="epenta">E Minor Pentatonic</option>
+      <option value="dpenta">D Minor Pentatonic</option>
+      <option value="fpenta">F# Minor Pentatonic</option>
+    </select>
+  </div>
+  <div>
+    <label>Frets shown:</label>
+    <select id="fretRange">
+      <option value="12">0 – 12</option>
+      <option value="15" selected>0 – 15</option>
+      <option value="24">0 – 24</option>
+    </select>
+  </div>
+</div>
+
+<div class="chord-buttons">
+  <button onclick="showChord('cm')">C Minor</button>
+  <button onclick="showChord('am')">A Minor</button>
+  <button onclick="showChord('em')">E Minor</button>
+  <button onclick="showChord('fm')">F Minor</button>
+  <button onclick="showChord('c5')">C5</button>
+  <button onclick="showChord('f5')">F#5</button>
+  <button onclick="showChord('a5')">A5</button>
+  <button onclick="showChord('cpenta')">C Pentatonic</button>
+  <button onclick="showChord('fpenta')">F# Pentatonic</button>
+</div>
+
+<div class="fretboard-wrap">
+  <div class="fretboard" id="fretboard"></div>
+</div>
+
+<div class="chord-info" id="chordInfo">
+  <h2 id="chordName">C Minor</h2>
+  <p class="notes" id="chordNotes">Notes: C · D# · G</p>
+  <p class="pos" id="chordPos">Positions: 8 shown on fretboard</p>
+</div>
+
+<div class="legend">
+  <span><div class="dot root-dot"></div> Root</span>
+  <span><div class="dot chord-dot"></div> Scale/Chord tone</span>
+</div>
+
+<script>
+const STRINGS = [
+  { note: 'F#', octave: 2 },
+  { note: 'B',  octave: 2 },
+  { note: 'E',  octave: 2 },
+  { note: 'A',  octave: 2 },
+  { note: 'D',  octave: 3 },
+  { note: 'G#', octave: 3 },
+  { note: 'C#', octave: 4 },
+  { note: 'F#', octave: 4 },
+];
+
+const CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const STRING_NOTES = STRINGS.map((s,i) => CHROMATIC.indexOf(s.note) + (s.octave * 12));
+
+const SCALES = {
+  cm:     { name: 'C Minor',       intervals: [0,3,5,7,8,10],      color: '#ff6b35' },
+  am:     { name: 'A Minor',       intervals: [0,3,5,7,8,10],      color: '#ff6b35' },
+  em:     { name: 'E Minor',       intervals: [0,3,5,7,8,10],      color: '#ff6b35' },
+  dm:     { name: 'D Minor',       intervals: [0,3,5,7,8,10],      color: '#ff6b35' },
+  fm:     { name: 'F Minor',       intervals: [0,3,5,7,8,10],      color: '#ff6b35' },
+  cmin:   { name: 'C Minor (Nat)', intervals: [0,3,5,7,8,10],      color: '#ff6b35' },
+  amin:   { name: 'A Minor (Nat)', intervals: [0,3,5,7,8,10],      color: '#ff6b35' },
+  emin:   { name: 'E Minor (Nat)', intervals: [0,3,5,7,8,10],      color: '#ff6b35' },
+  dmin:   { name: 'D Minor (Nat)', intervals: [0,3,5,7,8,10],      color: '#ff6b35' },
+  fmin:   { name: 'F Minor (Nat)', intervals: [0,3,5,7,8,10],      color: '#ff6b35' },
+  c5:     { name: 'C Power Chord', intervals: [0,7,12],            color: '#ff9f6b' },
+  g5:     { name: 'G Power Chord', intervals: [0,7,12],            color: '#ff9f6b' },
+  f5:     { name: 'F# Power Chord',intervals: [0,7,12],            color: '#ff9f6b' },
+  a5:     { name: 'A Power Chord', intervals: [0,7,12],            color: '#ff9f6b' },
+  d5:     { name: 'D Power Chord', intervals: [0,7,12],            color: '#ff9f6b' },
+  cpenta: { name: 'C Minor Pent',  intervals: [0,3,5,7,10],        color: '#6fcf6f' },
+  apenta: { name: 'A Minor Pent',  intervals: [0,3,5,7,10],        color: '#6fcf6f' },
+  epenta: { name: 'E Minor Pent',  intervals: [0,3,5,7,10],        color: '#6fcf6f' },
+  dpenta: { name: 'D Minor Pent',  intervals: [0,3,5,7,10],        color: '#6fcf6f' },
+  fpenta: { name: 'F# Minor Pent', intervals: [0,3,5,7,10],        color: '#6fcf6f' },
+};
+
+function getRoot(key) {
+  const map = {
+    cm:'C',am:'A',em:'E',dm:'D',fm:'F',
+    cmin:'C',amin:'A',emin:'E',dmin:'D',fmin:'F',
+    c5:'C',g5:'G',f5:'F#',a5:'A',d5:'D',
+    cpenta:'C',apenta:'A',epenta:'E',dpenta:'D',fpenta:'F#',
+  };
+  return map[key] || 'C';
+}
+
+function buildFretboard(chordKey) {
+  const scale = SCALES[chordKey];
+  const rootNote = getRoot(chordKey);
+  const rootMidi = CHROMATIC.indexOf(rootNote) + 12 * 4; // center octave
+  const targetFrets = parseInt(document.getElementById('fretRange').value);
+
+  const container = document.getElementById('fretboard');
+  container.innerHTML = '';
+
+  // Header row
+  const emptyCell = document.createElement('div');
+  container.appendChild(emptyCell);
+
+  for (let f = 0; f <= targetFrets; f++) {
+    const fn = document.createElement('div');
+    fn.className = 'fret-num';
+    fn.textContent = f;
+    if (f === 3 || f === 5 || f === 7 || f === 9) fn.classList.add('dot');
+    if (f === 12 || f === 15) fn.classList.add('double-dot');
+    container.appendChild(fn);
+  }
+
+  // String rows (string 0 = low F#, string 7 = high F#)
+  for (let s = 0; s < 8; s++) {
+    const label = document.createElement('div');
+    label.className = 'string-label';
+    label.innerHTML = `<span class="note">${STRINGS[s].note}</span><span class="oct">${STRINGS[s].octave}</span>`;
+    container.appendChild(label);
+
+    for (let f = 0; f <= targetFrets; f++) {
+      const cell = document.createElement('div');
+      cell.className = 'fret-cell';
+
+      const midiAtFret = STRING_NOTES[s] + f;
+      const noteAtFret = CHROMATIC[midiAtFret % 12];
+      const octave = Math.floor(midiAtFret / 12);
+
+      // Show note on nut (fret 0)
+      if (f === 0) {
+        cell.textContent = noteAtFret;
+        cell.style.color = '#444';
+        cell.style.fontSize = '0.65rem';
+      }
+
+      // Check if note is in scale
+      const noteClass = midiAtFret % 12;
+      const isRoot = noteClass === (rootMidi % 12);
+      const inScale = scale.intervals.some(interval => (noteClass - (rootMidi % 12) + 12) % 12 === interval);
+
+      if (inScale && f > 0) {
+        cell.classList.add('chord-tone');
+        if (isRoot) {
+          cell.classList.add('root');
+          cell.textContent = noteAtFret;
+        }
+      }
+
+      // Fret markers
+      if ((f === 5 || f === 7 || f === 9) && s === 3) {
+        const dot = document.createElement('div');
+        dot.className = 'fret-marker';
+        cell.appendChild(dot);
+      }
+      if ((f === 12) && s === 3) {
+        const dot = document.createElement('div');
+        dot.className = 'fret-marker';
+        cell.appendChild(dot);
+      }
+      if (f === 12 || f === 15) {
+        const dot = document.createElement('div');
+        dot.className = 'fret-marker';
+        cell.appendChild(dot);
+      }
+
+      container.appendChild(cell);
+    }
+  }
+
+  // Update chord info
+  const scaleNotes = scale.intervals.map(i => CHROMATIC[(CHROMATIC.indexOf(rootNote) + i) % 12]);
+  const uniqueNotes = [...new Set(scaleNotes)];
+  document.getElementById('chordName').textContent = scale.name;
+  document.getElementById('chordNotes').textContent = 'Notes: ' + uniqueNotes.join(' · ');
+  const count = Array.from(document.querySelectorAll('.chord-tone')).length;
+  document.getElementById('chordPos').textContent = `${count} positions shown on fretboard`;
+}
+
+function showChord(key) {
+  document.getElementById('chordSelect').value = key;
+  buildFretboard(key);
+}
+
+document.getElementById('chordSelect').addEventListener('change', e => buildFretboard(e.target.value));
+document.getElementById('fretRange').addEventListener('change', e => buildFretboard(document.getElementById('chordSelect').value));
+
+// Init
+buildFretboard('cm');
+</script>
+
+</body>
+</html>
