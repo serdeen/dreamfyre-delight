@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sidechain Studio</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #050508;
+    --surface: #0c0c14;
+    --surface2: #111120;
+    --border: #181830;
+    --border2: #242450;
+    --text: #e0e8f0;
+    --text-dim: #404068;
+    --orange: #fb923c;
+    --orange-dim: #3a1a00;
+    --cyan: #22d3ee;
+    --pink: #f472b6;
+    --green: #4ade80;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 12px 48px;
+    gap: 14px;
+  }
+  h1 { font-size: 10px; letter-spacing: 0.35em; text-transform: uppercase; color: var(--orange); opacity: 0.7; }
+
+  /* PATTERN SELECTOR */
+  .pattern-row {
+    display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px; width: 100%; max-width: 720px;
+  }
+  .pattern-btn {
+    padding: 6px 16px; border-radius: 6px; cursor: pointer;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600;
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text-dim);
+    transition: all 0.12s;
+  }
+  .pattern-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .pattern-btn.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); }
+
+  /* VISUAL PUMP */
+  .pump-display {
+    width: 100%; max-width: 720px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .pump-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+  .pump-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+  .pump-info { font-size: 10px; font-family: ui-monospace, monospace; color: var(--text-dim); }
+  #pumpCanvas { width: 100%; height: 120px; display: block; border-radius: 6px; background: #020206; }
+
+  /* CONTROLS */
+  .controls-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px; width: 100%; max-width: 720px;
+  }
+  .ctrl-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .ctrl-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
+  .ctrl-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .ctrl-label { font-size: 9px; color: var(--text-dim); width: 48px; flex-shrink: 0; }
+  .ctrl-slider {
+    -webkit-appearance: none; flex: 1; height: 4px;
+    background: var(--border2); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  .ctrl-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--orange); cursor: pointer;
+  }
+  .ctrl-val { font-family: ui-monospace, monospace; font-size: 11px; color: var(--orange); min-width: 40px; text-align: right; }
+
+  /* STEP GRID */
+  .step-section {
+    width: 100%; max-width: 720px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .step-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
+  .step-grid { display: flex; flex-direction: column; gap: 4px; }
+  .step-row { display: flex; align-items: center; gap: 4px; }
+  .step-label { font-size: 8px; color: var(--text-dim); width: 32px; text-align: right; flex-shrink: 0; }
+  .step-cells { display: flex; gap: 3px; }
+  .step-cell {
+    width: 38px; height: 28px; border-radius: 4px; cursor: pointer;
+    background: var(--surface2); border: 1px solid var(--border2);
+    transition: all 0.1s;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; color: var(--text-dim); font-family: ui-monospace, monospace;
+  }
+  .step-cell:hover { border-color: var(--orange); }
+  .step-cell.on { background: var(--orange-dim); border-color: var(--orange); }
+  .step-cell.on.pump { background: var(--orange); }
+  .step-cell.bar-start { border-left: 2px solid var(--border2); }
+  .step-cell.current { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
+
+  /* AUDIO PREVIEW */
+  .preview-section {
+    width: 100%; max-width: 720px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+    text-align: center;
+  }
+  .preview-hint { font-size: 10px; color: var(--text-dim); margin-bottom: 10px; }
+
+  /* TRANSPORT */
+  .transport {
+    display: flex; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 20px;
+  }
+  .trans-btn {
+    width: 48px; height: 42px; border-radius: 10px; cursor: pointer; font-size: 18px;
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s;
+  }
+  .trans-btn:hover { border-color: var(--orange); }
+  .trans-btn:active { transform: scale(0.9); }
+  .trans-btn.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); }
+</style>
+</head>
+<body>
+
+<h1>Sidechain Studio</h1>
+
+<div class="pattern-row">
+  <div class="pattern-label" style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text-dim);align-self:center;">Pattern:</div>
+  <button class="pattern-btn active" data-pattern="4on4">4/4 Club</button>
+  <button class="pattern-btn" data-pattern="dusky">Dusky Vocal</button>
+  <button class="pattern-btn" data-pattern="house">Jackin House</button>
+  <button class="pattern-btn" data-pattern="deep">Deep 4/4</button>
+  <button class="pattern-btn" data-pattern="half">Half-Time</button>
+  <button class="pattern-btn" data-pattern="triplet">Triplet</button>
+  <button class="pattern-btn" data-pattern="custom">Custom</button>
+</div>
+
+<div class="pump-display">
+  <div class="pump-header">
+    <div class="pump-title">Sidechain Pump Visualizer</div>
+    <div class="pump-info" id="pumpInfo">124 BPM &nbsp; 4/4 Club &nbsp; Depth: 80% &nbsp; Speed: 1/4</div>
+  </div>
+  <canvas id="pumpCanvas"></canvas>
+</div>
+
+<div class="controls-grid">
+  <div class="ctrl-panel">
+    <div class="ctrl-title">Pump</div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Depth</div>
+      <input type="range" class="ctrl-slider" id="depthSlider" min="0" max="100" value="80">
+      <div class="ctrl-val" id="depthVal">80%</div>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Speed</div>
+      <input type="range" class="ctrl-slider" id="speedSlider" min="1" max="8" value="4">
+      <div class="ctrl-val" id="speedVal">1/4</div>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Attack</div>
+      <input type="range" class="ctrl-slider" id="attackSlider" min="1" max="100" value="5">
+      <div class="ctrl-val" id="attackVal">5ms</div>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Release</div>
+      <input type="range" class="ctrl-slider" id="releaseSlider" min="10" max="500" value="150">
+      <div class="ctrl-val" id="releaseVal">150ms</div>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Hold</div>
+      <input type="range" class="ctrl-slider" id="holdSlider" min="0" max="100" value="30">
+      <div class="ctrl-val" id="holdVal">30%</div>
+    </div>
+  </div>
+
+  <div class="ctrl-panel">
+    <div class="ctrl-title">BPM</div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Tempo</div>
+      <input type="range" class="ctrl-slider" id="bpmSlider" min="80" max="160" value="124">
+      <div class="ctrl-val" id="bpmVal">124</div>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Grid</div>
+      <input type="range" class="ctrl-slider" id="gridSlider" min="4" max="32" value="16" step="4">
+      <div class="ctrl-val" id="gridVal">16th</div>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Thresh</div>
+      <input type="range" class="ctrl-slider" id="threshSlider" min="-60" max="0" value="-20">
+      <div class="ctrl-val" id="threshVal">-20dB</div>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Ratio</div>
+      <input type="range" class="ctrl-slider" id="ratioSlider" min="1" max="20" value="4" step="1">
+      <div class="ctrl-val" id="ratioVal">4:1</div>
+    </div>
+  </div>
+</div>
+
+<div class="step-section">
+  <div class="step-title">Trigger Pattern (click to toggle — orange = pump on)</div>
+  <div class="step-grid" id="stepGrid"></div>
+</div>
+
+<div class="transport">
+  <button class="trans-btn" id="playBtn">&#9654;</button>
+  <button class="trans-btn" id="stopBtn">&#9632;</button>
+</div>
+
+<script>
+(function() {
+  let audioCtx = null;
+  let isPlaying = false;
+  let currentStep = 0;
+  let nextNoteTime = 0;
+  let schedulerTimer = null;
+  let analyser = null;
+  let animFrame = null;
+  let bpm = 124;
+  let depth = 0.8;
+  let speed = 4; // 1/4 note
+  let attack = 5;
+  let release = 150;
+  let hold = 0.3;
+  let gridSteps = 16;
+  let thresh = -20;
+  let ratio = 4;
+  let pattern = '4on4';
+  let triggerSteps = new Array(64).fill(false);
+
+  const SPEED_LABELS = {1:'1/1', 2:'1/2', 3:'1/2D', 4:'1/4', 5:'1/4D', 6:'1/8', 7:'1/8D', 8:'1/16'};
+
+  const PATTERNS = {
+    '4on4':  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+    'dusky': [1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0],
+    'house': [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0],
+    'deep':  [1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0],
+    'half':  [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0],
+    'triplet': [1,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0],
+  };
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!analyser) {
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.connect(audioCtx.destination);
+    }
+  }
+
+  function applyPattern(p) {
+    pattern = p;
+    const ptn = PATTERNS[p] || PATTERNS['4on4'];
+    for (let i = 0; i < gridSteps; i++) {
+      triggerSteps[i] = ptn[i] === 1;
+    }
+    renderStepGrid();
+    drawPumpWave();
+  }
+
+  function buildStepGrid() {
+    const container = document.getElementById('stepGrid');
+    container.innerHTML = '';
+
+    const row = document.createElement('div');
+    row.className = 'step-row';
+
+    const label = document.createElement('div');
+    label.className = 'step-label';
+    label.textContent = 'Pump';
+    row.appendChild(label);
+
+    const cells = document.createElement('div');
+    cells.className = 'step-cells';
+
+    for (let i = 0; i < gridSteps; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'step-cell' + (i % 4 === 0 ? ' bar-start' : '') + (triggerSteps[i] ? ' on' : '');
+      cell.textContent = i + 1;
+      cell.dataset.step = i;
+      cell.addEventListener('click', () => {
+        triggerSteps[i] = !triggerSteps[i];
+        cell.classList.toggle('on', triggerSteps[i]);
+        drawPumpWave();
+      });
+      cells.appendChild(cell);
+    }
+    row.appendChild(cells);
+    container.appendChild(row);
+  }
+
+  function renderStepGrid() {
+    document.querySelectorAll('.step-cell').forEach((cell, i) => {
+      if (i < gridSteps) {
+        cell.className = 'step-cell' + (i % 4 === 0 ? ' bar-start' : '') + (triggerSteps[i] ? ' on' : '');
+      }
+    });
+  }
+
+  // ---- Pump Visualizer ----
+  let pumpTime = 0;
+  let lastDrawTime = 0;
+
+  function drawPumpWave() {
+    const canvas = document.getElementById('pumpCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.offsetWidth * dpr;
+    canvas.height = canvas.offsetHeight * dpr;
+    ctx.scale(dpr, dpr);
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+
+    ctx.fillStyle = '#020206';
+    ctx.fillRect(0, 0, w, h);
+
+    const stepDur = 60 / bpm / 4;
+    const speedDiv = [1, 2, 2, 4, 4, 8, 8, 16, 16][Math.min(speed - 1, 8)] || 4;
+    const lfoHz = (bpm / 60) / speedDiv;
+    const holdSamples = hold;
+
+    ctx.strokeStyle = '#fb923c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x < w; x++) {
+      const t = (x / w) * 2 / lfoHz;
+      const cycle = t % (1 / lfoHz);
+      const phase = cycle * lfoHz;
+
+      let val;
+      const attackT = attack / 1000;
+      const releaseT = release / 1000;
+      const total = attackT + holdSamples / lfoHz + releaseT;
+      const normPhase = (cycle % (1 / lfoHz)) / (1 / lfoHz);
+
+      if (normPhase < attackT * lfoHz) {
+        val = normPhase / (attackT * lfoHz);
+      } else if (normPhase < (attackT + holdSamples / lfoHz) * lfoHz) {
+        val = 1;
+      } else {
+        val = 1 - (normPhase - (attackT + holdSamples / lfoHz) * lfoHz) / (releaseT * lfoHz);
+      }
+      val = Math.max(0, Math.min(1, val)) * depth;
+
+      const y = h - val * (h - 20) - 10;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Grid lines
+    ctx.strokeStyle = '#181830';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 4; i++) {
+      const x = (i / 4) * w;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+  }
+
+  // ---- Audio ----
+  function playTestTone() {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    osc.frequency.value = 100;
+    filter.type = 'lowpass';
+    filter.frequency.value = 800;
+    gain.gain.value = 0.4;
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(analyser);
+    osc.start();
+
+    const speedDiv = [1, 2, 2, 4, 4, 8, 8, 16, 16][Math.min(speed - 1, 8)] || 4;
+    const stepDur = 60 / bpm / 4;
+    const lfoHz = (bpm / 60) / speedDiv;
+
+    let step = 0;
+    const scheduleAhead = 0.1;
+    const scheduleT = 0.05;
+
+    function scheduler() {
+      while (nextNoteTime < audioCtx.currentTime + scheduleAhead) {
+        if (triggerSteps[step % gridSteps]) {
+          const attackT = attack / 1000;
+          const releaseT = release / 1000;
+          const totalPump = stepDur * speedDiv;
+          const holdT = hold * totalPump;
+          const g = gain.gain;
+          const now = nextNoteTime;
+          g.cancelScheduledValues(now);
+          g.setValueAtTime(g.value, now);
+          g.linearRampToValueAtTime(0.4 * (1 - depth), now + attackT);
+          g.setValueAtTime(0.4 * (1 - depth), now + attackT + holdT);
+          g.linearRampToValueAtTime(0.4, now + attackT + holdT + releaseT);
+        }
+        step++;
+        nextNoteTime += stepDur;
+      }
+      schedulerTimer = setTimeout(scheduler, scheduleT * 1000);
+    }
+
+    nextNoteTime = audioCtx.currentTime + 0.05;
+    scheduler();
+  }
+
+  function animatePump() {
+    if (!isPlaying) return;
+    drawPumpWave();
+
+    // Highlight current step
+    const speedDiv = [1, 2, 2, 4, 4, 8, 8, 16, 16][Math.min(speed - 1, 8)] || 4;
+    const stepDur = 60 / bpm / 4;
+    const cycleLen = stepDur * speedDiv * gridSteps;
+    const elapsed = (audioCtx.currentTime - (nextNoteTime - stepDur * gridSteps * speedDiv));
+    const curStepInGrid = Math.floor(((audioCtx.currentTime % cycleLen) / stepDur)) % gridSteps;
+
+    document.querySelectorAll('.step-cell').forEach((cell, i) => {
+      cell.classList.toggle('current', i === curStepInGrid);
+    });
+
+    animFrame = requestAnimationFrame(animatePump);
+  }
+
+  function start() {
+    if (isPlaying) return;
+    initAudio();
+    isPlaying = true;
+    currentStep = 0;
+    nextNoteTime = audioCtx.currentTime + 0.05;
+    playTestTone();
+    animatePump();
+    document.getElementById('playBtn').classList.add('active');
+  }
+
+  function stop() {
+    isPlaying = false;
+    if (schedulerTimer) clearTimeout(schedulerTimer);
+    if (animFrame) cancelAnimationFrame(animFrame);
+    document.getElementById('playBtn').classList.remove('active');
+    document.querySelectorAll('.step-cell').forEach(c => c.classList.remove('current'));
+  }
+
+  // ---- UI ----
+  document.querySelectorAll('.pattern-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      applyPattern(btn.dataset.pattern);
+      updateInfo();
+    });
+  });
+
+  function updateInfo() {
+    const speedDiv = [1, 2, 2, 4, 4, 8, 8, 16, 16][Math.min(speed - 1, 8)] || 4;
+    document.getElementById('pumpInfo').textContent =
+      `${bpm} BPM  |  ${pattern}  |  Depth: ${Math.round(depth*100)}%  |  Speed: ${SPEED_LABELS[speed] || '1/4'}`;
+  }
+
+  document.getElementById('depthSlider').addEventListener('input', e => {
+    depth = parseInt(e.target.value) / 100;
+    document.getElementById('depthVal').textContent = e.target.value + '%';
+    updateInfo(); drawPumpWave();
+  });
+  document.getElementById('speedSlider').addEventListener('input', e => {
+    speed = parseInt(e.target.value);
+    document.getElementById('speedVal').textContent = SPEED_LABELS[speed] || '1/4';
+    updateInfo(); drawPumpWave();
+  });
+  document.getElementById('attackSlider').addEventListener('input', e => {
+    attack = parseInt(e.target.value);
+    document.getElementById('attackVal').textContent = attack + 'ms';
+    drawPumpWave();
+  });
+  document.getElementById('releaseSlider').addEventListener('input', e => {
+    release = parseInt(e.target.value);
+    document.getElementById('releaseVal').textContent = release + 'ms';
+    drawPumpWave();
+  });
+  document.getElementById('holdSlider').addEventListener('input', e => {
+    hold = parseInt(e.target.value) / 100;
+    document.getElementById('holdVal').textContent = e.target.value + '%';
+    drawPumpWave();
+  });
+  document.getElementById('bpmSlider').addEventListener('input', e => {
+    bpm = parseInt(e.target.value);
+    document.getElementById('bpmVal').textContent = bpm;
+    updateInfo(); drawPumpWave();
+  });
+  document.getElementById('gridSlider').addEventListener('input', e => {
+    gridSteps = parseInt(e.target.value);
+    document.getElementById('gridVal').textContent = gridSteps === 4 ? '4th' : gridSteps === 8 ? '8th' : gridSteps === 16 ? '16th' : '32nd';
+    triggerSteps = new Array(gridSteps).fill(false);
+    buildStepGrid();
+    applyPattern(pattern);
+  });
+  document.getElementById('threshSlider').addEventListener('input', e => {
+    thresh = parseInt(e.target.value);
+    document.getElementById('threshVal').textContent = thresh + 'dB';
+  });
+  document.getElementById('ratioSlider').addEventListener('input', e => {
+    ratio = parseInt(e.target.value);
+    document.getElementById('ratioVal').textContent = ratio + ':1';
+  });
+
+  document.getElementById('playBtn').addEventListener('click', () => { isPlaying ? stop() : start(); });
+  document.getElementById('stopBtn').addEventListener('click', stop);
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); isPlaying ? stop() : start(); }
+  });
+
+  buildStepGrid();
+  applyPattern('4on4');
+  drawPumpWave();
+  updateInfo();
+})();
+</script>
+</body>
+</html>
