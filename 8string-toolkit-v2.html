@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>8-String Guitar Toolkit v2 — for Christian</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface2: #1e1e1e;
+    --border: #2a2a2a;
+    --text: #e0e0e0;
+    --muted: #666;
+    --orange: #ff6b35;
+    --orange-dim: #cc5529;
+    --green: #4fcp4f;
+    --blue: #4f9fdf;
+    --purple: #9f6fdf;
+    --red: #df4f4f;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 1.5rem;
+    user-select: none;
+  }
+
+  /* HEADER */
+  header {
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+  h1 {
+    font-size: 1.6rem;
+    color: var(--orange);
+    letter-spacing: 0.04em;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.78rem;
+    margin-top: 4px;
+  }
+  .tuning-display {
+    display: inline-flex;
+    gap: 4px;
+    margin-top: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+  }
+  .tuning-display span {
+    font-size: 0.75rem;
+    color: var(--orange);
+    font-weight: 700;
+    min-width: 24px;
+    text-align: center;
+  }
+  .tuning-display .open-string-label {
+    color: var(--muted);
+    font-weight: 400;
+    font-size: 0.65rem;
+  }
+
+  /* CONTROLS BAR */
+  .controls-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    align-items: center;
+  }
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .control-group label {
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  select, input[type="range"] {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    outline: none;
+  }
+  select:hover, select:focus { border-color: var(--orange); }
+  input[type="range"] {
+    padding: 0;
+    accent-color: var(--orange);
+    width: 80px;
+  }
+  .btn-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  .btn {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-weight: 600;
+  }
+  .btn:hover { border-color: var(--orange); color: var(--orange); }
+  .btn.active {
+    background: var(--orange);
+    color: var(--bg);
+    border-color: var(--orange);
+  }
+  .btn.green.active { background: var(--green); border-color: var(--green); color: var(--bg); }
+
+  /* NOTE INFO PANEL */
+  .note-info {
+    display: none;
+    text-align: center;
+    margin-bottom: 1rem;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .note-info.show { display: block; }
+  .note-info .note-name {
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--orange);
+  }
+  .note-info .note-detail {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .note-info .play-btn {
+    margin-top: 8px;
+    background: var(--orange);
+    color: var(--bg);
+    border: none;
+    padding: 6px 20px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    font-weight: 700;
+  }
+
+  /* FRETBOARD */
+  .fretboard-wrap {
+    overflow-x: auto;
+    padding-bottom: 1rem;
+  }
+  .fretboard {
+    display: grid;
+    grid-template-columns: 52px repeat(24, 1fr);
+    gap: 0;
+    min-width: 1100px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  /* Fret numbers */
+  .fret-num {
+    background: var(--surface);
+    color: var(--muted);
+    font-size: 0.6rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 2px;
+    border-right: 1px solid var(--border);
+    height: 28px;
+  }
+  .fret-num.dot { color: var(--orange); }
+  .fret-num.double-dot { color: var(--orange); }
+
+  /* String labels */
+  .string-label {
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 4px;
+    border-right: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .string-label:hover { background: var(--surface2); }
+  .string-label .s-num { font-size: 0.6rem; color: var(--muted); }
+  .string-label .s-note { font-size: 0.85rem; color: var(--orange); font-weight: 800; }
+  .string-label.playing { background: var(--orange-dim); }
+
+  /* Fret cells */
+  .fret-cell {
+    height: 40px;
+    border-right: 1px solid #1a1a1a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+  .fret-cell:hover { background: #1f1f1f; }
+  .fret-cell.in-scale { color: var(--text); }
+  .fret-cell.in-scale.root { color: var(--orange); font-weight: 800; }
+  .fret-cell.root-bg { background: rgba(255, 107, 53, 0.15); }
+  .fret-cell.scale-bg { background: rgba(79, 207, 79, 0.08); }
+  .fret-cell.chord-bg { background: rgba(159, 111, 223, 0.15); }
+  .fret-cell.chord-root { background: rgba(159, 111, 223, 0.3); color: var(--purple); font-weight: 800; }
+  .fret-cell.clicked {
+    background: var(--orange) !important;
+    color: var(--bg) !important;
+    transform: scale(1.05);
+    z-index: 2;
+    border-radius: 4px;
+  }
+  .fret-cell .fn { font-size: 0.6rem; opacity: 0.6; }
+
+  /* Fret dots */
+  .fret-dot {
+    position: absolute;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #2a2a2a;
+    pointer-events: none;
+  }
+  .fret-dot.double { background: #333; }
+
+  /* Open string / muted */
+  .fret-cell.open { color: var(--muted); font-size: 0.55rem; }
+
+  /* LEGEND */
+  .legend {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-top: 1rem;
+    font-size: 0.72rem;
+    flex-wrap: wrap;
+  }
+  .legend span { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  .legend .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .legend .dot.root { background: var(--orange); }
+  .legend .dot.scale { background: var(--green); }
+  .legend .dot.chord { background: var(--purple); }
+
+  /* SCALE INFO */
+  .scale-info {
+    text-align: center;
+    margin-top: 1rem;
+    padding: 10px;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--muted);
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .scale-info strong { color: var(--green); }
+
+  /* TUNING PICKER */
+  .tuning-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 3px;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+  .tuning-string-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px;
+    font-size: 0.7rem;
+    color: var(--orange);
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.1s;
+  }
+  .tuning-string-btn:hover { border-color: var(--orange); }
+  .tuning-string-btn.selected { background: var(--orange); color: var(--bg); }
+
+  /* MODE BUTTONS */
+  .mode-grid {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 1rem;
+  }
+  .mode-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.72rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .mode-btn:hover { border-color: var(--orange); color: var(--orange); }
+  .mode-btn.active { background: var(--orange); color: var(--bg); border-color: var(--orange); }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎸 8-String Toolkit</h1>
+  <p class="subtitle">Built for Christian — Interactive 8-String Fretboard</p>
+  <div class="tuning-display" id="tuningDisplay"></div>
+</header>
+
+<!-- CONTROLS -->
+<div class="controls-bar">
+  <div class="control-group">
+    <label>Root Note</label>
+    <select id="rootSelect"></select>
+  </div>
+  <div class="control-group">
+    <label>Scale / Mode</label>
+    <select id="scaleSelect"></select>
+  </div>
+  <div class="control-group">
+    <label>Chord Type</label>
+    <select id="chordSelect"></select>
+  </div>
+  <div class="control-group">
+    <label>Frets</label>
+    <select id="fretRange">
+      <option value="12">0–12</option>
+      <option value="15" selected>0–15</option>
+      <option value="24">0–24</option>
+    </select>
+  </div>
+  <div class="control-group">
+    <label>Volume</label>
+    <input type="range" id="volumeSlider" min="0" max="100" value="70">
+  </div>
+</div>
+
+<!-- MODE / CHORD TOGGLES -->
+<div class="btn-row">
+  <button class="btn green active" id="modeBtn" onclick="setMode('scale')">Scale Mode</button>
+  <button class="btn" id="chordModeBtn" onclick="setMode('chord')">Chord Mode</button>
+  <button class="btn" id="bothBtn" onclick="setMode('both')">Both</button>
+  <button class="btn" onclick="playScale()">▶ Play Scale</button>
+  <button class="btn" onclick="toggleTuningPicker()">⚙ Tuning</button>
+</div>
+
+<!-- TUNING PICKER (hidden by default) -->
+<div id="tuningPicker" class="hidden">
+  <p style="text-align:center;font-size:0.75rem;color:var(--muted);margin-bottom:8px;">Click a string, then a note to retune it</p>
+  <div id="tuningGrid" class="tuning-grid"></div>
+  <div style="text-align:center;margin-top:8px;">
+    <button class="btn" onclick="resetTuning()">Reset to F# Standard</button>
+  </div>
+</div>
+
+<!-- MODE BUTTONS -->
+<div id="modeButtons" class="mode-grid">
+  <button class="mode-btn" onclick="setScale('ionian')">Ionian</button>
+  <button class="mode-btn" onclick="setScale('dorian')">Dorian</button>
+  <button class="mode-btn" onclick="setScale('phrygian')">Phrygian</button>
+  <button class="mode-btn" onclick="setScale('lydian')">Lydian</button>
+  <button class="mode-btn" onclick="setScale('mixolydian')">Mixolydian</button>
+  <button class="mode-btn" onclick="setScale('aeolian')">Aeolian</button>
+  <button class="mode-btn" onclick="setScale('locrian')">Locrian</button>
+  <button class="mode-btn" onclick="setScale('pentatonic')">Pentatonic</button>
+  <button class="mode-btn" onclick="setScale('blues')">Blues</button>
+  <button class="mode-btn" onclick="setScale('chromatic')">Chromatic</button>
+  <button class="mode-btn" onclick="setScale('wholetone')">Whole Tone</button>
+  <button class="mode-btn" onclick="setScale('diminished')">Diminished</button>
+</div>
+
+<!-- NOTE INFO PANEL -->
+<div class="note-info" id="noteInfo">
+  <div class="note-name" id="infoNoteName">—</div>
+  <div class="note-detail" id="infoNoteDetail">click a fret to play</div>
+  <button class="play-btn" onclick="replayNote()">🔊 Replay</button>
+</div>
+
+<!-- FRETBOARD -->
+<div class="fretboard-wrap">
+  <div class="fretboard" id="fretboard"></div>
+</div>
+
+<!-- LEGEND -->
+<div class="legend">
+  <span><div class="dot root"></div> Root</span>
+  <span><div class="dot scale"></div> Scale tone</span>
+  <span><div class="dot chord"></div> Chord tone</span>
+  <span><div class="dot" style="background:#333"></div> Click to play</span>
+</div>
+
+<div class="scale-info" id="scaleInfo"></div>
+
+<script>
+// ─── CONSTANTS ───────────────────────────────────────────────────────────────
+const CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const NATURAL_NOTES = ['C','D','E','F','G','A','B'];
+const SEMITONES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+
+// Standard F# tuning (8-string, low to high)
+const DEFAULT_TUNING = ['F#2','B2','E2','A2','D3','G#3','C#4','F#4'];
+
+const SCALES = {
+  ionian:     { name: 'Ionian (Major)',    intervals: [0,2,4,5,7,9,11] },
+  dorian:     { name: 'Dorian',            intervals: [0,2,3,5,7,9,10] },
+  phrygian:   { name: 'Phrygian',          intervals: [0,1,3,5,7,8,10] },
+  lydian:     { name: 'Lydian',            intervals: [0,2,4,6,7,9,11] },
+  mixolydian: { name: 'Mixolydian',        intervals: [0,2,4,5,7,9,10] },
+  aeolian:    { name: 'Aeolian (Nat.Min)',  intervals: [0,2,3,5,7,8,10] },
+  locrian:    { name: 'Locrian',           intervals: [0,1,3,5,6,8,10] },
+  pentatonic: { name: 'Minor Pentatonic',  intervals: [0,3,5,7,10] },
+  blues:      { name: 'Blues Scale',        intervals: [0,3,5,6,7,10] },
+  chromatic:  { name: 'Chromatic',          intervals: [0,1,2,3,4,5,6,7,8,9,10,11] },
+  wholetone:  { name: 'Whole Tone',         intervals: [0,2,4,6,8,10] },
+  diminished: { name: 'Diminished',         intervals: [0,2,3,5,6,8,9,11] },
+};
+
+const CHORDS = {
+  major:   { name: 'Major',   intervals: [0,4,7] },
+  minor:   { name: 'Minor',   intervals: [0,3,7] },
+  power:   { name: 'Power',   intervals: [0,7] },
+  sus2:    { name: 'Sus2',    intervals: [0,2,7] },
+  sus4:    { name: 'Sus4',    intervals: [0,5,7] },
+  maj7:    { name: 'Maj7',    intervals: [0,4,7,11] },
+  min7:    { name: 'Min7',    intervals: [0,3,7,10] },
+  dom7:    { name: 'Dom7',    intervals: [0,4,7,10] },
+  dim:     { name: 'Dim',     intervals: [0,3,6] },
+  aug:     { name: 'Aug',     intervals: [0,4,8] },
+};
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let state = {
+  root: 'C',
+  scale: 'aeolian',
+  chord: 'minor',
+  mode: 'scale',  // 'scale', 'chord', 'both'
+  tuning: [...DEFAULT_TUNING],
+  volume: 0.7,
+  selectedString: null,
+  lastPlayed: null,
+  maxFret: 15,
+};
+
+// ─── AUDIO ────────────────────────────────────────────────────────────────────
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function midiToFreq(midi) {
+  return 440 * Math.pow(2, (midi - 69) / 12);
+}
+
+function noteNameToMidi(name) {
+  const match = name.match(/^([A-G]#?)(\d)$/);
+  if (!match) return 60;
+  const note = match[1];
+  const oct = parseInt(match[2]);
+  return CHROMATIC.indexOf(note) + (oct + 1) * 12;
+}
+
+function playNote(name, duration = 1.2) {
+  const ctx = getAudioCtx();
+  const midi = noteNameToMidi(name);
+  const freq = midiToFreq(midi);
+
+  // Main oscillator
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(freq, ctx.currentTime);
+
+  filter.type = 'lowpass';
+  filter.frequency.setValueAtTime(1800, ctx.currentTime);
+  filter.Q.setValueAtTime(2, ctx.currentTime);
+
+  gain.gain.setValueAtTime(state.volume * 0.3, ctx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+
+  osc.connect(filter);
+  filter.connect(gain);
+  gain.connect(ctx.destination);
+
+  osc.start(ctx.currentTime);
+  osc.stop(ctx.currentTime + duration);
+
+  // Harmonics layer
+  const osc2 = ctx.createOscillator();
+  const gain2 = ctx.createGain();
+  osc2.type = 'triangle';
+  osc2.frequency.setValueAtTime(freq * 2, ctx.currentTime);
+  gain2.gain.setValueAtTime(state.volume * 0.08, ctx.currentTime);
+  gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration * 0.6);
+  osc2.connect(gain2);
+  gain2.connect(ctx.destination);
+  osc2.start(ctx.currentTime);
+  osc2.stop(ctx.currentTime + duration * 0.6);
+}
+
+// ─── TUNING HELPERS ───────────────────────────────────────────────────────────
+function getTuningMidi() {
+  return state.tuning.map(n => noteNameToMidi(n));
+}
+
+function getNoteAt(stringIdx, fret) {
+  const midi = getTuningMidi()[stringIdx] + fret;
+  const note = CHROMATIC[midi % 12];
+  const oct = Math.floor(midi / 12) - 1;
+  return note + oct;
+}
+
+// ─── BUILD CONTROLS ────────────────────────────────────────────────────────────
+function buildControls() {
+  const rootSel = document.getElementById('rootSelect');
+  CHROMATIC.forEach(n => {
+    rootSel.innerHTML += `<option value="${n}" ${n === state.root ? 'selected' : ''}>${n}</option>`;
+  });
+
+  const scaleSel = document.getElementById('scaleSelect');
+  Object.entries(SCALES).forEach(([k, v]) => {
+    scaleSel.innerHTML += `<option value="${k}" ${k === state.scale ? 'selected' : ''}>${v.name}</option>`;
+  });
+
+  const chordSel = document.getElementById('chordSelect');
+  Object.entries(CHORDS).forEach(([k, v]) => {
+    chordSel.innerHTML += `<option value="${k}" ${k === state.chord ? 'selected' : ''}>${v.name}</option>`;
+  });
+
+  rootSel.addEventListener('change', e => { state.root = e.target.value; buildFretboard(); });
+  scaleSel.addEventListener('change', e => { state.scale = e.target.value; updateModeButtons(); buildFretboard(); });
+  chordSel.addEventListener('change', e => { state.chord = e.target.value; buildFretboard(); });
+  document.getElementById('fretRange').addEventListener('change', e => { state.maxFret = parseInt(e.target.value); buildFretboard(); });
+  document.getElementById('volumeSlider').addEventListener('input', e => { state.volume = e.target.value / 100; });
+}
+
+// ─── MODE BUTTONS ─────────────────────────────────────────────────────────────
+function updateModeButtons() {
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.mode-btn[onclick="setScale('${state.scale}')"]`);
+  if (btn) btn.classList.add('active');
+}
+
+function setScale(key) {
+  state.scale = key;
+  document.getElementById('scaleSelect').value = key;
+  updateModeButtons();
+  buildFretboard();
+}
+
+function setMode(mode) {
+  state.mode = mode;
+  document.getElementById('modeBtn').classList.toggle('active', mode === 'scale');
+  document.getElementById('modeBtn').classList.toggle('green', mode === 'scale');
+  document.getElementById('chordModeBtn').classList.toggle('active', mode === 'chord');
+  document.getElementById('bothBtn').classList.toggle('active', mode === 'both');
+  buildFretboard();
+}
+
+// ─── TUNING PICKER ────────────────────────────────────────────────────────────
+function toggleTuningPicker() {
+  const el = document.getElementById('tuningPicker');
+  el.classList.toggle('hidden');
+  if (!el.classList.contains('hidden')) buildTuningGrid();
+}
+
+function buildTuningGrid() {
+  const grid = document.getElementById('tuningGrid');
+  grid.innerHTML = '';
+  state.tuning.forEach((note, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tuning-string-btn' + (state.selectedString === i ? ' selected' : '');
+    btn.textContent = note;
+    btn.onclick = () => selectTuningString(i);
+    grid.appendChild(btn);
+  });
+}
+
+function selectTuningString(idx) {
+  state.selectedString = idx;
+  buildNotePicker();
+}
+
+function buildNotePicker() {
+  const grid = document.getElementById('tuningGrid');
+  grid.innerHTML = '';
+  // String selector
+  state.tuning.forEach((note, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tuning-string-btn' + (state.selectedString === i ? ' selected' : '');
+    btn.textContent = note;
+    btn.onclick = () => { state.selectedString = i; buildNotePicker(); };
+    grid.appendChild(btn);
+  });
+  // Note selector for selected string
+  ['E2','F2','F#2','G2','G#2','A2','A#2','B2',
+   'C3','C#3','D3','D#3','E3','F3','F#3','G3','G#3','A3','A#3','B3',
+   'C4','C#4','D4','D#4','E4','F4','F#4'].forEach(n => {
+    const btn = document.createElement('button');
+    btn.className = 'tuning-string-btn' + (state.tuning[state.selectedString] === n ? ' selected' : '');
+    btn.textContent = n;
+    btn.onclick = () => {
+      state.tuning[state.selectedString] = n;
+      updateTuningDisplay();
+      toggleTuningPicker();
+      buildFretboard();
+    };
+    btn.style.gridColumn = 'span 1';
+    grid.appendChild(btn);
+  });
+}
+
+function resetTuning() {
+  state.tuning = [...DEFAULT_TUNING];
+  updateTuningDisplay();
+  buildFretboard();
+}
+
+function updateTuningDisplay() {
+  const el = document.getElementById('tuningDisplay');
+  el.innerHTML = state.tuning.map(n => `<span>${n}</span>`).join('');
+}
+
+// ─── FRETBOARD ────────────────────────────────────────────────────────────────
+function buildFretboard() {
+  const container = document.getElementById('fretboard');
+  container.innerHTML = '';
+
+  const rootMidi = CHROMATIC.indexOf(state.root) + 12 * 4;
+  const scale = SCALES[state.scale];
+  const chord = CHORDS[state.chord];
+  const tuningMidi = getTuningMidi();
+
+  // Helper: is note in scale?
+  function inScale(midi) {
+    if (!scale) return false;
+    const n = midi % 12;
+    const r = rootMidi % 12;
+    return scale.intervals.some(i => ((n - r + 12) % 12) === i);
+  }
+  function inChord(midi) {
+    if (!chord) return false;
+    const n = midi % 12;
+    const r = rootMidi % 12;
+    return chord.intervals.some(i => ((n - r + 12) % 12) === i);
+  }
+  function isRoot(midi) {
+    return (midi % 12) === (rootMidi % 12);
+  }
+
+  // Header row
+  container.appendChild(document.createElement('div')); // corner
+  for (let f = 0; f <= state.maxFret; f++) {
+    const fn = document.createElement('div');
+    fn.className = 'fret-num' + ([3,5,7,9].includes(f) ? ' dot' : '') + ([12,15].includes(f) ? ' double-dot' : '');
+    fn.textContent = f;
+    container.appendChild(fn);
+  }
+
+  // String rows (string 0 = low F#, string 7 = high F#)
+  for (let s = 0; s < 8; s++) {
+    // String label (clickable for open string)
+    const label = document.createElement('div');
+    label.className = 'string-label';
+    label.innerHTML = `<span class="s-num">${s + 1}</span><span class="s-note">${state.tuning[s]}</span>`;
+    label.onclick = () => {
+      playNote(state.tuning[s]);
+      label.classList.add('playing');
+      setTimeout(() => label.classList.remove('playing'), 300);
+    };
+    container.appendChild(label);
+
+    for (let f = 0; f <= state.maxFret; f++) {
+      const cell = document.createElement('div');
+      cell.className = 'fret-cell';
+
+      const midiAtFret = tuningMidi[s] + f;
+      const noteName = CHROMATIC[midiAtFret % 12];
+
+      // Open string (fret 0)
+      if (f === 0) {
+        cell.classList.add('open');
+        cell.textContent = noteName;
+        cell.onclick = () => {
+          playNote(state.tuning[s]);
+          animateCell(cell);
+        };
+        container.appendChild(cell);
+        continue;
+      }
+
+      const root = isRoot(midiAtFret);
+      const inS = inScale(midiAtFret);
+      const inC = inChord(midiAtFret);
+
+      if (state.mode === 'scale' && inS) {
+        cell.classList.add('in-scale');
+        if (root) cell.classList.add('root-bg');
+        else cell.classList.add('scale-bg');
+        if (root) cell.classList.add('root');
+      } else if (state.mode === 'chord' && inC) {
+        cell.classList.add('in-scale');
+        if (root) cell.classList.add('chord-root');
+        else cell.classList.add('chord-bg');
+        if (root) cell.classList.add('root');
+      } else if (state.mode === 'both') {
+        if (inS) cell.classList.add('scale-bg');
+        if (inC) cell.classList.add('chord-bg');
+        if (root && (inS || inC)) cell.classList.add('root-bg');
+        if (root && (inS || inC)) cell.classList.add('root');
+        if (inS || inC) cell.classList.add('in-scale');
+      }
+
+      // Show note name on scale/chord tones and on root
+      if (cell.classList.contains('in-scale') && (root || f % 4 === 0)) {
+        const fn = document.createElement('span');
+        fn.className = 'fn';
+        fn.textContent = noteName;
+        cell.appendChild(fn);
+      }
+
+      // Fret dots
+      const hasDot = (f === 5 || f === 7 || f === 9) ||
+                      (f === 12) ||
+                      ([12, 15].includes(f) && f === 12);
+      if (hasDot) {
+        const dot = document.createElement('div');
+        dot.className = 'fret-dot' + (f === 12 ? ' double' : '');
+        cell.appendChild(dot);
+      }
+
+      cell.onclick = () => {
+        const fullNote = getNoteAt(s, f);
+        playNote(fullNote);
+        showNoteInfo(fullNote, s, f);
+        animateCell(cell);
+      };
+
+      container.appendChild(cell);
+    }
+  }
+
+  // Scale info
+  const scaleNotes = scale.intervals.map(i => CHROMATIC[(CHROMATIC.indexOf(state.root) + i) % 12]);
+  const unique = [...new Set(scaleNotes)];
+  document.getElementById('scaleInfo').innerHTML =
+    `<strong>${scale.name}</strong> — root <strong>${state.root}</strong> → ${unique.join(' · ')} · ${state.tuning.join(' · ')}`;
+}
+
+function animateCell(cell) {
+  cell.classList.add('clicked');
+  setTimeout(() => cell.classList.remove('clicked'), 200);
+}
+
+// ─── NOTE INFO PANEL ──────────────────────────────────────────────────────────
+function showNoteInfo(noteName, stringIdx, fret) {
+  state.lastPlayed = { noteName, stringIdx, fret };
+  const info = document.getElementById('noteInfo');
+  info.classList.add('show');
+  document.getElementById('infoNoteName').textContent = noteName;
+
+  const tuningNote = state.tuning[stringIdx];
+  const stringNum = stringIdx + 1;
+  const interval = (CHROMATIC.indexOf(CHROMATIC[(CHROMATIC.indexOf(tuningNote.replace(/\d/,'')) + fret) % 12]) -
+                CHROMATIC.indexOf(state.root) + 12) % 12;
+  const intervalNames = ['','m2','M2','m3','M3','P4','TT','P5','m6','M6','m7','M7'];
+  const intName = intervalNames[interval] || interval + 'st';
+
+  document.getElementById('infoNoteDetail').textContent =
+    `String ${stringNum} (${tuningNote}) · Fret ${fret} · Interval: ${intName} from root ${state.root}`;
+}
+
+function replayNote() {
+  if (state.lastPlayed) playNote(state.lastPlayed.noteName);
+}
+
+// ─── PLAY SCALE ──────────────────────────────────────────────────────────────
+function playScale() {
+  const ctx = getAudioCtx();
+  const scale = SCALES[state.scale];
+  const rootMidi = CHROMATIC.indexOf(state.root) + 12 * 4;
+
+  // Collect all notes in scale across all strings, frets 0-12
+  const notes = [];
+  const tuningMidi = getTuningMidi();
+  for (let s = 0; s < 8; s++) {
+    for (let f = 0; f <= 12; f++) {
+      const midi = tuningMidi[s] + f;
+      const n = midi % 12;
+      const r = rootMidi % 12;
+      if (scale.intervals.some(i => ((n - r + 12) % 12) === i)) {
+        notes.push({ midi, s, f });
+      }
+    }
+  }
+
+  // Sort by midi pitch
+  notes.sort((a, b) => a.midi - b.midi);
+
+  // Deduplicate same note name
+  const seen = new Set();
+  const unique = notes.filter(n => {
+    const nn = CHROMATIC[n.midi % 12] + Math.floor(n.midi / 12);
+    if (seen.has(nn)) return false;
+    seen.add(nn);
+    return true;
+  });
+
+  // Play ascending then descending
+  const all = [...unique, ...[...unique].reverse().slice(1)];
+  all.forEach((n, i) => {
+    const noteName = CHROMATIC[n.midi % 12] + (Math.floor(n.midi / 12) - 1);
+    setTimeout(() => playNote(noteName, 0.5), i * 200);
+  });
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+function init() {
+  buildControls();
+  updateTuningDisplay();
+  updateModeButtons();
+  buildFretboard();
+}
+
+init();
+</script>
+</body>
+</html>
