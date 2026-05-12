@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chord Explorer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #07070d;
+    --surface: #0f0f1a;
+    --surface2: #141420;
+    --border: #1e1e30;
+    --text: #b0b0cc;
+    --muted: #44446a;
+    --cyan: #00e5cc;
+    --amber: #ffb830;
+    --rose: #ff3d78;
+    --violet: #9b5ff0;
+    --glow-cyan: rgba(0,229,204,0.3);
+    --glow-amber: rgba(255,184,48,0.25);
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 18px 12px;
+    gap: 14px;
+  }
+  h1 { font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); }
+  .subtitle { font-size: 10px; color: var(--muted); letter-spacing: 1px; }
+  header { width: 100%; max-width: 680px; display: flex; justify-content: space-between; align-items: center; }
+
+  .panel {
+    width: 100%;
+    max-width: 680px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Piano */
+  .piano {
+    display: flex;
+    position: relative;
+    height: 90px;
+    justify-content: center;
+  }
+  .white-keys { display: flex; gap: 2px; }
+  .wk {
+    width: 36px;
+    height: 88px;
+    background: #e8e8f0;
+    border-radius: 0 0 5px 5px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.08s;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    padding-bottom: 5px;
+  }
+  .wk span { font-size: 8px; color: #888; font-weight: 600; }
+  .wk:hover { background: #f4f4ff; }
+  .wk.active { background: var(--cyan); }
+  .wk.root { background: var(--amber); }
+  .black-keys {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .bk-wrap { width: 38px; display: flex; justify-content: center; }
+  .bk-wrap.gap { width: 38px; }
+  .bk {
+    width: 24px;
+    height: 56px;
+    background: #1a1a28;
+    border-radius: 0 0 4px 4px;
+    cursor: pointer;
+    pointer-events: all;
+    position: relative;
+    z-index: 2;
+    transition: background 0.08s;
+    margin-left: -12px;
+    margin-right: -12px;
+  }
+  .bk:hover { background: #2a2a40; }
+  .bk.active { background: var(--cyan); }
+  .bk.root { background: var(--amber); }
+
+  /* Root selector */
+  .root-row { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+  .note-btn {
+    width: 40px; height: 36px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .note-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .note-btn.on { border-color: var(--amber); color: var(--amber); background: rgba(255,184,48,0.08); }
+
+  /* Chord type */
+  .chord-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .chord-btn {
+    padding: 8px 4px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+  }
+  .chord-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .chord-btn.on { border-color: var(--cyan); color: var(--cyan); background: rgba(0,229,204,0.07); }
+
+  /* Voicing */
+  .voice-row { display: flex; gap: 6px; }
+  .voice-btn {
+    flex: 1;
+    padding: 8px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.12s;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .voice-btn.on { border-color: var(--rose); color: var(--rose); background: rgba(255,61,120,0.07); }
+  .voice-btn:hover { border-color: var(--muted); color: var(--text); }
+
+  /* Display */
+  .chord-name {
+    font-size: clamp(28px, 8vw, 44px);
+    font-weight: 800;
+    color: var(--cyan);
+    text-align: center;
+    text-shadow: 0 0 20px var(--glow-cyan);
+    letter-spacing: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chord-notes {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    font-weight: 600;
+  }
+
+  /* Play */
+  .play-row { display: flex; gap: 8px; }
+  .play-btn {
+    flex: 2;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .play-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .play-btn.playing { border-color: var(--cyan); color: var(--cyan); box-shadow: 0 0 16px var(--glow-cyan); }
+  .arp-btn {
+    flex: 1;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .arp-btn.on { border-color: var(--violet); color: var(--violet); }
+  .arp-btn:hover { border-color: var(--violet); color: var(--violet); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Chord Explorer</h1>
+  <span class="subtitle">deep house voicings</span>
+</header>
+
+<div class="panel">
+  <div class="piano" id="piano">
+    <div class="white-keys" id="whiteKeys"></div>
+    <div class="black-keys" id="blackKeys"></div>
+  </div>
+
+  <div class="chord-name" id="chordName">CMaj7</div>
+  <div class="chord-notes" id="chordNotes">C E G B</div>
+
+  <div>
+    <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">ROOT</div>
+    <div class="root-row" id="rootRow"></div>
+  </div>
+
+  <div>
+    <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">QUALITY</div>
+    <div class="chord-grid" id="chordGrid"></div>
+  </div>
+
+  <div>
+    <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;">VOICING</div>
+    <div class="voice-row">
+      <button class="voice-btn on" data-v="close">Close</button>
+      <button class="voice-btn" data-v="spread">Spread</button>
+      <button class="voice-btn" data-v="shell">Shell</button>
+      <button class="voice-btn" data-v="rootless">Rootless</button>
+    </div>
+  </div>
+
+  <div class="play-row">
+    <button class="play-btn" id="playBtn">▶ Play Chord</button>
+    <button class="arp-btn" id="arpBtn">Arp</button>
+  </div>
+</div>
+
+<script>
+const NOTES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const WKS = [0,2,4,5,7,9,11]; // white key offsets
+const BKS = [1,3,6,8,10]; // black key offsets
+const BK_POSITIONS = [1,2,4,5,6]; // positions after which black keys appear
+
+const CHORD_TYPES = {
+  'maj': [0,4,7],
+  'min': [0,3,7],
+  '7': [0,4,7,10],
+  'maj7': [0,4,7,11],
+  'min7': [0,3,7,10],
+  'dim': [0,3,6],
+  'aug': [0,4,8],
+  'sus2': [0,2,7],
+  'sus4': [0,5,7],
+  '9': [0,4,7,10,14],
+  'maj9': [0,4,7,11,14],
+  'min9': [0,3,7,10,14],
+  'add9': [0,4,7,14],
+  '6': [0,4,7,9],
+  '7sus4': [0,5,7,10],
+};
+
+const VOICINGS = {
+  close: (notes) => notes.slice(0, 4),
+  spread: (notes) => notes.length >= 3 ? [notes[0], notes[0]+12, ...notes.slice(1,3)] : notes,
+  shell: (notes) => notes.length >= 3 ? [notes[0], notes[1], notes[2]] : notes,
+  rootless: (notes) => notes.length >= 2 ? notes.slice(1, 4) : notes,
+};
+
+let root = 0; // C
+let chordType = 'maj7';
+let voicing = 'close';
+let arpMode = false;
+let audioCtx = null;
+let arpInterval = null;
+let currentNotes = [];
+let isPlaying = false;
+
+// Build piano keys
+const whiteKeys = document.getElementById('whiteKeys');
+const blackKeys = document.getElementById('blackKeys');
+const octave = 4;
+const startOctave = 4;
+
+// Build one octave of white keys (display 2 octaves)
+for (let oct = 0; oct < 2; oct++) {
+  WKS.forEach((note, i) => {
+    const wk = document.createElement('div');
+    wk.className = 'wk';
+    wk.dataset.note = note;
+    wk.dataset.oct = oct;
+    if (i === 0) wk.innerHTML = '<span>C' + (startOctave + oct) + '</span>';
+    wk.addEventListener('mousedown', () => playSingleNote(note + (startOctave + oct) * 12));
+    wk.addEventListener('touchstart', (e) => { e.preventDefault(); playSingleNote(note + (startOctave + oct) * 12); }, { passive: false });
+    whiteKeys.appendChild(wk);
+  });
+}
+
+// Black keys
+const bkPositions = [1, 2, 4, 5, 6]; // index after which to insert gap
+for (let oct = 0; oct < 2; oct++) {
+  let wkIdx = 0;
+  for (let i = 0; i < 7; i++) {
+    if (bkPositions.includes(i)) {
+      // insert black key
+      const bkWrap = document.createElement('div');
+      bkWrap.className = 'bk-wrap';
+      const bk = document.createElement('div');
+      bk.className = 'bk';
+      const noteVal = BKS[bkPositions.indexOf(i)];
+      bk.dataset.note = noteVal;
+      bk.addEventListener('mousedown', () => playSingleNote(noteVal + (startOctave + oct) * 12));
+      bk.addEventListener('touchstart', (e) => { e.preventDefault(); playSingleNote(noteVal + (startOctave + oct) * 12); }, { passive: false });
+      bkWrap.appendChild(bk);
+      blackKeys.appendChild(bkWrap);
+    } else {
+      // gap
+      const gap = document.createElement('div');
+      gap.className = 'bk-wrap gap';
+      blackKeys.appendChild(gap);
+    }
+  }
+}
+
+// Root buttons
+const rootRow = document.getElementById('rootRow');
+NOTES.forEach((n, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'note-btn' + (i === 0 ? ' on' : '');
+  btn.textContent = n.replace('#', '♯');
+  btn.dataset.root = i;
+  btn.addEventListener('click', () => {
+    root = i;
+    rootRow.querySelectorAll('.note-btn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    updateChord();
+  });
+  rootRow.appendChild(btn);
+});
+
+// Chord type buttons
+const chordGrid = document.getElementById('chordGrid');
+Object.keys(CHORD_TYPES).forEach(type => {
+  const btn = document.createElement('button');
+  btn.className = 'chord-btn' + (type === 'maj7' ? ' on' : '');
+  btn.textContent = type;
+  btn.dataset.type = type;
+  btn.addEventListener('click', () => {
+    chordType = type;
+    chordGrid.querySelectorAll('.chord-btn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    updateChord();
+  });
+  chordGrid.appendChild(btn);
+});
+
+// Voicing buttons
+document.querySelectorAll('.voice-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    voicing = btn.dataset.v;
+    document.querySelectorAll('.voice-btn').forEach(b => b.classList.remove('on'));
+    btn.classList.add('on');
+    updateChord();
+  });
+});
+
+function midiToFreq(m) { return 440 * Math.pow(2, (m - 69) / 12); }
+
+function getChordNotes() {
+  const intervals = CHORD_TYPES[chordType];
+  const base = root + 48; // start at C3
+  let notes = intervals.map(int => base + int);
+  notes = VOICINGS[voicing](notes);
+  return notes;
+}
+
+function updateChord() {
+  const notes = getChordNotes();
+  currentNotes = notes;
+  const names = notes.map(n => NOTES[n % 12]);
+  const rootName = NOTES[root];
+
+  let typeLabel = chordType;
+  const nameStr = rootName + typeLabel;
+  document.getElementById('chordName').textContent = nameStr;
+  document.getElementById('chordNotes').textContent = names.join(' · ');
+
+  // Highlight piano keys
+  document.querySelectorAll('.wk, .bk').forEach(k => {
+    k.classList.remove('active', 'root');
+  });
+  notes.forEach((n, i) => {
+    const oct = Math.floor(n / 12);
+    const noteInOct = n % 12;
+    const wks = document.querySelectorAll('.wk');
+    const bks = document.querySelectorAll('.bk');
+    // Find in white keys
+    const wkIdx = (oct - startOctave) * 7 + WKS.indexOf(noteInOct);
+    if (wkIdx >= 0 && wkIdx < wks.length) {
+      wks[wkIdx].classList.add(i === 0 ? 'root' : 'active');
+    }
+    // Find in black keys
+    if (BKS.includes(noteInOct)) {
+      const bkIdx = (oct - startOctave) * 5 + BKS.indexOf(noteInOct);
+      if (bkIdx >= 0 && bkIdx < bks.length) {
+        bks[bkIdx].classList.add(i === 0 ? 'root' : 'active');
+      }
+    }
+  });
+}
+
+function getAudio() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playChord(freqs, duration = 2.5) {
+  const ctx = getAudio();
+  const now = ctx.currentTime;
+  freqs.forEach((freq, i) => {
+    // Electric piano-ish: triangle osc + slight detune + envelope
+    [1, 1.003].forEach(detune => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filt = ctx.createBiquadFilter();
+      osc.type = 'triangle';
+      osc.frequency.value = freq * detune;
+      filt.type = 'lowpass';
+      filt.frequency.value = 3000;
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.12 / freqs.length, now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      osc.connect(filt); filt.connect(gain); gain.connect(ctx.destination);
+      osc.start(now); osc.stop(now + duration + 0.05);
+    });
+  });
+}
+
+function playSingleNote(midi) {
+  const ctx = getAudio();
+  const freq = midiToFreq(midi);
+  const now = ctx.currentTime;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'triangle';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.3, now);
+  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.start(now); osc.stop(now + 0.8);
+}
+
+function stopArp() {
+  if (arpInterval) { clearInterval(arpInterval); arpInterval = null; }
+  isPlaying = false;
+  document.getElementById('arpBtn').classList.remove('on');
+  document.getElementById('playBtn').classList.remove('playing');
+  document.getElementById('playBtn').textContent = '▶ Play Chord';
+}
+
+const playBtn = document.getElementById('playBtn');
+playBtn.addEventListener('click', () => {
+  getAudio();
+  const freqs = currentNotes.map(midiToFreq);
+  playChord(freqs);
+  playBtn.classList.add('playing');
+  playBtn.textContent = '▶ Playing…';
+  setTimeout(() => {
+    playBtn.classList.remove('playing');
+    playBtn.textContent = '▶ Play Chord';
+  }, 2400);
+});
+
+const arpBtn = document.getElementById('arpBtn');
+arpBtn.addEventListener('click', () => {
+  getAudio();
+  if (arpMode) {
+    stopArp();
+    arpMode = false;
+  } else {
+    arpMode = true;
+    isPlaying = true;
+    arpBtn.classList.add('on');
+    let noteIdx = 0;
+    const bpm = 126;
+    const interval = (60 / bpm) * 1000 / 2; // 8th notes
+    const freqs = currentNotes.map(midiToFreq);
+    function tick() {
+      playSingleNote(currentNotes[noteIdx % currentNotes.length]);
+      noteIdx++;
+    }
+    tick();
+    arpInterval = setInterval(tick, interval);
+  }
+});
+
+updateChord();
+</script>
+</body>
+</html>
