@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BPM-Synced LFO</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #050510;
+    --surface: #0c0c1e;
+    --surface2: #12122a;
+    --border: #1c1c3a;
+    --border2: #282860;
+    --text: #e0e8f0;
+    --text-dim: #4a4a7a;
+    --lime: #a3e635;
+    --lime-dim: #2d3a0a;
+    --cyan: #22d3ee;
+    --orange: #fb923c;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 12px 48px;
+    gap: 16px;
+  }
+  h1 { font-size: 10px; letter-spacing: 0.35em; text-transform: uppercase; color: var(--lime); opacity: 0.7; }
+
+  /* BPM + RATE */
+  .top-row {
+    display: flex; gap: 16px; align-items: center; flex-wrap: wrap; justify-content: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 14px 24px;
+  }
+  .bpm-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bpm-label { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+  .bpm-val {
+    font-family: ui-monospace, monospace; font-size: 36px; font-weight: 700;
+    color: var(--text); line-height: 1;
+  }
+  .bpm-btns { display: flex; gap: 4px; }
+  .bpm-btn {
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+    width: 28px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+  }
+  .bpm-btn:hover { border-color: var(--lime); }
+  .bpm-btn:active { transform: scale(0.9); }
+
+  .rate-group { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .rate-label { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); }
+  .rate-val { font-family: ui-monospace, monospace; font-size: 20px; font-weight: 700; color: var(--lime); }
+  .rate-note { font-size: 9px; color: var(--text-dim); }
+
+  /* WAVEFORM VISUAL */
+  .waveform-display {
+    width: 100%; max-width: 700px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .wave-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .wave-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); }
+  .wave-info { font-family: ui-monospace, monospace; font-size: 11px; color: var(--text-dim); }
+  #lfoCanvas { width: 100%; height: 100px; display: block; border-radius: 6px; background: #030308; }
+
+  /* LFO TARGETS */
+  .targets {
+    display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 12px 16px;
+  }
+  .target-label { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); align-self: center; }
+  .target-btn {
+    padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600;
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text-dim);
+    transition: all 0.12s;
+  }
+  .target-btn.active { background: var(--lime-dim); border-color: var(--lime); color: var(--lime); }
+  .target-btn:hover { border-color: var(--lime); color: var(--lime); }
+
+  /* WAVE TYPE */
+  .wave-selector {
+    display: flex; gap: 6px; justify-content: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 16px;
+  }
+  .wave-sel-btn {
+    padding: 6px 16px; border-radius: 6px; cursor: pointer;
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600;
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text-dim);
+    transition: all 0.12s;
+  }
+  .wave-sel-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .wave-sel-btn.active { background: #164e5a; border-color: var(--cyan); color: var(--cyan); }
+
+  /* DEPTH + PHASE */
+  .param-row {
+    display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 20px; width: 100%; max-width: 700px;
+  }
+  .param-block { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .param-label { font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); }
+  .param-val { font-family: ui-monospace, monospace; font-size: 18px; font-weight: 700; color: var(--cyan); }
+  .param-slider {
+    -webkit-appearance: none; width: 160px; height: 4px;
+    background: var(--border2); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  .param-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--cyan); cursor: pointer;
+  }
+
+  /* MULTI-LFO GRID */
+  .lfo-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px; width: 100%; max-width: 700px;
+  }
+  .lfo-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px;
+  }
+  .lfo-card-title {
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .lfo-on-btn {
+    width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+    background: var(--surface2); border: 1px solid var(--border2);
+    transition: all 0.12s;
+  }
+  .lfo-on-btn.on { background: var(--lime); border-color: var(--lime); box-shadow: 0 0 6px var(--lime); }
+  .lfo-canvas { width: 100%; height: 60px; display: block; border-radius: 4px; background: #030308; margin-bottom: 8px; }
+  .lfo-params { display: flex; flex-direction: column; gap: 6px; }
+  .lfo-param { display: flex; align-items: center; gap: 6px; }
+  .lfo-plabel { font-size: 8px; color: var(--text-dim); width: 28px; flex-shrink: 0; }
+  .lfo-pslider {
+    -webkit-appearance: none; flex: 1; height: 3px;
+    background: var(--border2); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  .lfo-pslider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--orange); cursor: pointer;
+  }
+  .lfo-pval { font-family: ui-monospace, monospace; font-size: 9px; color: var(--orange); min-width: 28px; }
+
+  /* AUDIO PREVIEW */
+  .audio-preview {
+    width: 100%; max-width: 700px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px;
+  }
+  .preview-title { font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px; }
+  .preview-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .preview-note { font-size: 10px; color: var(--text-dim); }
+
+  /* TRANSPORT */
+  .transport {
+    display: flex; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 10px 20px;
+  }
+  .trans-btn {
+    width: 48px; height: 42px; border-radius: 10px; cursor: pointer; font-size: 18px;
+    background: var(--surface2); border: 1px solid var(--border2); color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s;
+  }
+  .trans-btn:hover { border-color: var(--lime); }
+  .trans-btn:active { transform: scale(0.9); }
+  .trans-btn.active { background: var(--lime-dim); border-color: var(--lime); color: var(--lime); }
+</style>
+</head>
+<body>
+
+<h1>BPM-Synced LFO</h1>
+
+<div class="top-row">
+  <div class="bpm-group">
+    <div class="bpm-label">BPM</div>
+    <div class="bpm-val" id="bpmDisplay">124</div>
+    <div class="bpm-btns">
+      <button class="bpm-btn" id="bpmDn">&#9660;</button>
+      <button class="bpm-btn" id="bpmUp">&#9650;</button>
+    </div>
+  </div>
+  <div class="rate-group">
+    <div class="rate-label">LFO Rate</div>
+    <div class="rate-val" id="rateVal">1/4</div>
+    <div class="rate-note" id="rateHz">0.52 Hz</div>
+  </div>
+  <div class="rate-group">
+    <div class="rate-label">Division</div>
+    <div class="rate-note">1/1 &nbsp; 1/2 &nbsp; 1/4 &nbsp; 1/8 &nbsp; 1/16 &nbsp; 1/32</div>
+  </div>
+</div>
+
+<div class="wave-selector">
+  <button class="wave-sel-btn active" data-wave="sine">Sine</button>
+  <button class="wave-sel-btn" data-wave="triangle">Triangle</button>
+  <button class="wave-sel-btn" data-wave="sawtooth">Saw</button>
+  <button class="wave-sel-btn" data-wave="square">Square</button>
+</div>
+
+<div class="waveform-display">
+  <div class="wave-header">
+    <div class="wave-title">LFO Waveform</div>
+    <div class="wave-info" id="waveInfo">1/4 note @ 124 BPM = 0.52 Hz</div>
+  </div>
+  <canvas id="lfoCanvas"></canvas>
+</div>
+
+<div class="targets">
+  <div class="target-label">Target:</div>
+  <button class="target-btn active" data-target="filter">Filter Freq</button>
+  <button class="target-btn" data-target="tremolo">Tremolo</button>
+  <button class="target-btn" data-target="wobble">Wobble</button>
+  <button class="target-btn" data-target="pan">Auto-Pan</button>
+  <button class="target-btn" data-target="drive">Drive</button>
+</div>
+
+<div class="param-row">
+  <div class="param-block">
+    <div class="param-label">Depth</div>
+    <div class="param-val" id="depthVal">50%</div>
+    <input type="range" class="param-slider" id="depthSlider" min="0" max="100" value="50">
+  </div>
+  <div class="param-block">
+    <div class="param-label">Phase</div>
+    <div class="param-val" id="phaseVal">0°</div>
+    <input type="range" class="param-slider" id="phaseSlider" min="0" max="360" value="0">
+  </div>
+  <div class="param-block">
+    <div class="param-label">Offset</div>
+    <div class="param-val" id="offsetVal">50%</div>
+    <input type="range" class="param-slider" id="offsetSlider" min="0" max="100" value="50">
+  </div>
+</div>
+
+<div class="lfo-grid">
+  <div class="lfo-card">
+    <div class="lfo-card-title">
+      <span>LFO 1 — Filter Sweep</span>
+      <button class="lfo-on-btn on" id="lfo1On"></button>
+    </div>
+    <canvas class="lfo-canvas" id="lfo1Canvas"></canvas>
+    <div class="lfo-params">
+      <div class="lfo-param">
+        <div class="lfo-plabel">Rate</div>
+        <input type="range" class="lfo-pslider" id="lfo1Rate" min="1" max="100" value="25">
+        <div class="lfo-pval" id="lfo1RateVal">1/4</div>
+      </div>
+      <div class="lfo-param">
+        <div class="lfo-plabel">Depth</div>
+        <input type="range" class="lfo-pslider" id="lfo1Depth" min="0" max="100" value="60">
+        <div class="lfo-pval" id="lfo1DepthVal">60%</div>
+      </div>
+      <div class="lfo-param">
+        <div class="lfo-plabel">Phase</div>
+        <input type="range" class="lfo-pslider" id="lfo1Phase" min="0" max="360" value="0">
+        <div class="lfo-pval" id="lfo1PhaseVal">0°</div>
+      </div>
+    </div>
+  </div>
+  <div class="lfo-card">
+    <div class="lfo-card-title">
+      <span>LFO 2 — Tremolo</span>
+      <button class="lfo-on-btn" id="lfo2On"></button>
+    </div>
+    <canvas class="lfo-canvas" id="lfo2Canvas"></canvas>
+    <div class="lfo-params">
+      <div class="lfo-param">
+        <div class="lfo-plabel">Rate</div>
+        <input type="range" class="lfo-pslider" id="lfo2Rate" min="1" max="100" value="50">
+        <div class="lfo-pval" id="lfo2RateVal">1/8</div>
+      </div>
+      <div class="lfo-param">
+        <div class="lfo-plabel">Depth</div>
+        <input type="range" class="lfo-pslider" id="lfo2Depth" min="0" max="100" value="30">
+        <div class="lfo-pval" id="lfo2DepthVal">30%</div>
+      </div>
+      <div class="lfo-param">
+        <div class="lfo-plabel">Phase</div>
+        <input type="range" class="lfo-pslider" id="lfo2Phase" min="0" max="360" value="180">
+        <div class="lfo-pval" id="lfo2PhaseVal">180°</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="audio-preview">
+  <div class="preview-title">Audio Preview — LFO Applied to Oscillator</div>
+  <div class="preview-row">
+    <button class="trans-btn" id="previewBtn">&#9654;</button>
+    <div class="preview-note">Hear the LFO applied to a test tone (C3)</div>
+  </div>
+</div>
+
+<div class="transport">
+  <button class="trans-btn active" id="runBtn">&#9654;</button>
+  <button class="trans-btn" id="haltBtn">&#9632;</button>
+</div>
+
+<script>
+(function() {
+  let audioCtx = null;
+  let analyser = null;
+  let bpm = 124;
+  let wave = 'sine';
+  let target = 'filter';
+  let depth = 0.5;
+  let phase = 0;
+  let offset = 0.5;
+  let isRunning = false;
+  let lfoTime = 0;
+  let animFrame = null;
+
+  const lfos = [
+    { on: true, rate: 25, depth: 60, phase: 0, canvas: null, ctx: null },
+    { on: false, rate: 50, depth: 30, phase: 180, canvas: null, ctx: null }
+  ];
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function bpmToHz(div) {
+    // div: 1=whole, 2=half, 4=quarter, 8=8th, 16=16th, 32=32nd
+    return (bpm / 60) / div;
+  }
+
+  function getRateHz(rateVal) {
+    // rateVal 1-100 maps to 1/1 to 1/32
+    const divs = [1, 2, 4, 4, 8, 8, 16, 16, 32, 32];
+    const idx = Math.round((rateVal / 100) * (divs.length - 1));
+    return bpmToHz(divs[idx]);
+  }
+
+  function getRateLabel(rateVal) {
+    const labels = ['1/1','1/2','1/2','1/4','1/4','1/8','1/8','1/16','1/16','1/32'];
+    const idx = Math.round((rateVal / 100) * (labels.length - 1));
+    return labels[idx];
+  }
+
+  function lfoValue(t, waveType, phaseShift) {
+    const p = (t + phaseShift / 360) % 1;
+    switch (waveType) {
+      case 'sine': return Math.sin(p * 2 * Math.PI);
+      case 'triangle': return 4 * Math.abs(p - 0.5) - 1;
+      case 'sawtooth': return 2 * p - 1;
+      case 'square': return p < 0.5 ? 1 : -1;
+      default: return Math.sin(p * 2 * Math.PI);
+    }
+  }
+
+  function drawWaveform() {
+    const canvas = document.getElementById('lfoCanvas');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.offsetWidth * dpr;
+    canvas.height = canvas.offsetHeight * dpr;
+    ctx.scale(dpr, dpr);
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+
+    ctx.fillStyle = '#030308';
+    ctx.fillRect(0, 0, w, h);
+
+    const hz = getRateHz(50);
+    const cycleDur = 1 / hz;
+    const samples = w;
+    const rateHz = bpm / 60;
+
+    ctx.strokeStyle = '#22d3ee';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x < w; x++) {
+      const t = (x / w) * cycleDur * 2;
+      const val = lfoValue(t * rateHz, wave, 0);
+      const y = h / 2 - val * (h / 2 - 10) * depth;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Grid lines
+    ctx.strokeStyle = '#1c1c3a';
+    ctx.lineWidth = 1;
+    [0.25, 0.5, 0.75].forEach(pct => {
+      const x = pct * w;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+    });
+    ctx.beginPath(); ctx.moveTo(0, h/2); ctx.lineTo(w, h/2); ctx.stroke();
+  }
+
+  function drawLFOCanvas(lfoIdx) {
+    const lfo = lfos[lfoIdx];
+    if (!lfo.canvas) return;
+    const canvas = lfo.canvas;
+    const ctx = lfo.ctx;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = canvas.offsetWidth * dpr;
+    canvas.height = canvas.offsetHeight * dpr;
+    ctx.scale(dpr, dpr);
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+
+    ctx.fillStyle = '#030308';
+    ctx.fillRect(0, 0, w, h);
+
+    if (!lfo.on) return;
+
+    const hz = getRateHz(lfo.rate);
+    const cycleDur = 1 / hz;
+    const rateHz = bpm / 60;
+    const depthNorm = lfo.depth / 100;
+
+    ctx.strokeStyle = '#fb923c';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let x = 0; x < w; x++) {
+      const t = (x / w) * cycleDur * 2;
+      const val = lfoValue(t * rateHz, 'sine', lfo.phase);
+      const y = h / 2 - val * (h / 2 - 6) * depthNorm;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+
+  function setupLFOCanvases() {
+    [0, 1].forEach(i => {
+      const c = document.getElementById('lfo' + (i+1) + 'Canvas');
+      lfos[i].canvas = c;
+      lfos[i].ctx = c.getContext('2d');
+      drawLFOCanvas(i);
+    });
+  }
+
+  function updateInfo() {
+    const hz = getRateHz(50);
+    document.getElementById('rateHz').textContent = hz.toFixed(2) + ' Hz';
+    document.getElementById('rateVal').textContent = getRateLabel(50);
+    document.getElementById('waveInfo').textContent = getRateLabel(50) + ' note @ ' + bpm + ' BPM = ' + hz.toFixed(2) + ' Hz';
+  }
+
+  // ---- LFO Animation ----
+  let testOsc = null, testGain = null, testFilter = null, testPan = null;
+  let lfoAnimTime = 0;
+  let lastAnimTime = 0;
+
+  function startLFO() {
+    initAudio();
+    if (isRunning) return;
+    isRunning = true;
+
+    // Test oscillator
+    testOsc = audioCtx.createOscillator();
+    testOsc.type = 'sawtooth';
+    testOsc.frequency.value = 130.81; // C3
+
+    testFilter = audioCtx.createBiquadFilter();
+    testFilter.type = 'lowpass';
+    testFilter.frequency.value = 2000;
+    testFilter.Q.value = 5;
+
+    testGain = audioCtx.createGain();
+    testGain.gain.value = 0.3;
+
+    testPan = audioCtx.createStereoPanner();
+    testPan.pan.value = 0;
+
+    testOsc.connect(testFilter);
+    testFilter.connect(testGain);
+    testGain.connect(testPan);
+    testPan.connect(audioCtx.destination);
+    testOsc.start();
+
+    lastAnimTime = audioCtx.currentTime;
+    animateLFO();
+    document.getElementById('runBtn').classList.add('active');
+  }
+
+  function haltLFO() {
+    isRunning = false;
+    if (animFrame) cancelAnimationFrame(animFrame);
+    if (testOsc) { try { testOsc.stop(); } catch(e){} testOsc = null; }
+    document.getElementById('runBtn').classList.remove('active');
+  }
+
+  function animateLFO() {
+    if (!isRunning || !audioCtx) return;
+
+    const now = audioCtx.currentTime;
+    const elapsed = now - lastAnimTime;
+    lastAnimTime = now;
+    lfoAnimTime += elapsed;
+
+    // Main LFO
+    const hz = getRateHz(50);
+    const lfoVal = lfoValue(lfoAnimTime * hz, wave, phase);
+
+    if (testFilter && target === 'filter') {
+      const minF = 200, maxF = 6000;
+      const center = (minF + maxF) / 2;
+      const range = (maxF - minF) / 2;
+      testFilter.frequency.value = center + lfoVal * range * depth;
+    }
+
+    if (testGain && target === 'tremolo') {
+      testGain.gain.value = 0.3 * (offset + lfoVal * depth);
+    }
+
+    if (testPan && target === 'pan') {
+      testPan.pan.value = lfoVal * depth;
+    }
+
+    // Multi LFOs
+    lfos.forEach((lfo, i) => {
+      if (!lfo.on) return;
+      const lfoHz = getRateHz(lfo.rate);
+      const lfoV = lfoValue(lfoAnimTime * lfoHz, 'sine', lfo.phase);
+      drawLFOCanvas(i);
+    });
+
+    animFrame = requestAnimationFrame(animateLFO);
+  }
+
+  // ---- Preview ----
+  function playPreview() {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    osc.type = 'sawtooth';
+    osc.frequency.value = 130.81;
+    filter.type = 'lowpass';
+    filter.frequency.value = 3000;
+    gain.gain.value = 0.25;
+    osc.connect(filter); filter.connect(gain); gain.connect(audioCtx.destination);
+    const now = audioCtx.currentTime;
+    const hz = getRateHz(50);
+    for (let i = 0; i < 4; i++) {
+      const t = now + i * (1/hz);
+      const v = lfoValue((t - now) * hz, wave, phase);
+      const f = 3000 + v * 2500 * depth;
+      filter.frequency.setValueAtTime(f, t);
+    }
+    osc.start(now);
+    osc.stop(now + 4 * (1/hz));
+  }
+
+  // ---- UI ----
+  document.getElementById('bpmUp').addEventListener('click', () => {
+    bpm = Math.min(160, bpm + 1);
+    document.getElementById('bpmDisplay').textContent = bpm;
+    updateInfo();
+    drawWaveform();
+  });
+  document.getElementById('bpmDn').addEventListener('click', () => {
+    bpm = Math.max(80, bpm - 1);
+    document.getElementById('bpmDisplay').textContent = bpm;
+    updateInfo();
+    drawWaveform();
+  });
+
+  document.querySelectorAll('.wave-sel-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.wave-sel-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      wave = btn.dataset.wave;
+      drawWaveform();
+    });
+  });
+
+  document.querySelectorAll('.target-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.target-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      target = btn.dataset.target;
+    });
+  });
+
+  document.getElementById('depthSlider').addEventListener('input', e => {
+    depth = parseInt(e.target.value) / 100;
+    document.getElementById('depthVal').textContent = e.target.value + '%';
+    drawWaveform();
+  });
+
+  document.getElementById('phaseSlider').addEventListener('input', e => {
+    phase = parseInt(e.target.value);
+    document.getElementById('phaseVal').textContent = phase + '°';
+    drawWaveform();
+  });
+
+  document.getElementById('offsetSlider').addEventListener('input', e => {
+    offset = parseInt(e.target.value) / 100;
+    document.getElementById('offsetVal').textContent = e.target.value + '%';
+  });
+
+  // LFO cards
+  ['lfo1','lfo2'].forEach((name, i) => {
+    const idx = i;
+    document.getElementById(name + 'On').addEventListener('click', () => {
+      lfos[idx].on = !lfos[idx].on;
+      document.getElementById(name + 'On').classList.toggle('on', lfos[idx].on);
+      drawLFOCanvas(idx);
+    });
+    document.getElementById(name + 'Rate').addEventListener('input', e => {
+      lfos[idx].rate = parseInt(e.target.value);
+      document.getElementById(name + 'RateVal').textContent = getRateLabel(lfos[idx].rate);
+      drawLFOCanvas(idx);
+    });
+    document.getElementById(name + 'Depth').addEventListener('input', e => {
+      lfos[idx].depth = parseInt(e.target.value);
+      document.getElementById(name + 'DepthVal').textContent = e.target.value + '%';
+      drawLFOCanvas(idx);
+    });
+    document.getElementById(name + 'Phase').addEventListener('input', e => {
+      lfos[idx].phase = parseInt(e.target.value);
+      document.getElementById(name + 'PhaseVal').textContent = e.target.value + '°';
+      drawLFOCanvas(idx);
+    });
+  });
+
+  document.getElementById('runBtn').addEventListener('click', startLFO);
+  document.getElementById('haltBtn').addEventListener('click', haltLFO);
+  document.getElementById('previewBtn').addEventListener('click', playPreview);
+
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space') { e.preventDefault(); isRunning ? haltLFO() : startLFO(); }
+    if (e.code === 'ArrowUp') { bpm = Math.min(160, bpm + 1); document.getElementById('bpmDisplay').textContent = bpm; updateInfo(); drawWaveform(); }
+    if (e.code === 'ArrowDown') { bpm = Math.max(80, bpm - 1); document.getElementById('bpmDisplay').textContent = bpm; updateInfo(); drawWaveform(); }
+  });
+
+  setupLFOCanvases();
+  updateInfo();
+  drawWaveform();
+})();
+</script>
+</body>
+</html>
