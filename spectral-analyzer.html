@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spectral Analyzer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #050508;
+    --surface: #0a0a10;
+    --border: #141420;
+    --cyan: #00f5ff;
+    --cyan-dim: #00a5aa;
+    --magenta: #ff00aa;
+    --gold: #ffb800;
+    --text: #c8c8e0;
+    --text-dim: #5a5a78;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    user-select: none;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .logo {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: var(--cyan);
+    text-transform: uppercase;
+  }
+
+  .logo span { color: var(--text-dim); }
+
+  .header-controls { display: flex; gap: 10px; align-items: center; }
+
+  .btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    border-radius: 2px;
+  }
+
+  .btn:hover { border-color: var(--cyan-dim); color: var(--cyan); }
+  .btn.active { border-color: var(--cyan); color: var(--cyan); background: rgba(0,245,255,0.06); }
+  .btn-mic { border-color: var(--magenta); color: var(--magenta); }
+  .btn-mic:hover, .btn-mic.active { background: rgba(255,0,170,0.08); }
+
+  .main-display { padding: 14px 24px; }
+
+  canvas {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 2px;
+  }
+
+  #waveCanvas { margin-bottom: 8px; }
+  #specCanvas { margin-bottom: 8px; }
+  #peakCanvas { margin-bottom: 14px; }
+
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    padding: 0 24px 14px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 11px 13px;
+  }
+
+  .panel-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  .panel-value {
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--cyan);
+    line-height: 1;
+  }
+
+  .panel-unit { font-size: 9px; color: var(--text-dim); margin-top: 4px; }
+  .panel-value.warn { color: var(--gold); }
+  .panel-value.danger { color: var(--magenta); }
+
+  .bpm-strip { padding: 0 24px 14px; }
+
+  .bpm-strip-inner {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    overflow-x: auto;
+  }
+
+  .bpm-marker { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 38px; }
+
+  .bpm-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+
+  .bpm-hz { font-size: 8px; color: var(--text-dim); letter-spacing: 0.04em; }
+
+  .freq-labels {
+    display: flex;
+    justify-content: space-between;
+    padding: 3px 24px 0;
+    font-size: 8px;
+    color: var(--text-dim);
+    letter-spacing: 0.04em;
+  }
+
+  .bottom-bar {
+    padding: 10px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+
+  .status-dot {
+    display: inline-block;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    margin-right: 6px;
+    transition: background 0.3s, box-shadow 0.3s;
+  }
+
+  .status-dot.live {
+    background: var(--cyan);
+    box-shadow: 0 0 6px var(--cyan);
+    animation: blink 1.8s ease-in-out infinite;
+  }
+
+  .status-dot.mic {
+    background: var(--magenta);
+    box-shadow: 0 0 6px var(--magenta);
+    animation: blink 1.8s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .drag-hint {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10;
+    transition: opacity 0.4s;
+  }
+
+  .drag-hint.hidden { opacity: 0; }
+
+  .drag-box {
+    border: 1px dashed var(--border);
+    border-radius: 4px;
+    padding: 30px 46px;
+    text-align: center;
+  }
+
+  .drag-icon { font-size: 30px; opacity: 0.25; margin-bottom: 10px; }
+  .drag-text { font-size: 11px; letter-spacing: 0.12em; color: var(--text-dim); text-transform: uppercase; }
+  .drag-sub { font-size: 9px; color: var(--text-dim); margin-top: 5px; opacity: 0.5; }
+
+  #fileInput { display: none; }
+</style>
+</head>
+<body>
+
+<div class="drag-hint" id="dragHint">
+  <div class="drag-box">
+    <div class="drag-icon">&#9835;</div>
+    <div class="drag-text">Drop audio file here</div>
+    <div class="drag-sub">or use Mic / Load File above</div>
+  </div>
+</div>
+
+<header>
+  <div class="logo">Spectral <span>Analyzer</span></div>
+  <div class="header-controls">
+    <button class="btn" id="loadBtn">Load File</button>
+    <button class="btn btn-mic" id="micBtn">Mic</button>
+    <button class="btn" id="fft256" style="display:none">256</button>
+    <button class="btn active" id="fft1024">1024</button>
+    <button class="btn" id="fft2048" style="display:none">2048</button>
+    <button class="btn" id="logScale">Log</button>
+    <button class="btn active" id="linearScale">Lin</button>
+  </div>
+</header>
+
+<div class="main-display">
+  <canvas id="waveCanvas" height="72"></canvas>
+  <canvas id="specCanvas" height="200"></canvas>
+  <div class="freq-labels">
+    <span>20Hz</span><span>60Hz</span><span>200Hz</span><span>600Hz</span><span>2kHz</span><span>6kHz</span><span>20kHz</span>
+  </div>
+  <canvas id="peakCanvas" height="36"></canvas>
+</div>
+
+<div class="panels">
+  <div class="panel">
+    <div class="panel-label">Peak Freq</div>
+    <div class="panel-value" id="peakFreq">—</div>
+    <div class="panel-unit">Hz</div>
+  </div>
+  <div class="panel">
+    <div class="panel-label">Bass</div>
+    <div class="panel-value" id="bassEnergy">—</div>
+    <div class="panel-unit">20–250 Hz</div>
+  </div>
+  <div class="panel">
+    <div class="panel-label">Mid</div>
+    <div class="panel-value" id="midEnergy">—</div>
+    <div class="panel-unit">250–6kHz</div>
+  </div>
+  <div class="panel">
+    <div class="panel-label">High</div>
+    <div class="panel-value" id="highEnergy">—</div>
+    <div class="panel-unit">6–20kHz</div>
+  </div>
+</div>
+
+<div class="bpm-strip">
+  <div class="panel-label" style="margin-bottom:8px;padding-left:2px">Band Monitor</div>
+  <div class="bpm-strip-inner" id="freqStrip"></div>
+</div>
+
+<div class="bottom-bar">
+  <div>
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Drop audio or tap Mic</span>
+  </div>
+  <div id="bpmDisplay">&#8212; BPM</div>
+</div>
+
+<input type="file" id="fileInput" accept="audio/*">
+
+<script>
+(function() {
+  const waveCanvas = document.getElementById('waveCanvas');
+  const specCanvas = document.getElementById('specCanvas');
+  const peakCanvas = document.getElementById('peakCanvas');
+  const wCtx = waveCanvas.getContext('2d');
+  const sCtx = specCanvas.getContext('2d');
+  const pCtx = peakCanvas.getContext('2d');
+
+  let audioCtx = null;
+  let analyser = null;
+  let sourceNode = null;
+  let bufSource = null;
+  let isPlaying = false;
+  let isMicActive = false;
+  let fftSize = 1024;
+  let useLogScale = false;
+  let peakHold = null;
+  let peakDecay = null;
+  let rafId = null;
+  let fileBuffer = null;
+
+  const bandDefs = [
+    { label: '20',  hz: 20,    color: '#5a5a78' },
+    { label: '60',  hz: 60,    color: '#ff00aa' },
+    { label: '100', hz: 100,   color: '#ff00aa' },
+    { label: '200', hz: 200,   color: '#ffb800' },
+    { label: '400', hz: 400,   color: '#ffb800' },
+    { label: '800', hz: 800,   color: '#5a5a78' },
+    { label: '1k',  hz: 1000,  color: '#5a5a78' },
+    { label: '2k',  hz: 2000,  color: '#5a5a78' },
+    { label: '4k',  hz: 4000,  color: '#00f5ff' },
+    { label: '8k',  hz: 8000,  color: '#00f5ff' },
+    { label: '12k', hz: 12000, color: '#00f5ff' },
+    { label: '20k', hz: 20000, color: '#5a5a78' },
+  ];
+
+  function buildFreqStrip() {
+    const strip = document.getElementById('freqStrip');
+    bandDefs.forEach(function(b) {
+      var m = document.createElement('div');
+      m.className = 'bpm-marker';
+      m.innerHTML = '<div class="bpm-dot" id="dot_' + b.label + '"></div><div class="bpm-hz">' + b.label + '</div>';
+      strip.appendChild(m);
+    });
+  }
+  buildFreqStrip();
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (analyser) analyser.disconnect();
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = fftSize;
+    analyser.smoothingTimeConstant = 0.78;
+    analyser.connect(audioCtx.destination);
+    peakHold = new Float32Array(analyser.frequencyBinCount).fill(0);
+    peakDecay = new Float32Array(analyser.frequencyBinCount).fill(0);
+  }
+
+  function resizeCanvases() {
+    var heights = [72, 200, 36];
+    [waveCanvas, specCanvas, peakCanvas].forEach(function(c, i) {
+      var dpr = window.devicePixelRatio || 1;
+      c.width = c.offsetWidth * dpr;
+      c.height = heights[i] * dpr;
+      var ctx = [wCtx, sCtx, pCtx][i];
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    });
+  }
+
+  function stopAll() {
+    if (bufSource) {
+      try { bufSource.stop(); } catch(e) {}
+      bufSource.disconnect();
+      bufSource = null;
+    }
+    if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
+    isPlaying = false;
+  }
+
+  function loadFile(file) {
+    stopAll();
+    if (!audioCtx) initAudio();
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      audioCtx.decodeAudioData(e.target.result, function(decoded) {
+        fileBuffer = decoded;
+        document.getElementById('statusText').textContent = file.name;
+      }, function(err) { console.error(err); });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function playBuffer() {
+    if (!fileBuffer || !analyser) return;
+    stopAll();
+    bufSource = audioCtx.createBufferSource();
+    bufSource.buffer = fileBuffer;
+    bufSource.connect(analyser);
+    bufSource.start();
+    isPlaying = true;
+    bufSource.onended = function() { isPlaying = false; stopAll(); };
+  }
+
+  function startMic() {
+    stopAll();
+    if (!audioCtx) initAudio();
+    if (isMicActive) {
+      if (sourceNode) { sourceNode.disconnect(); sourceNode = null; }
+      isMicActive = false;
+      setStatusDot(false, 'Mic off');
+      return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+      sourceNode = audioCtx.createMediaStreamSource(stream);
+      sourceNode.connect(analyser);
+      isMicActive = true;
+      isPlaying = false;
+      setStatusDot(true, 'Live mic', true);
+    }).catch(function(e) { setStatusDot(false, 'Mic denied'); });
+  }
+
+  function setStatusDot(live, text, mic) {
+    var dot = document.getElementById('statusDot');
+    var txt = document.getElementById('statusText');
+    dot.className = 'status-dot' + (live ? (mic ? ' mic' : ' live') : '');
+    txt.textContent = text;
+  }
+
+  function hzToBin(hz, bins, sr) {
+    return Math.round(hz * bins / (sr / 2));
+  }
+
+  function binToHz(idx, bins, sr) {
+    return idx * sr / bins / 2;
+  }
+
+  function draw() {
+    rafId = requestAnimationFrame(draw);
+    if (!analyser) return;
+
+    var sr = audioCtx.sampleRate;
+    var bins = analyser.frequencyBinCount;
+    var freqData = new Uint8Array(bins);
+    var timeData = new Uint8Array(bins);
+    analyser.getByteFrequencyData(freqData);
+    analyser.getByteTimeDomainData(timeData);
+
+    var wW = waveCanvas.width / (window.devicePixelRatio || 1);
+    var wH = waveCanvas.height / (window.devicePixelRatio || 1);
+    var sW = specCanvas.width / (window.devicePixelRatio || 1);
+    var sH = specCanvas.height / (window.devicePixelRatio || 1);
+    var pW = peakCanvas.width / (window.devicePixelRatio || 1);
+    var pH = peakCanvas.height / (window.devicePixelRatio || 1);
+
+    // Waveform
+    wCtx.clearRect(0, 0, wW, wH);
+    wCtx.beginPath();
+    wCtx.strokeStyle = 'rgba(0,245,255,0.55)';
+    wCtx.lineWidth = 1;
+    var sliceW = wW / timeData.length;
+    for (var i = 0; i < timeData.length; i++) {
+      var v = timeData[i] / 128.0;
+      var y = (v * wH) / 2;
+      if (i === 0) wCtx.moveTo(0, y);
+      else wCtx.lineTo(i * sliceW, y);
+    }
+    wCtx.stroke();
+
+    // Spectrum background
+    sCtx.clearRect(0, 0, sW, sH);
+    sCtx.fillStyle = '#050508';
+    sCtx.fillRect(0, 0, sW, sH);
+
+    // Grid
+    sCtx.strokeStyle = 'rgba(255,255,255,0.04)';
+    sCtx.lineWidth = 1;
+    for (var gy = 0; gy < sH; gy += 40) {
+      sCtx.beginPath(); sCtx.moveTo(0, gy); sCtx.lineTo(sW, gy); sCtx.stroke();
+    }
+    for (var gx = 0; gx < sW; gx += sW / 7) {
+      sCtx.beginPath(); sCtx.moveTo(gx, 0); sCtx.lineTo(gx, sH); sCtx.stroke();
+    }
+
+    // Spectrum bars
+    var bars = useLogScale ? 128 : 256;
+    var barW = sW / bars;
+
+    for (var b = 0; b < bars; b++) {
+      var binIdx;
+      if (useLogScale) {
+        var minHz = 20, maxHz = 20000;
+        var minBin = hzToBin(minHz, bins, sr);
+        var maxBin = hzToBin(maxHz, bins, sr);
+        var logIdx = Math.pow(b / bars, 2);
+        binIdx = Math.floor(minBin + logIdx * (maxBin - minBin));
+      } else {
+        binIdx = Math.floor(b * bins / bars);
+      }
+      binIdx = Math.min(binIdx, bins - 1);
+      var val = freqData[binIdx];
+      var barH = (val / 255) * sH;
+
+      var t = binIdx / bins;
+      var r, g, col;
+      if (t < 0.15) { r = 255; g = 0; col = 'rgba(255,0,170,'; }
+      else if (t < 0.35) { r = 255; g = 184; col = 'rgba(255,184,0,'; }
+      else { r = 0; g = 245; col = 'rgba(0,245,255,'; }
+
+      var grad = sCtx.createLinearGradient(0, sH, 0, sH - barH);
+      grad.addColorStop(0, col + '0.9)');
+      grad.addColorStop(1, col + '0.25)');
+      sCtx.fillStyle = grad;
+      sCtx.fillRect(b * barW, sH - barH, Math.max(1, barW - 1), barH);
+
+      // Peak hold
+      if (val > peakHold[b]) {
+        peakHold[b] = val;
+        peakDecay[b] = 55;
+      } else if (peakDecay[b] > 0) {
+        peakDecay[b]--;
+      } else {
+        peakHold[b] = Math.max(0, peakHold[b] - 0.8);
+      }
+    }
+
+    // Peak trail
+    pCtx.clearRect(0, 0, pW, pH);
+    pCtx.fillStyle = '#050508';
+    pCtx.fillRect(0, 0, pW, pH);
+    var pBarW = pW / bars;
+    for (var pb = 0; pb < bars; pb++) {
+      var pBinIdx;
+      if (useLogScale) {
+        var pMinBin = hzToBin(20, bins, sr);
+        var pMaxBin = hzToBin(20000, bins, sr);
+        var pLogIdx = Math.pow(pb / bars, 2);
+        pBinIdx = Math.floor(pMinBin + pLogIdx * (pMaxBin - pMinBin));
+      } else {
+        pBinIdx = Math.floor(pb * bins / bars);
+      }
+      pBinIdx = Math.min(pBinIdx, bins - 1);
+      var pVal = peakHold[pBinIdx];
+      if (pVal > 1) {
+        var pt = pBinIdx / bins;
+        var pr, pg, pcol;
+        if (pt < 0.15) { pr = 255; pg = 0; pcol = 'rgba(255,0,170,'; }
+        else if (pt < 0.35) { pr = 255; pg = 184; pcol = 'rgba(255,184,0,'; }
+        else { pr = 0; pg = 245; pcol = 'rgba(0,245,255,'; }
+        var peakY = sH - (pVal / 255) * sH;
+        var scaledY = (peakY / sH) * pH;
+        pCtx.fillStyle = pcol + '0.9)';
+        pCtx.fillRect(pb * pBarW, scaledY, Math.max(1, pBarW - 1), 2);
+      }
+    }
+
+    updateMeters(freqData, bins, sr);
+    updateBandStrip(freqData, bins, sr);
+  }
+
+  function updateMeters(data, bins, sr) {
+    var maxVal = 0, maxIdx = 0;
+    for (var i = 1; i < bins; i++) {
+      if (data[i] > maxVal) { maxVal = data[i]; maxIdx = i; }
+    }
+    var peakHz = Math.round(binToHz(maxIdx, bins, sr));
+    var pfEl = document.getElementById('peakFreq');
+    pfEl.textContent = peakHz >= 1000 ? (peakHz / 1000).toFixed(1) + 'k' : peakHz;
+    pfEl.className = 'panel-value' + (maxVal > 220 ? ' warn' : '') + (maxVal > 245 ? ' danger' : '');
+
+    var bassEnd = hzToBin(250, bins, sr);
+    var midEnd = hzToBin(6000, bins, sr);
+    var bassSum = 0, midSum = 0, highSum = 0;
+    for (var j = 1; j < bins; j++) {
+      var n = (data[j] / 255);
+      if (j < bassEnd) bassSum += n * n;
+      else if (j < midEnd) midSum += n * n;
+      else highSum += n * n;
+    }
+    var toDb = function(v) {
+      if (v <= 0) return 0;
+      return Math.max(0, Math.round(20 * Math.log10(v / bins) + 68));
+    };
+    document.getElementById('bassEnergy').textContent = toDb(bassSum);
+    document.getElementById('midEnergy').textContent = toDb(midSum);
+    document.getElementById('highEnergy').textContent = toDb(highSum);
+  }
+
+  function updateBandStrip(data, bins, sr) {
+    bandDefs.forEach(function(b) {
+      var bin = hzToBin(b.hz, bins, sr);
+      var val = data[Math.min(bin, bins - 1)];
+      var dot = document.getElementById('dot_' + b.label);
+      if (!dot) return;
+      if (val > 180) {
+        dot.style.background = b.color;
+        dot.style.boxShadow = '0 0 7px ' + b.color;
+      } else if (val > 100) {
+        dot.style.background = b.color;
+        dot.style.boxShadow = 'none';
+      } else {
+        dot.style.background = 'var(--text-dim)';
+        dot.style.boxShadow = 'none';
+      }
+    });
+  }
+
+  document.getElementById('fft1024').onclick = function() {
+    fftSize = 1024;
+    if (analyser) { analyser.fftSize = fftSize; analyser.smoothingTimeConstant = 0.78; }
+    if (analyser) {
+      peakHold = new Float32Array(analyser.frequencyBinCount).fill(0);
+      peakDecay = new Float32Array(analyser.frequencyBinCount).fill(0);
+    }
+    document.getElementById('fft1024').classList.add('active');
+  };
+
+  document.getElementById('logScale').onclick = function() {
+    useLogScale = true;
+    this.classList.add('active');
+    document.getElementById('linearScale').classList.remove('active');
+  };
+
+  document.getElementById('linearScale').onclick = function() {
+    useLogScale = false;
+    this.classList.add('active');
+    document.getElementById('logScale').classList.remove('active');
+  };
+
+  document.getElementById('loadBtn').onclick = function() {
+    document.getElementById('fileInput').click();
+  };
+
+  document.getElementById('fileInput').onchange = function(e) {
+    if (e.target.files[0]) {
+      loadFile(e.target.files[0]);
+      setTimeout(playBuffer, 300);
+    }
+  };
+
+  document.getElementById('micBtn').onclick = startMic;
+
+  var dragHint = document.getElementById('dragHint');
+  document.addEventListener('dragover', function(e) { e.preventDefault(); dragHint.classList.remove('hidden'); });
+  document.addEventListener('dragleave', function(e) { if (!e.relatedTarget) dragHint.classList.add('hidden'); });
+  document.addEventListener('drop', function(e) {
+    e.preventDefault();
+    dragHint.classList.add('hidden');
+    var f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('audio/')) { loadFile(f); setTimeout(playBuffer, 350); }
+  });
+
+  specCanvas.addEventListener('click', function() {
+    if (!isMicActive && fileBuffer) {
+      if (isPlaying) stopAll();
+      else playBuffer();
+    }
+  });
+
+  window.addEventListener('resize', resizeCanvases);
+  resizeCanvases();
+  draw();
+
+  window.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (!isMicActive && fileBuffer) isPlaying ? stopAll() : playBuffer();
+    }
+    if (e.key === 'm' || e.key === 'M') startMic();
+    if (e.key === 'l' || e.key === 'L') document.getElementById('logScale').click();
+  });
+
+  // Expose initAudio globally for auto-start on file load
+  window.initSpectralAudio = initAudio;
+
+})();
+</script>
+</body>
+</html>
