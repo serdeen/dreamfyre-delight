@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polyrhythm Grid</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #050508;
+    --surface: #0a0a10;
+    --border: #141420;
+    --cyan: #00f5ff;
+    --cyan-dim: #00a5aa;
+    --gold: #ffb800;
+    --text: #c8c8e0;
+    --text-dim: #5a5a78;
+    --green: #00ff88;
+    --red: #ff3366;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+  }
+
+  header {
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .logo {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: var(--cyan);
+    text-transform: uppercase;
+  }
+
+  .logo span { color: var(--text-dim); }
+
+  .header-right { display: flex; gap: 10px; align-items: center; }
+
+  .play-btn {
+    background: transparent;
+    border: 1px solid var(--green);
+    color: var(--green);
+    padding: 7px 18px;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.15s, box-shadow 0.15s;
+  }
+
+  .play-btn:hover { background: rgba(0,255,136,0.07); box-shadow: 0 0 10px rgba(0,255,136,0.15); }
+  .play-btn.playing { border-color: var(--red); color: var(--red); }
+  .play-btn.playing:hover { background: rgba(255,51,102,0.07); }
+
+  .bpm-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--cyan);
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 300;
+    width: 64px;
+    padding: 5px 8px;
+    text-align: center;
+    border-radius: 2px;
+    outline: none;
+    letter-spacing: -0.02em;
+    transition: border-color 0.15s;
+  }
+
+  .bpm-input:focus { border-color: var(--cyan); }
+  .bpm-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .bpm-label { font-size: 10px; color: var(--text-dim); letter-spacing: 0.08em; }
+
+  .main-area {
+    flex: 1;
+    padding: 20px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /* Clock */
+  .clock-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 16px 20px;
+  }
+
+  .clock-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  canvas#clockCanvas {
+    display: block;
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    cursor: crosshair;
+  }
+
+  /* Voice Controls */
+  .voices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .voice-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 16px 18px;
+  }
+
+  .voice-card.voice-a { border-color: rgba(0,245,255,0.2); }
+  .voice-card.voice-b { border-color: rgba(255,184,0,0.2); }
+
+  .voice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .voice-name {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .voice-a .voice-name { color: var(--cyan); }
+  .voice-b .voice-name { color: var(--gold); }
+
+  .voice-ratio {
+    font-size: 22px;
+    font-weight: 300;
+    line-height: 1;
+  }
+
+  .voice-a .voice-ratio { color: var(--cyan); }
+  .voice-b .voice-ratio { color: var(--gold); }
+
+  .voice-sublabel {
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-top: 2px;
+    letter-spacing: 0.06em;
+  }
+
+  .voice-divs {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+
+  .div-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 5px 9px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 400;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    min-width: 34px;
+    text-align: center;
+  }
+
+  .div-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .voice-a .div-btn.active { border-color: var(--cyan); color: var(--cyan); background: rgba(0,245,255,0.06); }
+  .voice-b .div-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(255,184,0,0.06); }
+
+  /* Impulse Grid */
+  .impulse-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 16px 20px;
+  }
+
+  .impulse-label {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .impulse-grid {
+    position: relative;
+    height: 60px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .impulse-beats {
+    position: absolute;
+    inset: 0;
+    display: flex;
+  }
+
+  .impulse-beat-cell {
+    flex: 1;
+    border-right: 1px solid rgba(255,255,255,0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 2px;
+  }
+
+  .impulse-beat-cell:last-child { border-right: none; }
+
+  .impulse-tick {
+    width: 100%;
+    transition: height 0.05s, opacity 0.05s;
+    border-radius: 1px 1px 0 0;
+    height: 0;
+    opacity: 0;
+  }
+
+  .impulse-tick.voice-a { background: var(--cyan); }
+  .impulse-tick.voice-b { background: var(--gold); }
+  .impulse-tick.down { opacity: 1; }
+
+  .beat-num {
+    position: absolute;
+    top: 3px;
+    left: 4px;
+    font-size: 7px;
+    color: var(--text-dim);
+  }
+
+  /* Relationship display */
+  .rel-display {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .rel-items { display: flex; gap: 20px; }
+
+  .rel-item { display: flex; flex-direction: column; gap: 2px; }
+  .rel-label { font-size: 8px; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; }
+  .rel-val { font-size: 16px; font-weight: 300; color: var(--text); }
+
+  .rel-val.cyan { color: var(--cyan); }
+  .rel-val.gold { color: var(--gold); }
+
+  /* Bottom bar */
+  .bottom-bar {
+    padding: 10px 28px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Polyrhythm <span>Grid</span></div>
+  <div class="header-right">
+    <input type="number" class="bpm-input" id="bpmInput" value="124" min="40" max="220">
+    <span class="bpm-label">BPM</span>
+    <button class="play-btn" id="playBtn">&#9654; PLAY</button>
+  </div>
+</header>
+
+<div class="main-area">
+  <!-- Clock -->
+  <div class="clock-wrap">
+    <div class="clock-label">Polyrhythm Clock</div>
+    <canvas id="clockCanvas" height="200"></canvas>
+  </div>
+
+  <!-- Voice Controls -->
+  <div class="voices">
+    <div class="voice-card voice-a">
+      <div class="voice-header">
+        <span class="voice-name">Voice A</span>
+        <div>
+          <div class="voice-ratio" id="ratioA">4</div>
+          <div class="voice-sublabel">clicks per bar</div>
+        </div>
+      </div>
+      <div class="voice-divs" id="divsA"></div>
+    </div>
+    <div class="voice-card voice-b">
+      <div class="voice-header">
+        <span class="voice-name">Voice B</span>
+        <div>
+          <div class="voice-ratio" id="ratioB">3</div>
+          <div class="voice-sublabel">clicks per bar</div>
+        </div>
+      </div>
+      <div class="voice-divs" id="divsB"></div>
+    </div>
+  </div>
+
+  <!-- Impulse Grid -->
+  <div class="impulse-wrap">
+    <div class="impulse-label">Impulse Grid — 4 bar loop</div>
+    <div class="impulse-grid" id="impulseGrid">
+      <div class="impulse-beats" id="impulseBeats"></div>
+    </div>
+  </div>
+
+  <!-- Relationship -->
+  <div class="rel-display">
+    <div class="rel-items">
+      <div class="rel-item">
+        <span class="rel-label">Ratio</span>
+        <span class="rel-val" id="relRatio">4:3</span>
+      </div>
+      <div class="rel-item">
+        <span class="rel-label">A every</span>
+        <span class="rel-val cyan" id="relA">242.0 ms</span>
+      </div>
+      <div class="rel-item">
+        <span class="rel-label">B every</span>
+        <span class="rel-val gold" id="relB">323.0 ms</span>
+      </div>
+      <div class="rel-item">
+        <span class="rel-label">LCM cycle</span>
+        <span class="rel-val" id="relCycle">968 ms</span>
+      </div>
+      <div class="rel-item">
+        <span class="rel-label">Coincide at</span>
+        <span class="rel-val" id="relCoincide">beat 4 + beat 3</span>
+      </div>
+    </div>
+    <div style="font-size:9px; color:var(--text-dim); letter-spacing:0.06em; text-align:right;">
+      Common polyrhythms: 3:2 (half notes), 4:3 (quarter/triplet), 5:4 (suspension)
+    </div>
+  </div>
+</div>
+
+<div class="bottom-bar">
+  <div><span style="background:var(--surface); border:1px solid var(--border); padding:2px 6px; border-radius:2px; margin-right:6px;">Space</span>play/pause</div>
+  <div>Classic deep house groove: try 3:2 with the kick on 1 and 3</div>
+</div>
+
+<script>
+(function() {
+  var audioCtx = null;
+  var isPlaying = false;
+  var bpm = 124;
+  var divA = 4;
+  var divB = 3;
+  var nextNoteTime = 0;
+  var timerID = null;
+  var lookahead = 25;
+  var scheduleAhead = 0.1;
+  var currentBeat = 0;
+  var barCount = 0;
+  var rafId = null;
+  var clockAngleA = 0;
+  var clockAngleB = 0;
+
+  function msPerBeat(b) { return 60000 / b; }
+  function msPerBar(b) { return msPerBeat(b) * 4; }
+  function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+  function lcm(a, b) { return (a * b) / gcd(a, b); }
+
+  function initAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playClickA(time) {
+    if (!audioCtx) return;
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.setValueAtTime(880, time);
+    osc.frequency.exponentialRampToValueAtTime(440, time + 0.03);
+    gain.gain.setValueAtTime(0.4, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+    osc.start(time);
+    osc.stop(time + 0.06);
+  }
+
+  function playClickB(time) {
+    if (!audioCtx) return;
+    var osc = audioCtx.createOscillator();
+    var gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.setValueAtTime(1320, time);
+    osc.frequency.exponentialRampToValueAtTime(660, time + 0.03);
+    gain.gain.setValueAtTime(0.3, time);
+    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.06);
+    osc.start(time);
+    osc.stop(time + 0.06);
+  }
+
+  function scheduler() {
+    while (nextNoteTime < audioCtx.currentTime + scheduleAhead) {
+      scheduleNote(nextNoteTime);
+      advance();
+    }
+    timerID = setTimeout(scheduler, lookahead);
+  }
+
+  function scheduleNote(time) {
+    var msPerBarVal = msPerBar(bpm);
+    var msA = msPerBarVal / divA;
+    var msB = msPerBarVal / divB;
+    var cycleMs = lcm(Math.round(msPerBeat(bpm) * 4 / divA), Math.round(msPerBeat(bpm) * 4 / divB));
+    var barPos = ((time - audioCtx.startTime) * 1000) % msPerBarVal;
+
+    // Voice A
+    if (Math.abs(barPos % msA) < msA * 0.15) {
+      playClickA(time);
+      flashImpulseA(Math.round((barPos / msPerBarVal) * 32) % 32);
+    }
+    // Voice B
+    if (Math.abs(barPos % msB) < msB * 0.15) {
+      playClickB(time);
+      flashImpulseB(Math.round((barPos / msPerBarVal) * 32) % 32);
+    }
+
+    // Clock visual
+    var delay = (time - audioCtx.currentTime) * 1000;
+    setTimeout(function() {
+      updateClock();
+    }, Math.max(0, delay));
+  }
+
+  function advance() {
+    var cycle = lcm(
+      Math.round(msPerBeat(bpm) * 4 / divA),
+      Math.round(msPerBeat(bpm) * 4 / divB)
+    );
+    nextNoteTime += cycle / 1000;
+    barCount++;
+  }
+
+  function flashImpulseA(idx) {
+    var cells = document.querySelectorAll('.tick-a');
+    cells.forEach(function(c) { c.style.height = '0'; c.style.opacity = '0'; });
+    if (cells[idx]) {
+      cells[idx].style.height = '100%';
+      cells[idx].style.opacity = '1';
+    }
+  }
+
+  function flashImpulseB(idx) {
+    var cells = document.querySelectorAll('.tick-b');
+    cells.forEach(function(c) { c.style.height = '0'; c.style.opacity = '0'; });
+    if (cells[idx]) {
+      cells[idx].style.height = '100%';
+      cells[idx].style.opacity = '1';
+    }
+  }
+
+  function buildDivButtons() {
+    var divsA = document.getElementById('divsA');
+    var divsB = document.getElementById('divsB');
+    divsA.innerHTML = '';
+    divsB.innerHTML = '';
+
+    [3, 4, 5, 6, 7, 8, 12, 16].forEach(function(d) {
+      var btnA = document.createElement('button');
+      btnA.className = 'div-btn' + (d === divA ? ' active' : '');
+      btnA.textContent = d;
+      btnA.addEventListener('click', function() {
+        divA = d;
+        document.querySelectorAll('#divsA .div-btn').forEach(function(b) { b.classList.remove('active'); });
+        btnA.classList.add('active');
+        document.getElementById('ratioA').textContent = d;
+        updateRelationship();
+        rebuildImpulse();
+      });
+      divsA.appendChild(btnA);
+
+      var btnB = document.createElement('button');
+      btnB.className = 'div-btn' + (d === divB ? ' active' : '');
+      btnB.textContent = d;
+      btnB.addEventListener('click', function() {
+        divB = d;
+        document.querySelectorAll('#divsB .div-btn').forEach(function(b) { b.classList.remove('active'); });
+        btnB.classList.add('active');
+        document.getElementById('ratioB').textContent = d;
+        updateRelationship();
+        rebuildImpulse();
+      });
+      divsB.appendChild(btnB);
+    });
+  }
+
+  function rebuildImpulse() {
+    var container = document.getElementById('impulseBeats');
+    container.innerHTML = '';
+    var cells = 32;
+    for (var i = 0; i < cells; i++) {
+      var cell = document.createElement('div');
+      cell.className = 'impulse-beat-cell';
+
+      var beatNum = document.createElement('div');
+      beatNum.className = 'beat-num';
+      if (i % 8 === 0) beatNum.textContent = Math.floor(i / 8) + 1;
+      cell.appendChild(beatNum);
+
+      var tickA = document.createElement('div');
+      tickA.className = 'impulse-tick voice-a';
+      cell.appendChild(tickA);
+
+      var tickB = document.createElement('div');
+      tickB.className = 'impulse-tick voice-b';
+      cell.appendChild(tickB);
+
+      container.appendChild(cell);
+    }
+  }
+
+  function updateRelationship() {
+    var msA = msPerBar(bpm) / divA;
+    var msB = msPerBar(bpm) / divB;
+    var cycle = lcm(Math.round(msA), Math.round(msB));
+    var g = gcd(divA, divB);
+    var coincideA = divA / g;
+    var coincideB = divB / g;
+
+    document.getElementById('relRatio').textContent = divA + ':' + divB;
+    document.getElementById('relA').textContent = msA.toFixed(1) + ' ms';
+    document.getElementById('relB').textContent = msB.toFixed(1) + ' ms';
+    document.getElementById('relCycle').textContent = cycle.toFixed(0) + ' ms';
+    document.getElementById('relCoincide').textContent = 'beat ' + coincideA + ' + beat ' + coincideB;
+  }
+
+  function drawClock() {
+    rafId = requestAnimationFrame(drawClock);
+    var c = document.getElementById('clockCanvas');
+    var dpr = window.devicePixelRatio || 1;
+    c.width = c.offsetWidth * dpr;
+    c.height = 200 * dpr;
+    var ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    var W = c.width / dpr;
+    var H = c.height / dpr;
+    var cx = W / 2;
+    var cy = H / 2;
+    var radius = Math.min(cx, cy) - 20;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#050508';
+    ctx.fillRect(0, 0, W, H);
+
+    // Outer ring
+    ctx.strokeStyle = '#141420';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Ring ticks for A (divA ticks)
+    for (var i = 0; i < divA; i++) {
+      var angleA = (i / divA) * Math.PI * 2 - Math.PI / 2;
+      var innerR = radius - 12;
+      var outerR = radius - 4;
+      ctx.strokeStyle = 'rgba(0,245,255,0.4)';
+      ctx.lineWidth = i === 0 ? 2 : 1;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(angleA) * innerR, cy + Math.sin(angleA) * innerR);
+      ctx.lineTo(cx + Math.cos(angleA) * outerR, cy + Math.sin(angleA) * outerR);
+      ctx.stroke();
+
+      // Label
+      var labelR = radius - 22;
+      ctx.fillStyle = 'rgba(0,245,255,0.7)';
+      ctx.font = '9px IBM Plex Mono';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(i + 1, cx + Math.cos(angleA) * labelR, cy + Math.sin(angleA) * labelR);
+    }
+
+    // Ring ticks for B (divB ticks, dashed)
+    for (var j = 0; j < divB; j++) {
+      var angleB = (j / divB) * Math.PI * 2 - Math.PI / 2;
+      var innerRB = radius - 20;
+      var outerRB = radius - 12;
+      ctx.strokeStyle = 'rgba(255,184,0,0.35)';
+      ctx.lineWidth = j === 0 ? 2 : 1;
+      ctx.setLineDash([2, 3]);
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(angleB) * innerRB, cy + Math.sin(angleB) * innerRB);
+      ctx.lineTo(cx + Math.cos(angleB) * outerRB, cy + Math.sin(angleB) * outerRB);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // Hands — advance based on elapsed time
+    if (isPlaying && audioCtx) {
+      var elapsed = (audioCtx.currentTime - audioCtx.startTime);
+      clockAngleA = (elapsed / (msPerBar(bpm) / 1000)) * Math.PI * 2;
+      clockAngleB = (elapsed / (msPerBar(bpm) / 1000 / divB * divB)) * Math.PI * 2;
+    }
+
+    // Voice A hand (solid cyan)
+    var handLenA = radius - 30;
+    var hAngleA = clockAngleA - Math.PI / 2;
+    ctx.strokeStyle = '#00f5ff';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#00f5ff';
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(hAngleA) * handLenA, cy + Math.sin(hAngleA) * handLenA);
+    ctx.stroke();
+
+    // Voice B hand (dashed gold)
+    var handLenB = radius - 30;
+    var hAngleB = clockAngleB - Math.PI / 2;
+    ctx.strokeStyle = '#ffb800';
+    ctx.lineWidth = 2;
+    ctx.shadowColor = '#ffb800';
+    ctx.shadowBlur = 6;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(hAngleB) * handLenB, cy + Math.sin(hAngleB) * handLenB);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.shadowBlur = 0;
+
+    // Center dot
+    ctx.fillStyle = '#c8c8e0';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Legend
+    ctx.font = '9px IBM Plex Mono';
+    ctx.fillStyle = '#00f5ff';
+    ctx.textAlign = 'left';
+    ctx.fillText('— Voice A (' + divA + ')', 10, H - 20);
+    ctx.fillStyle = '#ffb800';
+    ctx.fillText('— Voice B (' + divB + ')', 10, H - 8);
+  }
+
+  function updateClock() {
+    // Triggered by scheduler
+  }
+
+  function start() {
+    initAudio();
+    isPlaying = true;
+    nextNoteTime = audioCtx.currentTime + 0.05;
+    audioCtx.startTime = audioCtx.currentTime;
+    clockAngleA = 0;
+    clockAngleB = 0;
+    barCount = 0;
+    document.getElementById('playBtn').textContent = '\u25A0 STOP';
+    document.getElementById('playBtn').classList.add('playing');
+    scheduler();
+  }
+
+  function stop() {
+    isPlaying = false;
+    clearTimeout(timerID);
+    document.getElementById('playBtn').textContent = '\u25B6 PLAY';
+    document.getElementById('playBtn').classList.remove('playing');
+  }
+
+  function toggle() {
+    if (isPlaying) stop();
+    else start();
+  }
+
+  // Events
+  document.getElementById('playBtn').addEventListener('click', toggle);
+  document.getElementById('bpmInput').addEventListener('change', function() {
+    bpm = Math.max(40, Math.min(220, parseInt(this.value) || 124));
+    this.value = bpm;
+    updateRelationship();
+  });
+
+  window.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); toggle(); }
+    if (e.key === 'ArrowUp') {
+      bpm = Math.min(220, bpm + 1);
+      document.getElementById('bpmInput').value = bpm;
+      updateRelationship();
+    }
+    if (e.key === 'ArrowDown') {
+      bpm = Math.max(40, bpm - 1);
+      document.getElementById('bpmInput').value = bpm;
+      updateRelationship();
+    }
+  });
+
+  // Init
+  buildDivButtons();
+  rebuildImpulse();
+  updateRelationship();
+  drawClock();
+
+})();
+</script>
+</body>
+</html>
