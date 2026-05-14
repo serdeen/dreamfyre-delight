@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EQ Rack</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--bg:#090910;--surface:#0f0e1a;--surface2:#171528;--accent:#ff4d9d;--accent2:#4dffda;--accent3:#ffd94d;--border:rgba(255,77,157,0.18);--text:#fff5f0;--muted:rgba(255,245,240,0.32);}
+body{background:var(--bg);min-height:100vh;font-family:'JetBrains Mono',monospace;color:var(--text);user-select:none;overflow-x:hidden;}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+.title{font-size:0.65rem;letter-spacing:5px;text-transform:uppercase;color:var(--accent);font-weight:600;}
+.header-right{display:flex;align-items:center;gap:12px;}
+.bpm-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);}
+.bpm-val{font-size:0.75rem;color:var(--accent2);margin-left:4px;}
+
+/* EQ Canvas */
+.eq-display{padding:16px 24px;background:var(--surface);}
+.eq-canvas-wrap{position:relative;background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;height:200px;}
+#eqCanvas{width:100%;height:100%;cursor:crosshair;}
+
+/* Band Handles Overlay */
+.band-handles{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
+.band-handle{position:absolute;width:12px;height:12px;border-radius:50%;border:2px solid var(--text);cursor:ew-resize;pointer-events:all;transform:translate(-50%,-50%);transition:transform 0.1s,box-shadow 0.1s;top:50%;}
+.band-handle:hover{transform:translate(-50%,-50%) scale(1.4);}
+.band-handle.hi{background:var(--accent);border-color:var(--accent);}
+.band-handle.lo{background:var(--accent2);border-color:var(--accent2);}
+.band-handle.lom{background:var(--accent3);border-color:var(--accent3);}
+.band-handle.him{background:#a78bff;border-color:#a78bff;}
+
+/* Band Controls */
+.bands{padding:14px 24px;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;background:var(--surface);border-bottom:1px solid var(--border);}
+.band-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 10px;display:flex;flex-direction:column;gap:8px;}
+.band-card[data-band="lo"]{border-color:rgba(77,255,218,0.2);}
+.band-card[data-band="lom"]{border-color:rgba(255,217,77,0.2);}
+.band-card[data-band="him"]{border-color:rgba(167,139,255,0.2);}
+.band-card[data-band="hi"]{border-color:rgba(255,77,157,0.2);}
+
+.band-name{font-size:0.55rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;text-align:center;}
+.band-name.lo{color:var(--accent2);}
+.band-name.lom{color:var(--accent3);}
+.band-name.him{color:#a78bff;}
+.band-name.hi{color:var(--accent);}
+
+.ctrl-row{display:flex;flex-direction:column;gap:3px;}
+.ctrl-lbl{font-size:0.5rem;letter-spacing:2px;color:var(--muted);}
+.ctrl-val{font-size:0.7rem;color:var(--text);text-align:center;}
+.ctrl-input{background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:inherit;font-size:0.65rem;width:100%;text-align:center;padding:4px 2px;outline:none;}
+.ctrl-input:focus{border-color:var(--accent);}
+
+/* Input / Load */
+.input-section{padding:14px 24px;background:var(--surface);display:flex;align-items:center;gap:12px;}
+.load-btn{background:transparent;border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:0.65rem;letter-spacing:2px;padding:8px 16px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.load-btn:hover{border-color:var(--accent);}
+.input-filename{font-size:0.6rem;color:var(--muted);flex:1;}
+.play-btn{background:var(--accent);border:none;color:#090910;font-family:inherit;font-size:0.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:8px 18px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.play-btn:hover{transform:scale(1.04);}
+.play-btn.playing{background:var(--accent2);}
+
+/* Master */
+.master-section{padding:12px 24px;background:var(--surface);display:flex;align-items:center;gap:14px;border-top:1px solid var(--border);}
+.master-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);flex-shrink:0;}
+.master-slider{flex:1;height:4px;-webkit-appearance:none;background:linear-gradient(to right,var(--accent) 75%,var(--border) 75%);border-radius:2px;outline:none;cursor:pointer;}
+.master-slider::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--text);cursor:pointer;}
+.db-label{font-size:0.55rem;color:var(--muted);width:32px;text-align:right;flex-shrink:0;}
+
+footer{padding:12px 24px;text-align:center;}
+.footer-text{font-size:0.5rem;letter-spacing:2px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title">EQ Rack</div>
+  <div class="header-right">
+    <span class="bpm-label">BPM</span>
+    <span class="bpm-val">124</span>
+  </div>
+</header>
+
+<div class="eq-display">
+  <div class="eq-canvas-wrap">
+    <canvas id="eqCanvas"></canvas>
+  </div>
+</div>
+
+<div class="bands">
+  <div class="band-card" data-band="lo">
+    <div class="band-name lo">Low</div>
+    <div class="ctrl-row">
+      <div class="ctrl-lbl">Freq (Hz)</div>
+      <input type="number" class="ctrl-input" id="loFreq" value="80" min="20" max="500">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-lbl">Gain (dB)</div>
+      <input type="number" class="ctrl-input" id="loGain" value="0" min="-20" max="20" step="0.5">
+    </div>
+  </div>
+  <div class="band-card" data-band="lom">
+    <div class="band-name lom">Lo-Mid</div>
+    <div class="ctrl-row">
+      <div class="ctrl-lbl">Freq (Hz)</div>
+      <input type="number" class="ctrl-input" id="lomFreq" value="400" min="100" max="2000">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-lbl">Q</div>
+      <input type="number" class="ctrl-input" id="lomQ" value="1" min="0.1" max="10" step="0.1">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-lbl">Gain (dB)</div>
+      <input type="number" class="ctrl-input" id="lomGain" value="0" min="-20" max="20" step="0.5">
+    </div>
+  </div>
+  <div class="band-card" data-band="him">
+    <div class="band-name him">Hi-Mid</div>
+    <div class="ctrl-row">
+      <div class="ctrl-lbl">Freq (Hz)</div>
+      <input type="number" class="ctrl-input" id="himFreq" value="2500" min="1000" max="8000">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-lbl">Q</div>
+      <input type="number" class="ctrl-input" id="himQ" value="1" min="0.1" max="10" step="0.1">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-lbl">Gain (dB)</div>
+      <input type="number" class="ctrl-input" id="himGain" value="0" min="-20" max="20" step="0.5">
+    </div>
+  </div>
+  <div class="band-card" data-band="hi">
+    <div class="band-name hi">High</div>
+    <div class="ctrl-row">
+      <div class="ctrl-lbl">Freq (Hz)</div>
+      <input type="number" class="ctrl-input" id="hiFreq" value="8000" min="2000" max="16000">
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-lbl">Gain (dB)</div>
+      <input type="number" class="ctrl-input" id="hiGain" value="0" min="-20" max="20" step="0.5">
+    </div>
+  </div>
+</div>
+
+<div class="input-section">
+  <button class="load-btn" id="loadBtn">Load Audio</button>
+  <input type="file" id="audioInput" accept="audio/*" style="display:none">
+  <div class="input-filename" id="fileName">No file loaded</div>
+  <button class="play-btn" id="playBtn">Play</button>
+</div>
+
+<div class="master-section">
+  <span class="master-label">Master</span>
+  <input type="range" class="master-slider" id="masterSlider" min="0" max="100" value="75">
+  <span class="db-label" id="dbLabel">-1dB</span>
+</div>
+
+<footer><div class="footer-text">4-Band Parametric EQ &bull; Deep House Signal Chain</div></footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let ctx, source, audioBuffer, masterGain;
+let isPlaying = false;
+let animFrame;
+let currentPosition = 0;
+
+// EQ settings
+const bands = {
+  lo:   { freq: 80,  gain: 0, Q: 0.7 },
+  lom:  { freq: 400, gain: 0, Q: 1 },
+  him:  { freq: 2500, gain: 0, Q: 1 },
+  hi:   { freq: 8000, gain: 0, Q: 0.7 }
+};
+
+// EQ filter nodes
+let eqFilters = {};
+
+function initAudio() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') ctx.resume();
+}
+
+function buildEQ() {
+  eqFilters.lo = ctx.createBiquadFilter();
+  eqFilters.lo.type = 'lowshelf';
+  eqFilters.lo.frequency.value = bands.lo.freq;
+  eqFilters.lo.gain.value = bands.lo.gain;
+
+  eqFilters.lom = ctx.createBiquadFilter();
+  eqFilters.lom.type = 'peaking';
+  eqFilters.lom.frequency.value = bands.lom.freq;
+  eqFilters.lom.gain.value = bands.lom.gain;
+  eqFilters.lom.Q.value = bands.lom.Q;
+
+  eqFilters.him = ctx.createBiquadFilter();
+  eqFilters.him.type = 'peaking';
+  eqFilters.him.frequency.value = bands.him.freq;
+  eqFilters.him.gain.value = bands.him.gain;
+  eqFilters.him.Q.value = bands.him.Q;
+
+  eqFilters.hi = ctx.createBiquadFilter();
+  eqFilters.hi.type = 'highshelf';
+  eqFilters.hi.frequency.value = bands.hi.freq;
+  eqFilters.hi.gain.value = bands.hi.gain;
+
+  eqFilters.lo.connect(eqFilters.lom);
+  eqFilters.lom.connect(eqFilters.him);
+  eqFilters.him.connect(eqFilters.hi);
+
+  masterGain = ctx.createGain();
+  masterGain.gain.value = 0.75;
+  eqFilters.hi.connect(masterGain);
+  masterGain.connect(ctx.destination);
+}
+
+function updateEQFromUI() {
+  if (eqFilters.lo) {
+    eqFilters.lo.frequency.value = bands.lo.freq;
+    eqFilters.lo.gain.value = bands.lo.gain;
+    eqFilters.lom.frequency.value = bands.lom.freq;
+    eqFilters.lom.gain.value = bands.lom.gain;
+    eqFilters.lom.Q.value = bands.lom.Q;
+    eqFilters.him.frequency.value = bands.him.freq;
+    eqFilters.him.gain.value = bands.him.gain;
+    eqFilters.him.Q.value = bands.him.Q;
+    eqFilters.hi.frequency.value = bands.hi.freq;
+    eqFilters.hi.gain.value = bands.hi.gain;
+  }
+  drawEQCurve();
+}
+
+// Load audio
+function loadAudio(file) {
+  initAudio();
+  $('fileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    ctx.decodeAudioData(e.target.result, buf => {
+      audioBuffer = buf;
+      $('playBtn').textContent = 'Play';
+      isPlaying = false;
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function playAudio() {
+  if (!audioBuffer) return;
+  initAudio();
+  if (!eqFilters.lo) buildEQ();
+
+  if (source) { try { source.stop(); } catch(e){} }
+  source = ctx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(eqFilters.lo);
+  source.onended = () => {
+    isPlaying = false;
+    $('playBtn').classList.remove('playing');
+    $('playBtn').textContent = 'Play';
+    cancelAnimationFrame(animFrame);
+  };
+  source.start(0, currentPosition);
+  isPlaying = true;
+  $('playBtn').classList.add('playing');
+  $('playBtn').textContent = 'Stop';
+  drawEQCurve();
+}
+
+function stopAudio() {
+  if (source) { try { source.stop(); } catch(e){} currentPosition = 0; }
+  isPlaying = false;
+  $('playBtn').classList.remove('playing');
+  $('playBtn').textContent = 'Play';
+  cancelAnimationFrame(animFrame);
+}
+
+// EQ Curve Drawing
+function freqToX(freq, w) {
+  // 20Hz to 20kHz log scale
+  const minLog = Math.log10(20);
+  const maxLog = Math.log10(20000);
+  const log = Math.log10(Math.max(20, Math.min(20000, freq)));
+  return ((log - minLog) / (maxLog - minLog)) * w;
+}
+
+function xToFreq(x, w) {
+  const minLog = Math.log10(20);
+  const maxLog = Math.log10(20000);
+  const log = minLog + (x / w) * (maxLog - minLog);
+  return Math.pow(10, log);
+}
+
+function dbToY(db, h) {
+  const range = 30; // ±15dB range
+  return (h / 2) - (db / range) * (h / 2);
+}
+
+function drawEQCurve() {
+  const canvas = $('eqCanvas');
+  const w = canvas.offsetWidth;
+  const h = canvas.offsetHeight;
+  canvas.width = w;
+  canvas.height = h;
+  const c = canvas.getContext('2d');
+
+  // Background grid
+  c.fillStyle = '#090910';
+  c.fillRect(0, 0, w, h);
+
+  // Horizontal dB lines
+  c.strokeStyle = 'rgba(255,245,240,0.06)';
+  c.lineWidth = 1;
+  c.setLineDash([3, 4]);
+  for (let db = -15; db <= 15; db += 3) {
+    const y = dbToY(db, h);
+    c.beginPath();
+    c.moveTo(0, y);
+    c.lineTo(w, y);
+    c.stroke();
+  }
+  c.setLineDash([]);
+
+  // Center line
+  c.strokeStyle = 'rgba(255,77,157,0.2)';
+  c.beginPath();
+  c.moveTo(0, h / 2);
+  c.lineTo(w, h / 2);
+  c.stroke();
+
+  // Vertical freq lines (every octave)
+  const octaves = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+  c.strokeStyle = 'rgba(255,245,240,0.05)';
+  for (const freq of octaves) {
+    const x = freqToX(freq, w);
+    c.beginPath();
+    c.moveTo(x, 0);
+    c.lineTo(x, h);
+    c.stroke();
+  }
+
+  // Draw EQ response curve (approximate)
+  c.strokeStyle = '#ff4d9d';
+  c.lineWidth = 2;
+  c.beginPath();
+  for (let px = 0; px <= w; px += 2) {
+    const freq = xToFreq(px, w);
+    let gain = 0;
+
+    // Low shelf approximation
+    const loFreq = bands.lo.freq;
+    if (freq < loFreq * 2) {
+      const ratio = freq / loFreq;
+      gain += bands.lo.gain * Math.max(0, 1 - ratio * 0.7);
+    }
+
+    // Lo-mid peak
+    const lomFreq = bands.lom.freq;
+    const lomQ = bands.lom.Q;
+    const lomRatio = (freq / lomFreq);
+    const lomFactor = Math.exp(-Math.pow(Math.log(lomRatio), 2) * lomQ * 2);
+    gain += bands.lom.gain * (1 - lomFactor);
+
+    // Hi-mid peak
+    const himFreq = bands.him.freq;
+    const himQ = bands.him.Q;
+    const himRatio = (freq / himFreq);
+    const himFactor = Math.exp(-Math.pow(Math.log(himRatio), 2) * himQ * 2);
+    gain += bands.him.gain * (1 - himFactor);
+
+    // High shelf approximation
+    const hiFreq = bands.hi.freq;
+    if (freq > hiFreq * 0.6) {
+      const ratio = hiFreq / freq;
+      gain += bands.hi.gain * Math.max(0, 1 - ratio * 0.5);
+    }
+
+    const y = dbToY(Math.max(-15, Math.min(15, gain)), h);
+    if (px === 0) c.moveTo(px, y);
+    else c.lineTo(px, y);
+  }
+  c.stroke();
+
+  // Fill under curve
+  c.strokeStyle = 'rgba(255,77,157,0.15)';
+  c.lineWidth = 1;
+  c.fillStyle = 'rgba(255,77,157,0.04)';
+  c.beginPath();
+  for (let px = 0; px <= w; px += 2) {
+    const freq = xToFreq(px, w);
+    let gain = 0;
+    const loFreq = bands.lo.freq;
+    if (freq < loFreq * 2) {
+      const ratio = freq / loFreq;
+      gain += bands.lo.gain * Math.max(0, 1 - ratio * 0.7);
+    }
+    const lomFreq = bands.lom.freq;
+    const lomQ = bands.lom.Q;
+    const lomRatio = (freq / lomFreq);
+    const lomFactor = Math.exp(-Math.pow(Math.log(lomRatio), 2) * lomQ * 2);
+    gain += bands.lom.gain * (1 - lomFactor);
+    const himFreq = bands.him.freq;
+    const himQ = bands.him.Q;
+    const himRatio = (freq / himFreq);
+    const himFactor = Math.exp(-Math.pow(Math.log(himRatio), 2) * himQ * 2);
+    gain += bands.him.gain * (1 - himFactor);
+    const hiFreq = bands.hi.freq;
+    if (freq > hiFreq * 0.6) {
+      const ratio = hiFreq / freq;
+      gain += bands.hi.gain * Math.max(0, 1 - ratio * 0.5);
+    }
+    const y = dbToY(Math.max(-15, Math.min(15, gain)), h);
+    if (px === 0) c.moveTo(px, y);
+    else c.lineTo(px, y);
+  }
+  c.lineTo(w, h);
+  c.lineTo(0, h);
+  c.closePath();
+  c.fill();
+
+  // Band labels on canvas
+  const bandX = {
+    lo: freqToX(bands.lo.freq, w),
+    lom: freqToX(bands.lom.freq, w),
+    him: freqToX(bands.him.freq, w),
+    hi: freqToX(bands.hi.freq, w)
+  };
+  const bandY = {
+    lo: dbToY(bands.lo.gain, h),
+    lom: dbToY(bands.lom.gain, h),
+    him: dbToY(bands.him.gain, h),
+    hi: dbToY(bands.hi.gain, h)
+  };
+
+  // Band handle dots
+  const colors = { lo: '#4dffda', lom: '#ffd94d', him: '#a78bff', hi: '#ff4d9d' };
+  for (const [key, x] of Object.entries(bandX)) {
+    c.beginPath();
+    c.arc(x, bandY[key], 5, 0, Math.PI * 2);
+    c.fillStyle = colors[key];
+    c.fill();
+    c.strokeStyle = '#fff';
+    c.lineWidth = 1.5;
+    c.stroke();
+  }
+
+  animFrame = requestAnimationFrame(drawEQCurve);
+}
+
+// Band control bindings
+function bindBand(id, key, param) {
+  const el = $(id);
+  el.addEventListener('input', () => {
+    bands[key][param] = parseFloat(el.value);
+    updateEQFromUI();
+  });
+}
+
+bindBand('loFreq', 'lo', 'freq');
+bindBand('loGain', 'lo', 'gain');
+bindBand('lomFreq', 'lom', 'freq');
+bindBand('lomQ', 'lom', 'Q');
+bindBand('lomGain', 'lom', 'gain');
+bindBand('himFreq', 'him', 'freq');
+bindBand('himQ', 'him', 'Q');
+bindBand('himGain', 'him', 'gain');
+bindBand('hiFreq', 'hi', 'freq');
+bindBand('hiGain', 'hi', 'gain');
+
+// Load button
+$('loadBtn').addEventListener('click', () => $('audioInput').click());
+$('audioInput').addEventListener('change', e => {
+  if (e.target.files[0]) loadAudio(e.target.files[0]);
+});
+
+// Play button
+$('playBtn').addEventListener('click', () => {
+  if (isPlaying) stopAudio(); else playAudio();
+});
+
+// Master volume
+$('masterSlider').addEventListener('input', e => {
+  const v = parseInt(e.target.value) / 100;
+  if (masterGain) masterGain.gain.value = v;
+  const db = v > 0 ? (20 * Math.log10(v)).toFixed(1) : '-∞';
+  $('dbLabel').textContent = db + 'dB';
+  const pct = parseInt(e.target.value);
+  e.target.style.background = `linear-gradient(to right, var(--accent) ${pct}%, var(--border) ${pct}%)`;
+});
+$('masterSlider').dispatchEvent(new Event('input'));
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); $('playBtn').click(); }
+  if (e.code === 'Escape') stopAudio();
+});
+
+// Init
+drawEQCurve();
+document.addEventListener('click', () => initAudio(), { once: true });
+</script>
+</body>
+</html>
