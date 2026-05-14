@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sidechain Pump</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--bg:#08080f;--surface:#11101e;--surface2:#1a1830;--accent:#7b61ff;--accent2:#ff6b9d;--accent3:#00e5b2;--border:rgba(123,97,255,0.18);--text:#f0eaff;--muted:rgba(240,234,255,0.32);}
+body{background:var(--bg);min-height:100vh;font-family:'JetBrains Mono',monospace;color:var(--text);user-select:none;overflow-x:hidden;}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+.title{font-size:0.65rem;letter-spacing:5px;text-transform:uppercase;color:var(--accent);font-weight:600;}
+.subtitle{font-size:0.55rem;letter-spacing:3px;color:var(--muted);}
+.bpm-row{display:flex;align-items:center;gap:8px;}
+.ctrl-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.bpm-box{display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.bpm-in{background:transparent;border:none;color:var(--accent);font-family:inherit;font-size:0.85rem;width:52px;text-align:center;padding:6px 4px;outline:none;}
+.num-btn{background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:0.8rem;padding:6px 10px;cursor:pointer;transition:all 0.15s;}
+.num-btn:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+
+/* Envelope Visualizer */
+.env-section{padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+.env-wrap{background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;height:140px;position:relative;}
+#envCanvas{width:100%;height:100%;}
+.env-info{position:absolute;top:8px;left:10px;font-size:0.5rem;letter-spacing:2px;color:var(--muted);}
+
+/* Controls Grid */
+.controls{padding:18px 24px;display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--surface);}
+.ctrl-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.ctrl-card-title{font-size:0.55rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:2px;}
+.knob-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.knob-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);}
+.knob-val{font-size:0.7rem;color:var(--text);}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;}
+
+/* Rate Selector */
+.rate-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.rate-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:inherit;font-size:0.6rem;letter-spacing:1px;padding:7px 4px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.rate-btn.selected{border-color:var(--accent);color:var(--accent);background:rgba(123,97,255,0.12);}
+.rate-btn:hover{border-color:rgba(123,97,255,0.5);}
+
+/* Presets */
+.preset-row{display:flex;gap:8px;flex-wrap:wrap;}
+.preset-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:inherit;font-size:0.6rem;letter-spacing:1px;padding:6px 12px;border-radius:5px;cursor:pointer;transition:all 0.15s;}
+.preset-btn:hover{border-color:var(--accent2);}
+.preset-btn.active{border-color:var(--accent2);color:var(--accent2);}
+
+/* Input Row */
+.input-row{display:flex;align-items:center;gap:12px;padding:14px 24px;background:var(--surface);border-top:1px solid var(--border);}
+.load-btn{background:transparent;border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:0.65rem;letter-spacing:2px;padding:8px 16px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.load-btn:hover{border-color:var(--accent);}
+input[type=file]{display:none;}
+.filename{font-size:0.6rem;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+.play-btn{background:var(--accent);border:none;color:#08080f;font-family:inherit;font-size:0.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:8px 18px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.play-btn:hover{transform:scale(1.04);}
+.play-btn.playing{background:var(--accent2);}
+
+/* Transport */
+.transport{display:flex;align-items:center;justify-content:center;gap:14px;padding:18px;background:var(--surface);border-top:1px solid var(--border);}
+.transport-btn{width:46px;height:46px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.transport-btn svg{width:18px;height:18px;fill:currentColor;}
+.transport-btn:hover{border-color:var(--accent);transform:scale(1.05);}
+.transport-btn.big{width:56px;height:56px;background:var(--accent);border-color:var(--accent);color:#08080f;}
+.transport-btn.big:hover{transform:scale(1.04);filter:brightness(1.1);}
+
+/* Beat indicators */
+.beat-row{display:flex;justify-content:center;gap:8px;padding:10px;background:var(--surface);border-top:1px solid var(--border);}
+.beat-pip{width:10px;height:10px;border-radius:50%;background:var(--border);transition:background 0.05s,box-shadow 0.05s;}
+.beat-pip.active{background:var(--accent);box-shadow:0 0 8px rgba(123,97,255,0.6);}
+
+footer{padding:12px 24px;text-align:center;}
+.footer-text{font-size:0.5rem;letter-spacing:2px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Sidechain Pump</div>
+    <div class="subtitle">Deep House Compression</div>
+  </div>
+  <div class="bpm-row">
+    <span class="ctrl-label">BPM</span>
+    <div class="bpm-box">
+      <button class="num-btn" id="bpmDown">−</button>
+      <input type="number" class="bpm-in" id="bpmIn" value="124" min="60" max="200">
+      <button class="num-btn" id="bpmUp">+</button>
+    </div>
+  </div>
+</header>
+
+<div class="env-section">
+  <div class="env-wrap">
+    <canvas id="envCanvas"></canvas>
+    <div class="env-info" id="envInfo">PUMP ENVELOPE</div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="ctrl-card">
+    <div class="ctrl-card-title">Envelope</div>
+    <div class="knob-row">
+      <span class="knob-label">Attack (ms)</span>
+      <span class="knob-val" id="atkVal">5</span>
+    </div>
+    <input type="range" id="atkSlider" min="0" max="100" value="5">
+    <div class="knob-row">
+      <span class="knob-label">Hold (ms)</span>
+      <span class="knob-val" id="holdVal">80</span>
+    </div>
+    <input type="range" id="holdSlider" min="0" max="300" value="80">
+    <div class="knob-row">
+      <span class="knob-label">Release (ms)</span>
+      <span class="knob-val" id="relVal">200</span>
+    </div>
+    <input type="range" id="relSlider" min="10" max="500" value="200">
+  </div>
+
+  <div class="ctrl-card">
+    <div class="ctrl-card-title">Depth & Mix</div>
+    <div class="knob-row">
+      <span class="knob-label">Depth (%)</span>
+      <span class="knob-val" id="depthVal">70</span>
+    </div>
+    <input type="range" id="depthSlider" min="0" max="100" value="70">
+    <div class="knob-row">
+      <span class="knob-label">Dry/Wet (%)</span>
+      <span class="knob-val" id="wetVal">100</span>
+    </div>
+    <input type="range" id="wetSlider" min="0" max="100" value="100">
+  </div>
+
+  <div class="ctrl-card">
+    <div class="ctrl-card-title">Rate</div>
+    <div class="rate-grid">
+      <button class="rate-btn" data-rate="4">1/4</button>
+      <button class="rate-btn selected" data-rate="8">1/8</button>
+      <button class="rate-btn" data-rate="16">1/16</button>
+    </div>
+  </div>
+
+  <div class="ctrl-card">
+    <div class="ctrl-card-title">Presets</div>
+    <div class="preset-row">
+      <button class="preset-btn" data-p="subtle">Subtle</button>
+      <button class="preset-btn" data-p="dusky">Dusky</button>
+      <button class="preset-btn" data-p="punchy">Punchy</button>
+      <button class="preset-btn" data-p="classic">Classic</button>
+    </div>
+  </div>
+</div>
+
+<div class="input-row">
+  <button class="load-btn" id="loadBtn">Load Audio</button>
+  <input type="file" id="audioInput" accept="audio/*" style="display:none">
+  <div class="filename" id="fileName">No audio loaded</div>
+  <button class="play-btn" id="playBtn">Play</button>
+</div>
+
+<div class="transport">
+  <button class="transport-btn" id="stopBtn" title="Stop">
+    <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+  </button>
+  <button class="transport-btn big" id="pumpBtn" title="Pump">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z" transform="rotate(180 12 12)"/></svg>
+  </button>
+  <button class="transport-btn" id="muteBtn" title="Toggle Dry">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+      <line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>
+    </svg>
+  </button>
+</div>
+
+<div class="beat-row">
+  <div class="beat-pip" id="pip0"></div>
+  <div class="beat-pip" id="pip1"></div>
+  <div class="beat-pip" id="pip2"></div>
+  <div class="beat-pip" id="pip3"></div>
+</div>
+
+<footer><div class="footer-text">Sidechain Pump &bull; BPM-Synced Gain Envelope</div></footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let ctx, source, audioBuffer, dryGain, wetGain, pumpGain;
+let BPM = 124;
+let RATE = 8; // divisions per beat
+let isPlaying = false;
+let isPumping = false;
+let masterMuted = false;
+
+// Envelope params
+let attack = 5;   // ms
+let hold = 80;     // ms
+let release = 200; // ms
+let depth = 0.70;  // 0-1
+let wet = 1.0;     // 0-1
+
+let beatIndex = 0;
+let beatInterval;
+let currentSourceNode = null;
+let pumpInterval;
+let animFrame;
+
+const presets = {
+  subtle: { atk: 20, hold: 40, rel: 300, depth: 40, wet: 100 },
+  dusky:  { atk: 10, hold: 120, rel: 350, depth: 55, wet: 100 },
+  punchy: { atk: 2, hold: 50, rel: 100, depth: 90, wet: 100 },
+  classic:{ atk: 5, hold: 60, rel: 150, depth: 75, wet: 100 },
+};
+
+function initAudio() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') ctx.resume();
+}
+
+function buildChain() {
+  dryGain = ctx.createGain();
+  wetGain = ctx.createGain();
+  pumpGain = ctx.createGain();
+  dryGain.gain.value = 1;
+  wetGain.gain.value = 0;
+  pumpGain.gain.value = 1;
+  dryGain.connect(ctx.destination);
+  wetGain.connect(pumpGain);
+  pumpGain.connect(ctx.destination);
+}
+
+function loadAudio(file) {
+  initAudio();
+  $('fileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    ctx.decodeAudioData(e.target.result, buf => {
+      audioBuffer = buf;
+      $('playBtn').textContent = 'Play';
+      isPlaying = false;
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function startPlayback() {
+  if (!audioBuffer) return;
+  initAudio();
+  if (!dryGain) buildChain();
+
+  if (source) { try { source.stop(); } catch(e){} }
+  source = ctx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(dryGain);
+  source.connect(wetGain);
+  source.loop = false;
+  source.onended = () => {
+    isPlaying = false;
+    $('playBtn').classList.remove('playing');
+    $('playBtn').textContent = 'Play';
+    stopPumping();
+  };
+  source.start(0);
+  isPlaying = true;
+  $('playBtn').classList.add('playing');
+  $('playBtn').textContent = 'Stop';
+  if (isPumping) startPumping();
+}
+
+function stopPlayback() {
+  if (source) { try { source.stop(); } catch(e){} }
+  isPlaying = false;
+  $('playBtn').classList.remove('playing');
+  $('playBtn').textContent = 'Play';
+  stopPumping();
+}
+
+// Pump envelope
+function getPumpGainAt(ms) {
+  const beatMs = 60000 / BPM;
+  const stepMs = beatMs / RATE;
+  const pos = ms % stepMs;
+  const depthVal = 1 - depth;
+
+  if (pos < attack) {
+    // Attack: rise from (1-depth) to 1
+    return depthVal + (1 - depthVal) * (pos / attack);
+  } else if (pos < attack + hold) {
+    // Hold: stay at 1
+    return 1;
+  } else {
+    // Release: fall from 1 to (1-depth)
+    const relPos = pos - attack - hold;
+    if (release === 0) return depthVal;
+    return Math.max(depthVal, 1 - (relPos / release));
+  }
+}
+
+function startPumping() {
+  isPumping = true;
+  $('pumpBtn').style.background = 'var(--accent2)';
+  $('pumpBtn').style.borderColor = 'var(--accent2)';
+  beatIndex = 0;
+  const beatMs = 60000 / BPM;
+  const stepMs = beatMs / RATE;
+
+  // Flash beat pips
+  function flashBeat() {
+    document.querySelectorAll('.beat-pip').forEach(p => p.classList.remove('active'));
+    const pip = $('pip' + (beatIndex % 4));
+    if (pip) pip.classList.add('active');
+    beatIndex++;
+  }
+  flashBeat();
+  beatInterval = setInterval(flashBeat, stepMs);
+
+  // Apply gain envelope
+  function applyPump() {
+    if (!pumpGain || !isPlaying) return;
+    const now = ctx.currentTime * 1000;
+    // Calculate position within pump cycle
+    const beatMs2 = 60000 / BPM;
+    const stepMs2 = beatMs2 / RATE;
+    const elapsed = performance.now() % stepMs2;
+    const g = getPumpGainAt(elapsed);
+    pumpGain.gain.setTargetAtTime(g, ctx.currentTime, 0.001);
+    animFrame = requestAnimationFrame(applyPump);
+  }
+  applyPump();
+  drawEnvelope();
+}
+
+function stopPumping() {
+  isPumping = false;
+  clearInterval(beatInterval);
+  cancelAnimationFrame(animFrame);
+  document.querySelectorAll('.beat-pip').forEach(p => p.classList.remove('active'));
+  $('pumpBtn').style.background = '';
+  $('pumpBtn').style.borderColor = '';
+  if (pumpGain) pumpGain.gain.setTargetAtTime(1, ctx.currentTime, 0.01);
+}
+
+// Draw pump envelope visualization
+function drawEnvelope() {
+  const canvas = $('envCanvas');
+  const w = canvas.offsetWidth;
+  const h = canvas.offsetHeight;
+  canvas.width = w;
+  canvas.height = h;
+  const c = canvas.getContext('2d');
+
+  c.fillStyle = '#08080f';
+  c.fillRect(0, 0, w, h);
+
+  const beatMs = 60000 / BPM;
+  const stepMs = beatMs / RATE;
+  const numSamples = 120;
+
+  // Grid lines
+  c.strokeStyle = 'rgba(123,97,255,0.08)';
+  c.lineWidth = 1;
+  for (let i = 0; i <= numSamples; i++) {
+    const x = (i / numSamples) * w;
+    c.beginPath();
+    c.moveTo(x, 0);
+    c.lineTo(x, h);
+    c.stroke();
+  }
+
+  // Draw envelope curve
+  c.strokeStyle = '#7b61ff';
+  c.lineWidth = 2;
+  c.beginPath();
+  for (let i = 0; i <= numSamples; i++) {
+    const t = (i / numSamples) * stepMs;
+    const g = getPumpGainAt(t);
+    const x = (i / numSamples) * w;
+    const y = h - g * h;
+    if (i === 0) c.moveTo(x, y);
+    else c.lineTo(x, y);
+  }
+  c.stroke();
+
+  // Fill
+  c.strokeStyle = 'rgba(123,97,255,0.15)';
+  c.fillStyle = 'rgba(123,97,255,0.06)';
+  c.lineTo(w, h);
+  c.lineTo(0, h);
+  c.closePath();
+  c.fill();
+
+  // Phase markers
+  const atkX = (attack / stepMs) * w;
+  const holdX = ((attack + hold) / stepMs) * w;
+  c.strokeStyle = 'rgba(255,107,157,0.4)';
+  c.setLineDash([3, 3]);
+  if (attack < stepMs) {
+    c.beginPath(); c.moveTo(atkX, 0); c.lineTo(atkX, h); c.stroke();
+  }
+  if (attack + hold < stepMs) {
+    c.beginPath(); c.moveTo(holdX, 0); c.lineTo(holdX, h); c.stroke();
+  }
+  c.setLineDash([]);
+
+  if (isPumping) animFrame = requestAnimationFrame(drawEnvelope);
+}
+
+// Update envelope display info
+function updateEnvInfo() {
+  const beatMs = (60000 / BPM).toFixed(0);
+  const stepMs = (beatMs / RATE).toFixed(0);
+  $('envInfo').textContent = `${attack}ms attack / ${hold}ms hold / ${release}ms release @ ${BPM}bpm ${RATE === 4 ? '1/4' : RATE === 8 ? '1/8' : '1/16'}`;
+}
+
+// BPM controls
+$('bpmIn').addEventListener('change', e => {
+  BPM = Math.max(60, Math.min(200, parseInt(e.target.value) || 124));
+  e.target.value = BPM;
+  updateEnvInfo();
+  drawEnvelope();
+});
+$('bpmDown').addEventListener('click', () => { BPM = Math.max(60, BPM - 1); $('bpmIn').value = BPM; updateEnvInfo(); drawEnvelope(); });
+$('bpmUp').addEventListener('click', () => { BPM = Math.min(200, BPM + 1); $('bpmIn').value = BPM; updateEnvInfo(); drawEnvelope(); });
+
+// Envelope sliders
+$('atkSlider').addEventListener('input', e => {
+  attack = parseInt(e.target.value);
+  $('atkVal').textContent = attack;
+  updateEnvInfo();
+  drawEnvelope();
+});
+$('holdSlider').addEventListener('input', e => {
+  hold = parseInt(e.target.value);
+  $('holdVal').textContent = hold;
+  updateEnvInfo();
+  drawEnvelope();
+});
+$('relSlider').addEventListener('input', e => {
+  release = parseInt(e.target.value);
+  $('relVal').textContent = release;
+  updateEnvInfo();
+  drawEnvelope();
+});
+$('depthSlider').addEventListener('input', e => {
+  depth = parseInt(e.target.value) / 100;
+  $('depthVal').textContent = e.target.value;
+  drawEnvelope();
+});
+$('wetSlider').addEventListener('input', e => {
+  wet = parseInt(e.target.value) / 100;
+  $('wetVal').textContent = e.target.value;
+  if (wetGain) wetGain.gain.setTargetAtTime(wet, ctx.currentTime, 0.01);
+});
+
+// Rate buttons
+document.querySelectorAll('.rate-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.rate-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    RATE = parseInt(btn.dataset.rate);
+    updateEnvInfo();
+    drawEnvelope();
+    if (isPumping) { stopPumping(); startPumping(); }
+  });
+});
+
+// Presets
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const p = presets[btn.dataset.p];
+    attack = p.atk; $('atkSlider').value = attack; $('atkVal').textContent = attack;
+    hold = p.hold; $('holdSlider').value = hold; $('holdVal').textContent = hold;
+    release = p.rel; $('relSlider').value = release; $('relVal').textContent = release;
+    depth = p.depth / 100; $('depthSlider').value = p.depth; $('depthVal').textContent = p.depth;
+    wet = p.wet / 100; $('wetSlider').value = p.wet; $('wetVal').textContent = p.wet;
+    updateEnvInfo();
+    drawEnvelope();
+  });
+});
+
+// Transport
+$('playBtn').addEventListener('click', () => {
+  if (isPlaying) stopPlayback(); else startPlayback();
+});
+$('stopBtn').addEventListener('click', () => stopPlayback());
+$('pumpBtn').addEventListener('click', () => {
+  if (isPumping) stopPumping(); else { if (isPlaying) startPumping(); }
+});
+$('muteBtn').addEventListener('click', () => {
+  masterMuted = !masterMuted;
+  if (dryGain) dryGain.gain.setTargetAtTime(masterMuted ? 0 : 1, ctx.currentTime, 0.01);
+});
+
+// Load
+$('loadBtn').addEventListener('click', () => $('audioInput').click());
+$('audioInput').addEventListener('change', e => {
+  if (e.target.files[0]) loadAudio(e.target.files[0]);
+});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); $('playBtn').click(); }
+  if (e.code === 'KeyP') $('pumpBtn').click();
+  if (e.code === 'Escape') { stopPlayback(); stopPumping(); }
+});
+
+// Init
+updateEnvInfo();
+drawEnvelope();
+document.addEventListener('click', () => initAudio(), { once: true });
+</script>
+</body>
+</html>
