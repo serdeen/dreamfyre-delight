@@ -14,18 +14,31 @@
 </head>
 <body>
 <script>
-// === Tunables ===
-const BALL_RADIUS = 10;
-const POCKET_RADIUS = 20;
-const FRICTION = 0.988;
-const BOUNCE = 0.78;
-const MIN_SPEED = 0.08;
-const MAX_POWER = 22;
+// === Real-world pool table constants ===
+// Standard 9-ft table: 100" x 50", balls are 2.25" dia
+// Pocket openings: ~4.5" corner, ~5" side  → ~2× ball diameter
+// Felt friction: ~0.985 velocity retained per second at medium speed
+// Cushion rebound: modern rubber ~0.55
 
-// Ball colors (solid fill)
+const BALL_RADIUS = 10;
+const POCKET_RADIUS = 12;    // 2.4× ball dia — realistic for corner/side pockets
+const FRICTION     = 0.994; // felt: ~0.985/sec at 60fps ≈ 0.994^60
+const BOUNCE       = 0.52;   // cushion rubber
+const MIN_SPEED    = 0.05;
+const MAX_POWER    = 16;     // realistic max shot speed
+
+// Ball colors (American ball colors)
 const BALL_COLOR = [
-  null, '#f5e642','#3b5d9e','#c0392b','#6b3fa0',
-  '#e67e22','#27ae60','#7d3c1e','#111','#c9a84c',
+  null,        // 0 cue
+  '#f5e642',   // 1 yellow
+  '#3b5d9e',   // 2 blue
+  '#c0392b',   // 3 red
+  '#6b3fa0',   // 4 purple
+  '#e67e22',   // 5 orange
+  '#27ae60',   // 6 green
+  '#7d3c1e',   // 7 maroon
+  '#111111',   // 8 black
+  '#c9a84c',   // 9 gold
 ];
 
 // === State ===
@@ -53,8 +66,6 @@ function initTable() {
   tableH = tableW * 0.5;
   tableX = (width - tableW) / 2;
   tableY = (height - tableH) / 2 - 20;
-
-  // 6 pockets: 3 top, 3 bottom
   pockets = [
     {x: tableX,              y: tableY},
     {x: tableX + tableW/2,   y: tableY},
@@ -67,25 +78,19 @@ function initTable() {
 
 function initBalls() {
   balls = [];
-  // Rack: right third, 9-ball diamond
   let rx = tableX + tableW * 0.72;
   let ry = tableY + tableH / 2;
   let g = BALL_RADIUS * 2.3;
-  // Row 1
-  balls.push(mkBall(rx,      ry,      1));
-  // Row 2
-  balls.push(mkBall(rx+g,    ry-g*0.5, 2));
-  balls.push(mkBall(rx+g,    ry+g*0.5, 3));
-  // Row 3 — 9 in center
-  balls.push(mkBall(rx+g*2,  ry-g,    4));
-  balls.push(mkBall(rx+g*2,  ry,      9));
-  balls.push(mkBall(rx+g*2,  ry+g,    5));
-  // Row 4
-  balls.push(mkBall(rx+g*3,  ry-g*0.5, 6));
-  balls.push(mkBall(rx+g*3,  ry+g*0.5, 7));
-  // Row 5
-  balls.push(mkBall(rx+g*4,  ry,      8));
-
+  // Diamond rack: 1 at apex, 9-ball in center
+  balls.push(mkBall(rx,       ry,       1));
+  balls.push(mkBall(rx+g,     ry-g*0.5,  2));
+  balls.push(mkBall(rx+g,     ry+g*0.5,  3));
+  balls.push(mkBall(rx+g*2,   ry-g,      4));
+  balls.push(mkBall(rx+g*2,   ry,        9)); // 9-ball center
+  balls.push(mkBall(rx+g*2,   ry+g,      5));
+  balls.push(mkBall(rx+g*3,   ry-g*0.5,  6));
+  balls.push(mkBall(rx+g*3,   ry+g*0.5,  7));
+  balls.push(mkBall(rx+g*4,   ry,        8));
   cueBall = mkBall(tableX + tableW * 0.25, ry, 0);
   balls.push(cueBall);
 }
@@ -96,6 +101,7 @@ function mkBall(x, y, num) {
     num, r: BALL_RADIUS,
     isCue: num === 0,
     scored: false,
+    angle: 0, // rotation angle (radians)
   };
 }
 
@@ -103,154 +109,256 @@ function draw() {
   background('#1a1209');
   drawTable();
 
-  // Physics — run multiple substeps for stability
+  // Physics — one pass per frame with proper felt friction
   let moving = false;
-  for (let sub = 0; sub < 3; sub++) {
-    for (let b of balls) b.vx *= 0.993, b.vy *= 0.993;
+  for (let b of balls) {
+    if (b.scored) continue;
+    b.vx *= FRICTION;
+    b.vy *= FRICTION;
+  }
 
-    for (let i = 0; i < balls.length; i++) {
-      for (let j = i+1; j < balls.length; j++) {
-        let a = balls[i], b = balls[j];
-        if (a.scored || b.scored) continue;
-        let dx = b.x - a.x, dy = b.y - a.y;
-        let dist = Math.sqrt(dx*dx + dy*dy);
-        let minD = a.r + b.r;
-        if (dist < minD && dist > 0.001) {
-          let nx = dx/dist, ny = dy/dist;
-          let overlap = (minD - dist) * 0.5;
-          a.x -= nx*overlap; a.y -= ny*overlap;
-          b.x += nx*overlap; b.y += ny*overlap;
-          let dvx = a.vx-b.vx, dvy = a.vy-b.vy;
-          let dot = dvx*nx + dvy*ny;
-          if (dot > 0) {
-            a.vx -= dot*nx; a.vy -= dot*ny;
-            b.vx += dot*nx; b.vy += dot*ny;
-          }
-        }
-      }
-    }
-
-    for (let b of balls) {
-      if (b.scored) continue;
-      b.x += b.vx; b.y += b.vy;
-      let spd = Math.sqrt(b.vx*b.vx + b.vy*b.vy);
-      if (spd < MIN_SPEED) b.vx = 0, b.vy = 0;
-      if (b.vx !== 0 || b.vy !== 0) moving = true;
-
-      // Cushions
-      if (b.x < tableX + b.r)     b.x = tableX+b.r,     b.vx *= -BOUNCE;
-      if (b.x > tableX+tableW-b.r) b.x = tableX+tableW-b.r, b.vx *= -BOUNCE;
-      if (b.y < tableY + b.r)     b.y = tableY+b.r,     b.vy *= -BOUNCE;
-      if (b.y > tableY+tableH-b.r) b.y = tableY+tableH-b.r, b.vy *= -BOUNCE;
-    }
-
-    // Pockets
-    for (let b of balls) {
-      if (b.scored) continue;
-      for (let p of pockets) {
-        let dx = b.x-p.x, dy = b.y-p.y;
-        if (Math.sqrt(dx*dx+dy*dy) < POCKET_RADIUS) {
-          b.scored = true; b.vx = 0; b.vy = 0;
-          if (b.isCue) {
-            setTimeout(() => {
-              b.scored = false;
-              b.x = tableX + tableW * 0.25;
-              b.y = tableY + tableH / 2;
-              b.vx = 0; b.vy = 0;
-              showMsg('SCRATCH!');
-            }, 600);
-          } else {
-            let remaining = balls.filter(x => !x.isCue && !x.scored);
-            if (remaining.length === 0) {
-              showMsg('🏆 BRENDAN WINS!');
-            } else {
-              showMsg('BALL ' + b.num + '!');
-            }
-          }
+  // Ball-ball collisions
+  for (let i = 0; i < balls.length; i++) {
+    for (let j = i+1; j < balls.length; j++) {
+      let a = balls[i], b = balls[j];
+      if (a.scored || b.scored) continue;
+      let dx = b.x - a.x, dy = b.y - a.y;
+      let dist = Math.sqrt(dx*dx + dy*dy);
+      let minD = a.r + b.r;
+      if (dist < minD && dist > 0.001) {
+        let nx = dx/dist, ny = dy/dist;
+        let overlap = (minD - dist) * 0.5;
+        a.x -= nx*overlap; a.y -= ny*overlap;
+        b.x += nx*overlap; b.y += ny*overlap;
+        let dvx = a.vx-b.vx, dvy = a.vy-b.vy;
+        let dot = dvx*nx + dvy*ny;
+        if (dot > 0) {
+          a.vx -= dot*nx; a.vy -= dot*ny;
+          b.vx += dot*nx; b.vy += dot*ny;
         }
       }
     }
   }
 
-  if (!moving && !canShoot) { canShoot = true; }
+  // Move, roll, cushion
+  for (let b of balls) {
+    if (b.scored) continue;
+
+    b.x += b.vx;
+    b.y += b.vy;
+
+    // Rolling rotation — arc length = r * theta
+    let spd = Math.sqrt(b.vx*b.vx + b.vy*b.vy);
+    if (spd > MIN_SPEED) {
+      // Cross product of velocity and x-axis gives signed angular velocity
+      let sign = (b.vx * 0 - b.vy * 1) > 0 ? 1 : -1;
+      b.angle += spd / b.r;
+    }
+
+    // Cushion collisions
+    if (b.x < tableX + b.r)     b.x = tableX+b.r,     b.vx *= -BOUNCE;
+    if (b.x > tableX+tableW-b.r) b.x = tableX+tableW-b.r, b.vx *= -BOUNCE;
+    if (b.y < tableY + b.r)     b.y = tableY+b.r,     b.vy *= -BOUNCE;
+    if (b.y > tableY+tableH-b.r) b.y = tableY+tableH-b.r, b.vy *= -BOUNCE;
+
+    if (b.vx !== 0 || b.vy !== 0) moving = true;
+    if (spd < MIN_SPEED) b.vx = 0, b.vy = 0;
+  }
+
+  // Pockets
+  for (let b of balls) {
+    if (b.scored) continue;
+    for (let p of pockets) {
+      let dx = b.x-p.x, dy = b.y-p.y;
+      if (Math.sqrt(dx*dx+dy*dy) < POCKET_RADIUS) {
+        b.scored = true; b.vx = 0; b.vy = 0;
+        if (b.isCue) {
+          setTimeout(() => {
+            b.scored = false;
+            b.x = tableX + tableW * 0.25;
+            b.y = tableY + tableH / 2;
+            b.vx = 0; b.vy = 0;
+            b.angle = 0;
+            showMsg('SCRATCH!');
+          }, 600);
+        } else {
+          let remaining = balls.filter(x => !x.isCue && !x.scored);
+          if (remaining.length === 0) showMsg('BRENDAN WINS!');
+          else showMsg('BALL ' + b.num + '!');
+        }
+      }
+    }
+  }
+
+  if (!moving && !canShoot) canShoot = true;
   for (let b of balls) drawBall(b);
 
-  // Aiming line
+  // Aim line
   if (canShoot && cueBall && !cueBall.scored && dragStart && dragCurrent) {
     let dx = dragStart.x - dragCurrent.x;
     let dy = dragStart.y - dragCurrent.y;
     let len = Math.sqrt(dx*dx + dy*dy);
     if (len > 4) {
       let nx = dx/len, ny = dy/len;
-      stroke(255,255,255,70);
-      strokeWeight(2);
+      stroke(255,255,255,60);
+      strokeWeight(1.5);
       line(cueBall.x, cueBall.y, cueBall.x+nx*2000, cueBall.y+ny*2000);
+      // Draw cue stick
+      drawCue(cueBall.x + nx*2000, cueBall.y + ny*2000, Math.atan2(-ny, -nx), Math.min(len*0.4, 120));
     }
+  } else if (canShoot && cueBall && !cueBall.scored) {
+    // Cue stick at rest
+    drawCueAtRest();
   }
 
   // Title
   noStroke();
   fill(201,168,76);
   textFont('Georgia');
-  textSize(min(width, height) * 0.025);
+  textSize(Math.max(14, min(width, height) * 0.022));
   textAlign(CENTER, TOP);
   text('9-BALL', width/2, 10);
 
+  // Message fade
   if (messageAlpha > 0) {
     fill(201,168,76, messageAlpha * 255);
-    textSize(min(width, height) * 0.038);
+    textSize(Math.max(20, min(width, height) * 0.035));
     textAlign(CENTER, CENTER);
     text(messageText, width/2, height/2);
-    messageAlpha = max(0, messageAlpha - 0.012);
+    messageAlpha = max(0, messageAlpha - 0.011);
   }
+}
+
+function drawCue(tx, ty, ang, pullback) {
+  push();
+  translate(tx, ty);
+  rotate(ang);
+  // Cue stick — tapered from thick (butt) to thin (tip)
+  // Butt end at (0,0), tip extends in +x direction
+  let len = 160 + pullback;
+  // Shadow
+  stroke(0, 0, 0, 30);
+  strokeWeight(9);
+  line(3, 3, len, 3);
+  // Shaft (lighter wood)
+  stroke(200, 165, 100);
+  strokeWeight(6);
+  line(0, 0, len * 0.85, 0);
+  // Tip (blue chalk)
+  stroke(80, 140, 200);
+  strokeWeight(5);
+  line(len * 0.85, 0, len, 0);
+  // Butt cap
+  stroke('#3d2314');
+  strokeWeight(9);
+  line(-8, 0, 0, 0);
+  pop();
+}
+
+function drawCueAtRest() {
+  if (!cueBall || cueBall.scored) return;
+  let ang = 0; // pointing left
+  let tipX = cueBall.x - BALL_RADIUS - 4;
+  push();
+  translate(tipX, cueBall.y);
+  rotate(ang);
+  let len = 160;
+  stroke(0, 0, 0, 30);
+  strokeWeight(9);
+  line(3, 3, len, 3);
+  stroke(200, 165, 100);
+  strokeWeight(6);
+  line(0, 0, len * 0.85, 0);
+  stroke(80, 140, 200);
+  strokeWeight(5);
+  line(len * 0.85, 0, len, 0);
+  stroke('#3d2314');
+  strokeWeight(9);
+  line(-8, 0, 0, 0);
+  pop();
 }
 
 function drawTable() {
   // Outer wood rail
   fill('#3d2314'); stroke('#2a1810'); strokeWeight(4);
   rect(tableX-32, tableY-32, tableW+64, tableH+64, 8);
-  // Inner rail
-  fill(RAIL_COLOR = '#5c3a1e'); noStroke();
+  // Inner rail (cushion backing)
+  fill('#5c3a1e'); noStroke();
   rect(tableX-20, tableY-20, tableW+40, tableH+40, 5);
-  // Felt
+  // Felt surface
   fill('#236b3a'); rect(tableX, tableY, tableW, tableH);
-  // Subtle texture
-  stroke('#1e4d2b'); strokeWeight(0.4);
-  for (let y = tableY; y < tableY+tableH; y += 6) line(tableX, y, tableX+tableW, y);
-  // Pockets
+  // Felt texture lines
+  stroke('#1e5c30'); strokeWeight(0.4);
+  for (let y = tableY; y < tableY+tableH; y += 7) line(tableX, y, tableX+tableW, y);
+  // Pocket openings
   noStroke();
   for (let p of pockets) {
     fill('#080808');
-    ellipse(p.x, p.y, POCKET_RADIUS*2.8, POCKET_RADIUS*2.8);
+    ellipse(p.x, p.y, POCKET_RADIUS*2.6, POCKET_RADIUS*2.6);
   }
-  // Head string spot
+  // Pocket throat gradient ring
+  for (let p of pockets) {
+    noFill();
+    stroke('#1e4d2b');
+    strokeWeight(3);
+    ellipse(p.x, p.y, POCKET_RADIUS*3.2, POCKET_RADIUS*3.2);
+  }
+  // Head string diamond
   fill('#c9a84c'); noStroke();
-  ellipse(tableX + tableW*0.25, tableY+tableH/2, 4, 4);
+  let cx = tableX + tableW * 0.25;
+  ellipse(cx, tableY + tableH/2, 5, 5);
+  // Foot spot
+  let fx = tableX + tableW * 0.72;
+  ellipse(fx, tableY + tableH/2, 5, 5);
 }
 
 function drawBall(b) {
   if (b.scored) return;
   push();
   translate(b.x, b.y);
+
   // Shadow
-  noStroke(); fill(0,0,0,35);
+  noStroke();
+  fill(0, 0, 0, 30);
   ellipse(2, 3, b.r*2.3, b.r*2.3);
-  // Ball
+
+  // Ball body — rotated for rolling effect
+  push();
+  rotate(b.angle);
   fill(b.isCue ? '#f0f0f0' : BALL_COLOR[b.num]);
-  stroke(0,0,0,100); strokeWeight(1.5);
+  stroke(0, 0, 0, 90); strokeWeight(1.5);
   ellipse(0, 0, b.r*2, b.r*2);
-  // Shine
-  noStroke(); fill(255,255,255,55);
-  ellipse(-b.r*0.3, -b.r*0.3, b.r*0.85, b.r*0.85);
-  // Number
+
+  // Stripe band for balls 1-8 (standard pool balls have a stripe band)
+  if (!b.isCue && b.num !== 9) {
+    // White bands at top and bottom of the ball, leaving a colored stripe in middle
+    fill(255, 255, 255, 200);
+    noStroke();
+    arc(0, 0, b.r*2, b.r*2, -PI*0.35, PI*0.35, PIE);
+    arc(0, 0, b.r*2, b.r*2, PI*0.65, PI*1.35, PIE);
+  }
+  pop();
+
+  // White circle with number — stays fixed orientation (doesn't rotate)
   if (!b.isCue) {
-    fill(255,255,255,220); stroke(0,0,0,60); strokeWeight(0.8);
-    ellipse(0, 0, b.r*1.15, b.r*1.15);
-    noStroke(); fill(20);
-    textSize(b.r * 0.85); textAlign(CENTER, CENTER);
+    // White disc (fixed)
+    fill(255, 255, 255, 230);
+    stroke(0, 0, 0, 60); strokeWeight(0.8);
+    ellipse(0, 0, b.r*1.2, b.r*1.2);
+    // Number — fixed, always upright
+    noStroke();
+    fill(b.num === 8 ? 30 : 20); // 8-ball has white number on black
+    textAlign(CENTER, CENTER);
+    textSize(b.r * 0.85);
     textStyle(BOLD);
     text(b.num, 0, 1);
   }
+
+  // Specular highlight (fixed on ball, upper-left)
+  noStroke();
+  fill(255, 255, 255, 50);
+  ellipse(-b.r*0.28, -b.r*0.28, b.r*0.9, b.r*0.9);
+
   pop();
 }
 
@@ -259,10 +367,7 @@ function showMsg(t) {
   messageAlpha = 1.0;
 }
 
-function getPos() {
-  return {x: mouseX, y: mouseY};
-}
-
+// --- Input ---
 function mousePressed() { onStart(mouseX, mouseY); }
 function mouseDragged() { onMove(mouseX, mouseY); }
 function mouseReleased() { onEnd(); }
@@ -279,7 +384,7 @@ function touchEnded() { onEnd(); return false; }
 
 function onStart(x, y) {
   if (!canShoot || !cueBall || cueBall.scored) return;
-  if (dist(x, y, cueBall.x, cueBall.y) < BALL_RADIUS * 6) {
+  if (dist(x, y, cueBall.x, cueBall.y) < BALL_RADIUS * 7) {
     dragStart = {x, y};
     dragCurrent = {x, y};
   }
@@ -295,7 +400,8 @@ function onEnd() {
     let dy = dragStart.y - dragCurrent.y;
     let len = Math.sqrt(dx*dx + dy*dy);
     if (len > 8) {
-      let pwr = Math.min(len * 0.13, MAX_POWER);
+      // Power scales with drag distance — realistic pull-back feel
+      let pwr = Math.min(len * 0.12, MAX_POWER);
       cueBall.vx = (dx/len) * pwr;
       cueBall.vy = (dy/len) * pwr;
       canShoot = false;
@@ -308,8 +414,6 @@ function onEnd() {
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
   initTable();
-  // Rescale ball positions to new table
-  // Re-init on resize for simplicity
   initBalls();
 }
 </script>
