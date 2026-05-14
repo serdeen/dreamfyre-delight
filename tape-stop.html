@@ -3,489 +3,387 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tape Stop — Dreamfyre Delight</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<title>Tape Stop</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg: #0a0a0f;
-    --surface: #13131a;
-    --border: #1e1e2e;
-    --amber: #f4a261;
-    --amber-dim: rgba(244,162,97,0.12);
-    --text: #e0e0e0;
-    --text-dim: #666680;
-  }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 2rem 1rem;
-  }
-  body::before {
-    content: '';
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background:
-      radial-gradient(ellipse 50% 40% at 50% 20%, rgba(244,162,97,0.07) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 50% at 50% 90%, rgba(244,162,97,0.04) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: -1;
-  }
-  h1 {
-    font-family: 'Space Mono', monospace;
-    font-size: 1.5rem;
-    letter-spacing: 0.2em;
-    color: var(--amber);
-    margin-bottom: 1.5rem;
-    text-transform: uppercase;
-  }
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--bg:#0a0810;--surface:#16121f;--surface2:#201b30;--accent:#ff6b35;--accent2:#1aee8f;--accent3:#a78bff;--border:rgba(255,107,53,0.18);--text:#fff0e8;--muted:rgba(255,240,232,0.32);}
+body{background:var(--bg);min-height:100vh;font-family:'JetBrains Mono',monospace;color:var(--text);user-select:none;overflow-x:hidden;}
 
-  .container {
-    width: 100%;
-    max-width: 660px;
-    display: flex;
-    flex-direction: column;
-    gap: 1.2rem;
-  }
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+.title{font-size:0.65rem;letter-spacing:5px;text-transform:uppercase;color:var(--accent);font-weight:600;}
+.subtitle{font-size:0.55rem;letter-spacing:3px;color:var(--muted);}
+.bpm-row{display:flex;align-items:center;gap:8px;}
+.ctrl-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.bpm-box{display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.bpm-in{background:transparent;border:none;color:var(--accent);font-family:inherit;font-size:0.85rem;width:52px;text-align:center;padding:6px 4px;outline:none;}
+.num-btn{background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:0.8rem;padding:6px 10px;cursor:pointer;transition:all 0.15s;}
+.num-btn:hover{color:var(--text);background:rgba(255,255,255,0.05);}
 
-  /* Drop zone */
-  .drop-zone {
-    border: 2px dashed var(--text-dim);
-    border-radius: 10px;
-    padding: 1.5rem;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    font-size: 0.9rem;
-    color: var(--text-dim);
-  }
-  .drop-zone:hover, .drop-zone.drag-over {
-    border-color: var(--amber);
-    background: var(--amber-dim);
-  }
-  .drop-zone.loaded {
-    border-style: solid;
-    border-color: var(--amber);
-    color: var(--amber);
-  }
-  #file-input { display: none; }
+/* Speed display */
+.speed-section{padding:20px 24px;background:var(--surface);border-bottom:1px solid var(--border);text-align:center;}
+.speed-display{font-size:clamp(3rem, 18vw, 7rem);font-weight:600;color:var(--accent);line-height:1;letter-spacing:-3px;text-shadow:0 0 40px rgba(255,107,53,0.4);transition:color 0.1s,text-shadow 0.1s;}
+.speed-display.slow{color:var(--accent3);text-shadow:0 0 40px rgba(167,139,255,0.4);}
+.speed-unit{font-size:0.7rem;letter-spacing:4px;color:rgba(255,107,53,0.5);margin-top:4px;}
 
-  /* Waveform */
-  #waveform-canvas {
-    width: 100%;
-    height: 100px;
-    background: var(--surface);
-    border-radius: 8px;
-    display: block;
-  }
+/* Controls */
+.controls{padding:18px 24px;display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--surface);}
+.ctrl-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.ctrl-card-title{font-size:0.55rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:2px;}
+.knob-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.knob-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);}
+.knob-val{font-size:0.7rem;color:var(--text);}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;}
 
-  /* Transport */
-  .transport {
-    display: flex;
-    gap: 0.8rem;
-    justify-content: center;
-  }
-  .transport button {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    color: var(--text);
-    font-family: 'Space Mono', monospace;
-    font-size: 0.8rem;
-    padding: 0.6rem 1.2rem;
-    cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
-    letter-spacing: 0.05em;
-  }
-  .transport button:hover {
-    border-color: var(--amber);
-    background: var(--amber-dim);
-  }
-  .transport button.active {
-    border-color: var(--amber);
-    color: var(--amber);
-  }
+/* Mode buttons */
+.mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.mode-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:inherit;font-size:0.65rem;letter-spacing:1px;padding:9px 6px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.mode-btn.selected{border-color:var(--accent);color:var(--accent);background:rgba(255,107,53,0.1);}
+.mode-btn:hover{border-color:rgba(255,107,53,0.4);}
 
-  /* Effects */
-  .effects {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    justify-content: center;
-    flex-wrap: wrap;
-  }
-  .effect-btn {
-    background: var(--surface);
-    border: 2px solid var(--amber);
-    border-radius: 10px;
-    color: var(--amber);
-    font-family: 'Space Mono', monospace;
-    font-size: 0.9rem;
-    font-weight: 700;
-    padding: 0.8rem 1.4rem;
-    cursor: pointer;
-    letter-spacing: 0.08em;
-    transition: background 0.15s;
-  }
-  .effect-btn:hover { background: var(--amber-dim); }
+/* Input row */
+.input-row{display:flex;align-items:center;gap:12px;padding:14px 24px;background:var(--surface);border-top:1px solid var(--border);}
+.load-btn{background:transparent;border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:0.65rem;letter-spacing:2px;padding:8px 16px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.load-btn:hover{border-color:var(--accent);}
+input[type=file]{display:none;}
+.filename{font-size:0.6rem;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+.play-btn{background:var(--accent);border:none;color:#0a0810;font-family:inherit;font-size:0.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:8px 18px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.play-btn:hover{transform:scale(1.04);}
+.play-btn.playing{background:var(--accent2);}
 
-  .duration-group {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    color: var(--text-dim);
-    font-size: 0.8rem;
-  }
-  .duration-group input[type=range] {
-    accent-color: var(--amber);
-    width: 120px;
-  }
-  #duration-val {
-    font-family: 'Space Mono', monospace;
-    color: var(--amber);
-    font-size: 0.8rem;
-    min-width: 45px;
-  }
+/* Big effect buttons */
+.effect-section{padding:24px;display:flex;gap:16px;justify-content:center;background:var(--surface);border-top:1px solid var(--border);}
+.effect-btn{background:transparent;border:2px solid var(--accent);color:var(--accent);font-family:inherit;font-size:0.7rem;font-weight:600;letter-spacing:3px;text-transform:uppercase;padding:20px 40px;border-radius:10px;cursor:pointer;transition:all 0.15s;min-width:180px;}
+.effect-btn:hover{background:rgba(255,107,53,0.12);transform:scale(1.03);}
+.effect-btn.reverse{border-color:var(--accent3);color:var(--accent3);}
+.effect-btn.reverse:hover{background:rgba(167,139,255,0.12);}
 
-  /* Master */
-  .master-row {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0 0.5rem;
-  }
-  .master-row label {
-    font-size: 0.75rem;
-    color: var(--text-dim);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    min-width: 60px;
-  }
-  .master-row input[type=range] {
-    flex: 1;
-    accent-color: var(--amber);
-  }
+/* Transport */
+.transport{display:flex;align-items:center;justify-content:center;gap:14px;padding:18px;background:var(--surface);border-top:1px solid var(--border);}
+.transport-btn{width:48px;height:48px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.transport-btn svg{width:18px;height:18px;fill:currentColor;}
+.transport-btn:hover{border-color:var(--accent);transform:scale(1.05);}
+
+footer{padding:12px 24px;text-align:center;}
+.footer-text{font-size:0.5rem;letter-spacing:2px;color:var(--muted);}
+
+@keyframes tapePulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.recording .speed-display{animation:tapePulse 0.5s ease-in-out infinite;}
 </style>
 </head>
 <body>
 
-<h1>Tape Stop</h1>
-
-<div class="container">
-
-  <div class="drop-zone" id="drop-zone">Drop a WAV or MP3 file here — or click to browse</div>
-  <input type="file" id="file-input" accept="audio/*">
-
-  <canvas id="waveform-canvas"></canvas>
-
-  <div class="transport">
-    <button id="play-btn">▶ Play</button>
-    <button id="stop-btn">■ Stop</button>
+<header>
+  <div>
+    <div class="title">Tape Stop</div>
+    <div class="subtitle">Scratch &bull; Slowdown Effects</div>
   </div>
+  <div class="bpm-row">
+    <span class="ctrl-label">BPM</span>
+    <div class="bpm-box">
+      <button class="num-btn" id="bpmDown">−</button>
+      <input type="number" class="bpm-in" id="bpmIn" value="124" min="60" max="200">
+      <button class="num-btn" id="bpmUp">+</button>
+    </div>
+  </div>
+</header>
 
-  <div class="effects">
-    <button class="effect-btn" id="tape-stop-btn">TAPE STOP</button>
-    <button class="effect-btn" id="rewind-btn">↩ REWIND</button>
-    <div class="duration-group">
-      <label for="duration-slider">Duration</label>
-      <input type="range" id="duration-slider" min="0.2" max="2.0" step="0.1" value="1.0">
-      <span id="duration-val">1.0s</span>
+<div class="speed-section">
+  <div class="speed-display" id="speedDisplay">1.00x</div>
+  <div class="speed-unit">PLAYBACK RATE</div>
+</div>
+
+<div class="controls">
+  <div class="ctrl-card">
+    <div class="ctrl-card-title">Stop Duration</div>
+    <div class="knob-row">
+      <span class="knob-label">Time (ms)</span>
+      <span class="knob-val" id="timeVal">600</span>
+    </div>
+    <input type="range" id="timeSlider" min="100" max="2000" value="600">
+    <div class="knob-row">
+      <span class="knob-label">BPM Sync</span>
+      <span class="knob-val" id="syncVal">Off</span>
+    </div>
+    <div class="mode-row">
+      <button class="mode-btn selected" data-sync="off">Free</button>
+      <button class="mode-btn" data-sync="beat">1 Beat</button>
+      <button class="mode-btn" data-sync="bar">1 Bar</button>
     </div>
   </div>
 
-  <div class="master-row">
-    <label>Master</label>
-    <input type="range" id="master-vol" min="0" max="1" value="0.7" step="0.01">
+  <div class="ctrl-card">
+    <div class="ctrl-card-title">Effect Curve</div>
+    <div class="knob-row">
+      <span class="knob-label">Curve Shape</span>
+      <span class="knob-val" id="curveVal">Exp</span>
+    </div>
+    <div class="mode-row">
+      <button class="mode-btn selected" data-c="exp">Exp</button>
+      <button class="mode-btn" data-c="lin">Linear</button>
+      <button class="mode-btn" data-c="log">Log</button>
+    </div>
+    <div class="knob-row">
+      <span class="knob-label">Min Rate</span>
+      <span class="knob-val" id="minRateVal">0.05x</span>
+    </div>
+    <input type="range" id="minRateSlider" min="0" max="30" value="5">
   </div>
-
 </div>
 
+<div class="input-row">
+  <button class="load-btn" id="loadBtn">Load Audio</button>
+  <input type="file" id="audioInput" accept="audio/*" style="display:none">
+  <div class="filename" id="fileName">No audio loaded</div>
+  <button class="play-btn" id="playBtn">Play</button>
+</div>
+
+<div class="effect-section">
+  <button class="effect-btn" id="stopBtn">Tape Stop</button>
+  <button class="effect-btn reverse" id="revBtn">Reverse Scratch</button>
+</div>
+
+<div class="transport">
+  <button class="transport-btn" id="stopAllBtn" title="Stop">
+    <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+  </button>
+</div>
+
+<footer><div class="footer-text">Tape Stop &bull; Scratch &bull; Slowdown FX</div></footer>
+
 <script>
-(function() {
-  let audioCtx = null;
-  let masterGain = null;
-  let compressor = null;
-  let audioBuffer = null;
-  let currentSource = null;
-  let isPlaying = false;
-  let startTime = 0;       // audioCtx.currentTime when play started
-  let pauseOffset = 0;     // offset into buffer where playback continues
-  let rafId = null;
-  let waveformData = null;
+const $ = id => document.getElementById(id);
+let ctx, audioBuffer, sourceNode, gainNode;
+let BPM = 124;
+let DURATION = 600; // ms
+let CURVE = 'exp';
+let MIN_RATE = 0.05;
+let isPlaying = false;
+let isEffectActive = false;
+let effectResolve = null;
+let currentSpeed = 1.0;
+let animFrame;
+let SYNC = 'off';
 
-  const dropZone = document.getElementById('drop-zone');
-  const fileInput = document.getElementById('file-input');
-  const canvas = document.getElementById('waveform-canvas');
-  const playBtn = document.getElementById('play-btn');
-  const stopBtn = document.getElementById('stop-btn');
-  const tapeStopBtn = document.getElementById('tape-stop-btn');
-  const rewindBtn = document.getElementById('rewind-btn');
-  const durationSlider = document.getElementById('duration-slider');
-  const durationVal = document.getElementById('duration-val');
-  const masterVol = document.getElementById('master-vol');
+function initAudio() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') ctx.resume();
+}
 
-  // --- Init audio context on first interaction ---
-  function ensureAudioCtx() {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function loadAudio(file) {
+  initAudio();
+  $('fileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    ctx.decodeAudioData(e.target.result, buf => {
+      audioBuffer = buf;
+      $('playBtn').textContent = 'Play';
+      isPlaying = false;
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
 
-      compressor = audioCtx.createDynamicsCompressor();
-      compressor.threshold.value = -6;
-      compressor.ratio.value = 4;
-      compressor.connect(audioCtx.destination);
+function playAtRate(rate, fromPos) {
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+  if (!gainNode) gainNode = ctx.createGain();
+  sourceNode = ctx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.playbackRate.value = rate;
+  sourceNode.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  const maxDur = audioBuffer.duration - fromPos;
+  sourceNode.start(0, fromPos, maxDur > 0 ? maxDur : undefined);
+  return sourceNode;
+}
 
-      masterGain = audioCtx.createGain();
-      masterGain.gain.value = 0.7;
-      masterGain.connect(compressor);
-    }
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-  }
-
-  // --- File load ---
-  dropZone.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', (e) => loadFile(e.target.files[0]));
-
-  dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    const file = e.dataTransfer.files[0];
-    if (file) loadFile(file);
-  });
-
-  function loadFile(file) {
-    if (!file) return;
-    ensureAudioCtx();
-    dropZone.textContent = file.name;
-    dropZone.classList.add('loaded');
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      audioCtx.decodeAudioData(ev.target.result).then((buf) => {
-        audioBuffer = buf;
-        drawWaveform();
-        playBtn.disabled = false;
-      }).catch((err) => {
-        dropZone.textContent = 'Error: ' + err.message;
-      });
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  // --- Waveform ---
-  function drawWaveform() {
-    if (!audioBuffer) return;
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const w = canvas.offsetWidth;
-    const h = 100;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    ctx.scale(dpr, dpr);
-
-    const data = audioBuffer.getChannelData(0);
-    const step = Math.ceil(data.length / 400);
-
-    ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#1e1e2e';
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.beginPath();
-    ctx.strokeStyle = '#f4a261';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 400 && i * step < data.length; i++) {
-      const x = (i / 400) * w;
-      const y = h / 2 + (data[i * step] * h * 0.8 / 2);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-
-    // Store for playhead tracking
-    waveformData = { length: audioBuffer.duration, step };
-  }
-
-  window.addEventListener('resize', () => {
-    if (audioBuffer) drawWaveform();
-  });
-
-  // --- Playback ---
-  function playAudio(offset) {
-    if (!audioBuffer) return;
-    stopPlayback();
-
-    const source = audioCtx.createBufferSource();
-    source.buffer = audioBuffer;
-    source.connect(masterGain);
-
-    source.start(0, offset);
-    isPlaying = true;
-    startTime = audioCtx.currentTime;
-
-    currentSource = source;
-    playBtn.textContent = '❚❚ Pause';
-    playBtn.classList.add('active');
-
-    source.onended = () => {
-      if (isPlaying && source === currentSource) {
-        // Natural end of audio
-        isPlaying = false;
-        pauseOffset = 0;
-        playBtn.textContent = '▶ Play';
-        playBtn.classList.remove('active');
-        cancelAnimationFrame(rafId);
-        drawWaveform(); // redraw clean
-      }
-    };
-
-    startPlayhead();
-  }
-
-  function stopPlayback() {
-    if (currentSource) {
-      try { currentSource.stop(); } catch(e) {}
-      currentSource = null;
-    }
-    cancelAnimationFrame(rafId);
+function startPlayback() {
+  if (!audioBuffer) return;
+  initAudio();
+  if (!gainNode) gainNode = ctx.createGain();
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+  sourceNode = ctx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.playbackRate.value = 1;
+  sourceNode.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  sourceNode.start(0);
+  isPlaying = true;
+  currentSpeed = 1;
+  updateSpeedDisplay(1);
+  sourceNode.onended = () => {
     isPlaying = false;
+    isEffectActive = false;
+    $('playBtn').classList.remove('playing');
+    $('playBtn').textContent = 'Play';
+    cancelAnimationFrame(animFrame);
+  };
+  $('playBtn').classList.add('playing');
+  $('playBtn').textContent = 'Stop';
+}
+
+function stopPlayback() {
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+  isPlaying = false;
+  isEffectActive = false;
+  currentSpeed = 1;
+  updateSpeedDisplay(1);
+  $('playBtn').classList.remove('playing');
+  $('playBtn').textContent = 'Play';
+  cancelAnimationFrame(animFrame);
+}
+
+function updateSpeedDisplay(speed) {
+  const display = $('speedDisplay');
+  display.textContent = speed.toFixed(2) + 'x';
+  display.classList.toggle('slow', speed < 0.5);
+}
+
+function getEffectiveDuration() {
+  if (SYNC === 'beat') return 60000 / BPM;
+  if (SYNC === 'bar') return 60000 / BPM * 4;
+  return DURATION;
+}
+
+function applyCurve(t) {
+  // t: 0..1 where 0=start, 1=end
+  switch (CURVE) {
+    case 'exp': return Math.pow(t, 2);
+    case 'lin': return t;
+    case 'log': return 1 - Math.pow(1 - t, 2);
+    default: return t;
   }
+}
 
-  function startPlayhead() {
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
-    const w = canvas.offsetWidth;
-    const h = 100;
+function doTapeStop() {
+  if (!isPlaying || isEffectActive) return;
+  isEffectActive = true;
+  const dur = getEffectiveDuration();
+  const startTime = performance.now();
+  const startRate = sourceNode ? sourceNode.playbackRate.value : 1;
 
-    function draw() {
-      if (!isPlaying) return;
-      rafId = requestAnimationFrame(draw);
-
-      // Draw waveform base
-      const data = audioBuffer.getChannelData(0);
-      const step = Math.ceil(data.length / 400);
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#1e1e2e';
-      ctx.fillRect(0, 0, w, h);
-
-      ctx.beginPath();
-      ctx.strokeStyle = '#f4a261';
-      ctx.lineWidth = 1;
-      for (let i = 0; i < 400 && i * step < data.length; i++) {
-        const x = (i / 400) * w;
-        const y = h / 2 + (data[i * step] * h * 0.8 / 2);
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-
-      // Playhead line
-      const elapsed = audioCtx.currentTime - startTime;
-      const totalDuration = audioBuffer.duration;
-      const progress = Math.min((pauseOffset + elapsed) / totalDuration, 1);
-      const px = progress * w;
-
-      ctx.beginPath();
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 2;
-      ctx.moveTo(px, 0);
-      ctx.lineTo(px, h);
-      ctx.stroke();
+  function animate() {
+    if (!isEffectActive) return;
+    const elapsed = performance.now() - startTime;
+    let t = Math.min(1, elapsed / dur);
+    let curved = applyCurve(t);
+    let rate = startRate * (1 - curved * (1 - MIN_RATE));
+    rate = Math.max(MIN_RATE, rate);
+    currentSpeed = rate;
+    if (sourceNode && isPlaying) {
+      sourceNode.playbackRate.setTargetAtTime(rate, ctx.currentTime, 0.01);
     }
-    draw();
-  }
-
-  playBtn.addEventListener('click', () => {
-    ensureAudioCtx();
-    if (isPlaying) {
-      // Pause
-      pauseOffset += audioCtx.currentTime - startTime;
-      stopPlayback();
-      playBtn.textContent = '▶ Play';
-      playBtn.classList.remove('active');
-      cancelAnimationFrame(rafId);
+    updateSpeedDisplay(rate);
+    if (t < 1) {
+      animFrame = requestAnimationFrame(animate);
     } else {
-      playAudio(pauseOffset);
+      isEffectActive = false;
+      updateSpeedDisplay(MIN_RATE);
     }
-  });
+  }
+  animate();
+}
 
-  stopBtn.addEventListener('click', () => {
-    stopPlayback();
-    pauseOffset = 0;
-    playBtn.textContent = '▶ Play';
-    playBtn.classList.remove('active');
-    if (audioBuffer) drawWaveform();
-  });
+function doReverseScratch() {
+  if (!isPlaying || isEffectActive) return;
+  isEffectActive = true;
+  const dur = getEffectiveDuration();
+  const startTime = performance.now();
+  const startRate = sourceNode ? sourceNode.playbackRate.value : 1;
 
-  // --- Tape Stop ---
-  tapeStopBtn.addEventListener('click', () => {
-    if (!currentSource || !audioBuffer) return;
-    ensureAudioCtx();
-
-    const duration = +durationSlider.value;
-    // Exponential ramp to 0 over ~duration seconds
-    // setTargetAtTime(target, startTime, timeConstant)
-    // timeConstant = duration/3 means ~95% convergence by duration
-    currentSource.playbackRate.setTargetAtTime(0, audioCtx.currentTime, duration / 3);
-
-    // When rate hits ~0, stop and reset
-    const onended = () => {
-      stopPlayback();
-      pauseOffset = 0;
-      playBtn.textContent = '▶ Play';
-      playBtn.classList.remove('active');
-      if (currentSource) currentSource.playbackRate.value = 1;
-      if (audioBuffer) drawWaveform();
-    };
-    currentSource.onended = onended;
-  });
-
-  // --- Rewind ---
-  rewindBtn.addEventListener('click', () => {
-    if (!currentSource || !audioBuffer) return;
-    ensureAudioCtx();
-
-    // Start playing backward at accelerating rate
-    currentSource.playbackRate.setTargetAtTime(-2.0, audioCtx.currentTime, 1.5);
-
-    // After reaching -2x, keep playing or stop
-    setTimeout(() => {
-      if (currentSource && isPlaying) {
-        stopPlayback();
-        pauseOffset = 0;
-        playBtn.textContent = '▶ Play';
-        playBtn.classList.remove('active');
-        if (audioBuffer) drawWaveform();
+  function animate() {
+    if (!isEffectActive) return;
+    const elapsed = performance.now() - startTime;
+    let t = Math.min(1, elapsed / dur);
+    let curved = applyCurve(1 - t); // reverse
+    let rate = startRate * (MIN_RATE + curved * (1 - MIN_RATE));
+    currentSpeed = rate;
+    if (sourceNode && isPlaying) {
+      sourceNode.playbackRate.setTargetAtTime(rate, ctx.currentTime, 0.01);
+    }
+    updateSpeedDisplay(rate);
+    if (t < 1) {
+      animFrame = requestAnimationFrame(animate);
+    } else {
+      isEffectActive = false;
+      updateSpeedDisplay(1);
+      if (sourceNode && isPlaying) {
+        sourceNode.playbackRate.setTargetAtTime(1, ctx.currentTime, 0.01);
       }
-    }, 2000);
-  });
-
-  // --- Duration slider ---
-  durationSlider.addEventListener('input', () => {
-    durationVal.textContent = +durationSlider.value.toFixed(1) + 's';
-  });
-
-  // --- Master volume ---
-  masterVol.addEventListener('input', () => {
-    if (masterGain) masterGain.gain.value = +masterVol.value;
-  });
-
-  // Disable play until file loaded
-  playBtn.disabled = true;
-
-  // Clean stop on page hide
-  window.addEventListener('beforeunload', () => {
-    if (masterGain) {
-      masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.3);
-      setTimeout(() => { if (audioCtx) audioCtx.close(); }, 400);
     }
+  }
+  animate();
+}
+
+// BPM controls
+$('bpmIn').addEventListener('change', e => {
+  BPM = Math.max(60, Math.min(200, parseInt(e.target.value) || 124));
+  e.target.value = BPM;
+});
+$('bpmDown').addEventListener('click', () => { BPM = Math.max(60, BPM - 1); $('bpmIn').value = BPM; });
+$('bpmUp').addEventListener('click', () => { BPM = Math.min(200, BPM + 1); $('bpmIn').value = BPM; });
+
+// Duration slider
+$('timeSlider').addEventListener('input', e => {
+  DURATION = parseInt(e.target.value);
+  $('timeVal').textContent = DURATION;
+});
+
+// Sync buttons
+document.querySelectorAll('.mode-btn[data-sync]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn[data-sync]').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    SYNC = btn.dataset.sync;
+    $('syncVal').textContent = btn.textContent;
+    $('timeSlider').disabled = SYNC !== 'off';
   });
-})();
+});
+
+// Curve buttons
+document.querySelectorAll('.mode-btn[data-c]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn[data-c]').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    CURVE = btn.dataset.c;
+    $('curveVal').textContent = btn.textContent.charAt(0).toUpperCase() + btn.textContent.slice(1);
+  });
+});
+
+// Min rate
+$('minRateSlider').addEventListener('input', e => {
+  MIN_RATE = parseInt(e.target.value) / 100;
+  $('minRateVal').textContent = MIN_RATE.toFixed(2) + 'x';
+});
+
+// Load
+$('loadBtn').addEventListener('click', () => $('audioInput').click());
+$('audioInput').addEventListener('change', e => {
+  if (e.target.files[0]) loadAudio(e.target.files[0]);
+});
+
+// Play
+$('playBtn').addEventListener('click', () => {
+  if (isPlaying) stopPlayback(); else startPlayback();
+});
+
+// Effect buttons
+$('stopBtn').addEventListener('click', doTapeStop);
+$('revBtn').addEventListener('click', doReverseScratch);
+$('stopAllBtn').addEventListener('click', stopPlayback);
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); if (isPlaying) stopPlayback(); else startPlayback(); }
+  if (e.code === 'KeyS') doTapeStop();
+  if (e.code === 'KeyR') doReverseScratch();
+  if (e.code === 'Escape') stopPlayback();
+});
+
+// Init
+document.addEventListener('click', () => initAudio(), { once: true });
 </script>
 </body>
 </html>
