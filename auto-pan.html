@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auto Pan</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--bg:#090910;--surface:#12101f;--surface2:#1c1832;--accent:#00e5b2;--accent2:#ff9d4d;--accent3:#a78bff;--border:rgba(0,229,178,0.15);--text:#f0fff8;--muted:rgba(240,255,248,0.32);}
+body{background:var(--bg);min-height:100vh;font-family:'JetBrains Mono',monospace;color:var(--text);user-select:none;overflow-x:hidden;}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+.title{font-size:0.65rem;letter-spacing:5px;text-transform:uppercase;color:var(--accent);font-weight:600;}
+.subtitle{font-size:0.55rem;letter-spacing:3px;color:var(--muted);}
+.bpm-row{display:flex;align-items:center;gap:8px;}
+.ctrl-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.bpm-box{display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.bpm-in{background:transparent;border:none;color:var(--accent);font-family:inherit;font-size:0.85rem;width:52px;text-align:center;padding:6px 4px;outline:none;}
+.num-btn{background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:0.8rem;padding:6px 10px;cursor:pointer;transition:all 0.15s;}
+.num-btn:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+
+/* Waveform/LFO display */
+.lfo-section{padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+.lfo-wrap{background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;height:140px;position:relative;}
+#lfoCanvas{width:100%;height:100%;}
+
+/* Pan position indicator */
+.pan-ind{display:flex;align-items:center;justify-content:center;padding:10px;background:var(--surface);border-bottom:1px solid var(--border);}
+.pan-track{flex:1;height:6px;background:var(--surface2);border-radius:3px;position:relative;max-width:280px;margin:0 20px;}
+.pan-knob{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px rgba(0,229,178,0.4);transition:left 0.04s;}
+
+/* Controls */
+.controls{padding:18px 24px;display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--surface);}
+.ctrl-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.ctrl-card-title{font-size:0.55rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:2px;}
+.knob-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.knob-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);}
+.knob-val{font-size:0.7rem;color:var(--text);}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;}
+
+/* Shape selector */
+.shape-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.shape-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:inherit;font-size:0.6rem;letter-spacing:1px;padding:8px 4px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.shape-btn.selected{border-color:var(--accent);color:var(--accent);background:rgba(0,229,178,0.1);}
+.shape-btn:hover{border-color:rgba(0,229,178,0.4);}
+
+/* Rate selector */
+.rate-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.rate-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:inherit;font-size:0.6rem;letter-spacing:1px;padding:7px 2px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.rate-btn.selected{border-color:var(--accent2);color:var(--accent2);background:rgba(255,157,77,0.1);}
+.rate-btn:hover{border-color:rgba(255,157,77,0.4);}
+
+/* Input row */
+.input-row{display:flex;align-items:center;gap:12px;padding:14px 24px;background:var(--surface);border-top:1px solid var(--border);}
+.load-btn{background:transparent;border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:0.65rem;letter-spacing:2px;padding:8px 16px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.load-btn:hover{border-color:var(--accent);}
+input[type=file]{display:none;}
+.filename{font-size:0.6rem;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+.play-btn{background:var(--accent);border:none;color:#090910;font-family:inherit;font-size:0.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:8px 18px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.play-btn:hover{transform:scale(1.04);}
+.play-btn.playing{background:var(--accent2);}
+
+/* Transport */
+.transport{display:flex;align-items:center;justify-content:center;gap:14px;padding:18px;background:var(--surface);border-top:1px solid var(--border);}
+.transport-btn{width:48px;height:48px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.transport-btn svg{width:18px;height:18px;fill:currentColor;}
+.transport-btn:hover{border-color:var(--accent);transform:scale(1.05);}
+.transport-btn.big{width:56px;height:56px;background:var(--accent);border-color:var(--accent);color:#090910;}
+.transport-btn.big:hover{transform:scale(1.04);filter:brightness(1.1);}
+
+footer{padding:12px 24px;text-align:center;}
+.footer-text{font-size:0.5rem;letter-spacing:2px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Auto Pan</div>
+    <div class="subtitle">LFO Stereo Movement</div>
+  </div>
+  <div class="bpm-row">
+    <span class="ctrl-label">BPM</span>
+    <div class="bpm-box">
+      <button class="num-btn" id="bpmDown">−</button>
+      <input type="number" class="bpm-in" id="bpmIn" value="124" min="60" max="200">
+      <button class="num-btn" id="bpmUp">+</button>
+    </div>
+  </div>
+</header>
+
+<div class="lfo-section">
+  <div class="lfo-wrap">
+    <canvas id="lfoCanvas"></canvas>
+  </div>
+</div>
+
+<div class="pan-ind">
+  <span style="font-size:0.55rem;letter-spacing:1px;color:var(--muted)">L</span>
+  <div class="pan-track">
+    <div class="pan-knob" id="panKnob"></div>
+  </div>
+  <span style="font-size:0.55rem;letter-spacing:1px;color:var(--muted)">R</span>
+</div>
+
+<div class="controls">
+  <div class="ctrl-card">
+    <div class="ctrl-card-title">Depth & Speed</div>
+    <div class="knob-row">
+      <span class="knob-label">Depth (%)</span>
+      <span class="knob-val" id="depthVal">60</span>
+    </div>
+    <input type="range" id="depthSlider" min="0" max="100" value="60">
+    <div class="knob-row">
+      <span class="knob-label">Rate</span>
+      <span class="knob-val" id="rateVal">1/8</span>
+    </div>
+    <div class="rate-row">
+      <button class="rate-btn" data-r="4">1/4</button>
+      <button class="rate-btn selected" data-r="8">1/8</button>
+      <button class="rate-btn" data-r="16">1/16</button>
+      <button class="rate-btn" data-r="32">1/32</button>
+    </div>
+  </div>
+
+  <div class="ctrl-card">
+    <div class="ctrl-card-title">LFO Shape</div>
+    <div class="knob-row">
+      <span class="knob-label">Offset (°)</span>
+      <span class="knob-val" id="phaseVal">0</span>
+    </div>
+    <input type="range" id="phaseSlider" min="0" max="359" value="0">
+    <div class="shape-row">
+      <button class="shape-btn selected" data-s="sine">Sine</button>
+      <button class="shape-btn" data-s="tri">Triangle</button>
+      <button class="shape-btn" data-s="sqr">Square</button>
+    </div>
+  </div>
+</div>
+
+<div class="input-row">
+  <button class="load-btn" id="loadBtn">Load Audio</button>
+  <input type="file" id="audioInput" accept="audio/*" style="display:none">
+  <div class="filename" id="fileName">No audio loaded</div>
+  <button class="play-btn" id="playBtn">Play</button>
+</div>
+
+<div class="transport">
+  <button class="transport-btn" id="stopBtn" title="Stop">
+    <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+  </button>
+  <button class="transport-btn big" id="panBtn" title="Toggle Auto Pan">
+    <svg viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14H8V8h4v8zm2 0V8h4v8h-4z" opacity="0.3"/>
+      <path d="M10 8v8l6-4z"/>
+    </svg>
+  </button>
+  <button class="transport-btn" id="muteBtn" title="Center">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 2v20M7 9l10 0M17 15l-10 0"/>
+    </svg>
+  </button>
+</div>
+
+<footer><div class="footer-text">Auto Pan &bull; BPM-Synced Stereo Movement</div></footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let ctx, sourceNode, audioBuffer, panNode;
+let BPM = 124;
+let RATE = 8;
+let SHAPE = 'sine';
+let PHASE = 0;
+let DEPTH = 0.60;
+let isPlaying = false;
+let isPanning = false;
+let lfoStartTime = 0;
+let panPos = 0.5;
+let animFrame;
+
+function initAudio() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') ctx.resume();
+}
+
+function loadAudio(file) {
+  initAudio();
+  $('fileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    ctx.decodeAudioData(e.target.result, buf => {
+      audioBuffer = buf;
+      $('playBtn').textContent = 'Play';
+      isPlaying = false;
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function buildPanChain() {
+  panNode = ctx.createStereoPanner();
+  panNode.pan.value = 0;
+}
+
+function startPlayback() {
+  if (!audioBuffer) return;
+  initAudio();
+  if (!panNode) buildPanChain();
+
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+  sourceNode = ctx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.connect(panNode);
+  panNode.connect(ctx.destination);
+  sourceNode.onended = () => {
+    isPlaying = false;
+    $('playBtn').classList.remove('playing');
+    $('playBtn').textContent = 'Play';
+    stopPanning();
+  };
+  sourceNode.start(0);
+  isPlaying = true;
+  lfoStartTime = performance.now();
+  $('playBtn').classList.add('playing');
+  $('playBtn').textContent = 'Stop';
+  if (isPanning) startPanning();
+}
+
+function stopPlayback() {
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+  isPlaying = false;
+  $('playBtn').classList.remove('playing');
+  $('playBtn').textContent = 'Play';
+  stopPanning();
+}
+
+function lfoValue(phase) {
+  const t = (phase + PHASE / 360) % 1;
+  switch (SHAPE) {
+    case 'sine': return (Math.sin(t * Math.PI * 2) + 1) / 2;
+    case 'tri':  return t < 0.5 ? t * 2 : 2 - t * 2;
+    case 'sqr':  return t < 0.5 ? 1 : 0;
+    default: return (Math.sin(t * Math.PI * 2) + 1) / 2;
+  }
+}
+
+function startPanning() {
+  isPanning = true;
+  lfoStartTime = performance.now();
+  $('panBtn').style.background = 'var(--accent2)';
+  $('panBtn').style.borderColor = 'var(--accent2)';
+  applyPan();
+}
+
+function stopPanning() {
+  isPanning = false;
+  cancelAnimationFrame(animFrame);
+  $('panBtn').style.background = '';
+  $('panBtn').style.borderColor = '';
+  if (panNode) panNode.pan.setTargetAtTime(0, ctx.currentTime, 0.01);
+  $('panKnob').style.left = '50%';
+  drawLFO();
+}
+
+function applyPan() {
+  if (!isPanning || !panNode || !isPlaying) return;
+
+  const beatMs = 60000 / BPM;
+  const stepMs = beatMs / RATE;
+  const elapsed = (performance.now() - lfoStartTime) % stepMs;
+  const phase = elapsed / stepMs;
+
+  const raw = lfoValue(phase);
+  // Map depth: 0 = center, 1 = full swing
+  const center = 0.5;
+  panPos = center + (raw - 0.5) * DEPTH * 2;
+  panPos = Math.max(-1, Math.min(1, panPos));
+
+  panNode.pan.setTargetAtTime(panPos, ctx.currentTime, 0.01);
+  $('panKnob').style.left = ((panPos + 1) / 2 * 100) + '%';
+
+  drawLFO(phase);
+  animFrame = requestAnimationFrame(applyPan);
+}
+
+function drawLFO(activePhase) {
+  const canvas = $('lfoCanvas');
+  const w = canvas.offsetWidth;
+  const h = canvas.offsetHeight;
+  canvas.width = w;
+  canvas.height = h;
+  const c = canvas.getContext('2d');
+
+  c.fillStyle = '#090910';
+  c.fillRect(0, 0, w, h);
+
+  // Grid
+  c.strokeStyle = 'rgba(0,229,178,0.06)';
+  c.lineWidth = 1;
+  for (let i = 0; i < 5; i++) {
+    const y = (i / 4) * h;
+    c.beginPath(); c.moveTo(0, y); c.lineTo(w, y); c.stroke();
+  }
+
+  // Center line
+  c.strokeStyle = 'rgba(0,229,178,0.2)';
+  c.beginPath(); c.moveTo(0, h/2); c.lineTo(w, h/2); c.stroke();
+
+  // LFO curve
+  c.strokeStyle = '#00e5b2';
+  c.lineWidth = 2;
+  c.beginPath();
+  for (let px = 0; px <= w; px++) {
+    const t = px / w;
+    const raw = lfoValue(t);
+    const center = 0.5;
+    const val = center + (raw - 0.5) * DEPTH * 2;
+    const y = h - val * h;
+    if (px === 0) c.moveTo(px, y);
+    else c.lineTo(px, y);
+  }
+  c.stroke();
+
+  // Fill
+  c.strokeStyle = 'rgba(0,229,178,0.1)';
+  c.fillStyle = 'rgba(0,229,178,0.04)';
+  c.lineTo(w, h);
+  c.lineTo(0, h);
+  c.closePath();
+  c.fill();
+
+  // Active phase marker
+  if (activePhase !== undefined) {
+    const x = activePhase * w;
+    c.strokeStyle = 'rgba(255,157,77,0.6)';
+    c.lineWidth = 1.5;
+    c.setLineDash([3,3]);
+    c.beginPath(); c.moveTo(x, 0); c.lineTo(x, h); c.stroke();
+    c.setLineDash([]);
+
+    // Current position dot
+    const raw = lfoValue(activePhase);
+    const val = 0.5 + (raw - 0.5) * DEPTH * 2;
+    const y = h - val * h;
+    c.beginPath();
+    c.arc(x, y, 5, 0, Math.PI * 2);
+    c.fillStyle = '#ff9d4d';
+    c.fill();
+    c.strokeStyle = '#fff';
+    c.lineWidth = 1.5;
+    c.stroke();
+  }
+
+  if (isPanning) animFrame = requestAnimationFrame(drawLFO);
+}
+
+// BPM controls
+$('bpmIn').addEventListener('change', e => {
+  BPM = Math.max(60, Math.min(200, parseInt(e.target.value) || 124));
+  e.target.value = BPM;
+  drawLFO();
+});
+$('bpmDown').addEventListener('click', () => { BPM = Math.max(60, BPM - 1); $('bpmIn').value = BPM; drawLFO(); });
+$('bpmUp').addEventListener('click', () => { BPM = Math.min(200, BPM + 1); $('bpmIn').value = BPM; drawLFO(); });
+
+// Depth
+$('depthSlider').addEventListener('input', e => {
+  DEPTH = parseInt(e.target.value) / 100;
+  $('depthVal').textContent = e.target.value;
+  drawLFO();
+});
+
+// Rate
+document.querySelectorAll('.rate-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.rate-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    RATE = parseInt(btn.dataset.r);
+    $('rateVal').textContent = btn.textContent;
+  });
+});
+
+// Phase
+$('phaseSlider').addEventListener('input', e => {
+  PHASE = parseInt(e.target.value);
+  $('phaseVal').textContent = PHASE;
+  drawLFO();
+});
+
+// Shape
+document.querySelectorAll('.shape-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.shape-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    SHAPE = btn.dataset.s;
+    drawLFO();
+  });
+});
+
+// Load
+$('loadBtn').addEventListener('click', () => $('audioInput').click());
+$('audioInput').addEventListener('change', e => {
+  if (e.target.files[0]) loadAudio(e.target.files[0]);
+});
+
+// Transport
+$('playBtn').addEventListener('click', () => {
+  if (isPlaying) stopPlayback(); else startPlayback();
+});
+$('stopBtn').addEventListener('click', () => stopPlayback());
+$('panBtn').addEventListener('click', () => {
+  if (isPanning) stopPanning(); else { if (isPlaying) startPanning(); }
+});
+$('muteBtn').addEventListener('click', () => {
+  if (panNode) panNode.pan.setTargetAtTime(0, ctx.currentTime, 0.01);
+  $('panKnob').style.left = '50%';
+});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); $('playBtn').click(); }
+  if (e.code === 'KeyA') $('panBtn').click();
+  if (e.code === 'Escape') stopPlayback();
+});
+
+// Init
+drawLFO();
+document.addEventListener('click', () => initAudio(), { once: true });
+</script>
+</body>
+</html>
