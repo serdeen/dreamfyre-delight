@@ -1,40 +1,382 @@
 <!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Dreamfyre Delight</title>
-<style>body{background:#0a0a0f;color:#00f5d4;font-family:monospace;padding:2rem}
-h1{color:#f72585}a{color:#00f5d4;display:block;margin:.5rem 0}</style></head>
-<body><h1>Dreamfyre Delight</h1><a href="808-loop.html">808-loop.html</a>
-<a href="ai-drum-gen.html">ai-drum-gen.html</a>
-<a href="animal-tap.html">animal-tap.html</a>
-<a href="arpeggio-engine.html">arpeggio-engine.html</a>
-<a href="bpm-tap.html">bpm-tap.html</a>
-<a href="chaos-pad.html">chaos-pad.html</a>
-<a href="chord-lab.html">chord-lab.html</a>
-<a href="chord-morph.html">chord-morph.html</a>
-<a href="chord-voicer-v2.html">chord-voicer-v2.html</a>
-<a href="chord-voicer.html">chord-voicer.html</a>
-<a href="color-lab.html">color-lab.html</a>
-<a href="color-shape-tap.html">color-shape-tap.html</a>
-<a href="drum-lab.html">drum-lab.html</a>
-<a href="drum-machine.html">drum-machine.html</a>
-<a href="drum-pattern-studio.html">drum-pattern-studio.html</a>
-<a href="echo-lab.html">echo-lab.html</a>
-<a href="filter-lab.html">filter-lab.html</a>
-<a href="key-finder.html">key-finder.html</a>
-<a href="komplete-kontrol-synth.html">komplete-kontrol-synth.html</a>
-<a href="loop-station.html">loop-station.html</a>
-<a href="melodic-sequencer.html">melodic-sequencer.html</a>
-<a href="midi-piano-test.html">midi-piano-test.html</a>
-<a href="octave-synth.html">octave-synth.html</a>
-<a href="palabras.html">palabras.html</a>
-<a href="pan-sphere.html">pan-sphere.html</a>
-<a href="pitch-shifter.html">pitch-shifter.html</a>
-<a href="signal-lab.html">signal-lab.html</a>
-<a href="slicer-dice.html">slicer-dice.html</a>
-<a href="stereo-field.html">stereo-field.html</a>
-<a href="studio-companion.html">studio-companion.html</a>
-<a href="tape-stop.html">tape-stop.html</a>
-<a href="texture-studio.html">texture-studio.html</a>
-<a href="tuner.html">tuner.html</a>
-<a href="vocal-chopper.html">vocal-chopper.html</a>
-<a href="void-engine.html">void-engine.html</a>
-</body></html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dreamfyre Delight</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0a0a1a;
+      color: #e0d8ff;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: hue 8s linear infinite;
+    }
+    @keyframes hue {
+      0% { filter: hue-rotate(0deg); }
+      100% { filter: hue-rotate(360deg); }
+    }
+    .subtitle { color: #888; margin-bottom: 2rem; }
+    h2 { font-size: 1.4rem; margin: 2rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #2a2a4a; }
+    h2 .emoji { margin-right: 0.5rem; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: #16162a;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      padding: 1.2rem;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: #6b5bff;
+      box-shadow: 0 8px 24px rgba(107,91,255,0.15);
+    }
+    .card h3 { font-size: 1.05rem; margin-bottom: 0.4rem; color: #fff; }
+    .card p { font-size: 0.82rem; color: #888; line-height: 1.4; }
+    .tag {
+      display: inline-block;
+      background: #2a2a4a;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      margin-top: 0.6rem;
+      color: #aaa;
+    }
+    /* Category accent borders */
+    .card.audio { border-left: 3px solid #ff6b6b; }
+    .card.synth { border-left: 3px solid #4d96ff; }
+    .card.effect { border-left: 3px solid #ffd93d; }
+    .card.mix { border-left: 3px solid #6bcb77; }
+    .card.kid { border-left: 3px solid #ff9ff3; }
+    .card.learn { border-left: 3px solid #da77f2; }
+    .card.util { border-left: 3px solid #74c0fc; }
+
+    /* Big toddler buttons */
+    .kid-zone .grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1.2rem; }
+    .kid-zone .card {
+      background: #1a1030;
+      border: 2px solid #ff9ff3;
+      border-radius: 20px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+    }
+    .kid-zone .card h3 { font-size: 1.5rem; color: #ff9ff3; }
+    .kid-zone .card p { color: #ccc; font-size: 0.9rem; }
+
+    footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #2a2a4a; color: #555; font-size: 0.8rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>🔥 Dreamfyre Delight</h1>
+  <p class="subtitle">48 creative tools & toys — built overnight by Vhagar</p>
+
+  <!-- 👶 For Nizar — big buttons for toddlers -->
+  <section class="kid-zone">
+    <h2><span class="emoji">👶</span>For Nizar</h2>
+    <div class="grid">
+      <a class="card kid" href="animal-tap.html">
+        <h3>🦁 Animal Tap</h3>
+        <p>Tap animals — hear the sound & see the picture</p>
+      </a>
+      <a class="card kid" href="toddler-rainbow.html">
+        <h3>🌈 Toddler Rainbow</h3>
+        <p>Colorful rainbow interactive for little eyes</p>
+      </a>
+      <a class="card kid" href="bpm-tap.html">
+        <h3>🥁 Big Tap</h3>
+        <p>Tap the screen and watch it bounce!</p>
+      </a>
+      <a class="card kid" href="color-shape-tap.html">
+        <h3>🎨 Colors & Shapes</h3>
+        <p>Bright colors and fun shapes to explore</p>
+      </a>
+    </div>
+  </section>
+
+  <!-- 🔊 Audio & Drums -->
+  <h2><span class="emoji">🔊</span>Audio & Drums</h2>
+  <div class="grid">
+    <a class="card audio" href="808-loop.html">
+      <h3>808 Loop</h3>
+      <p>Classic 808 drum machine with pattern sequencer</p>
+      <span class="tag">Drum Machine</span>
+    </a>
+    <a class="card audio" href="ai-drum-gen.html">
+      <h3>🧠 AI Drum Gen</h3>
+      <p>Generate drum patterns with AI</p>
+      <span class="tag">AI</span>
+    </a>
+    <a class="card audio" href="drum-machine.html">
+      <h3>🥁 Drum Machine</h3>
+      <p>Step sequencer with 808 samples</p>
+      <span class="tag">Step Sequencer</span>
+    </a>
+    <a class="card audio" href="drum-pattern-studio.html">
+      <h3>🎛️ Drum Pattern Studio</h3>
+      <p>Build complex drum patterns</p>
+      <span class="tag">Pattern</span>
+    </a>
+    <a class="card audio" href="drum-lab.html">
+      <h3>🧪 Drum Lab</h3>
+      <p>Sound design lab for drums</p>
+      <span class="tag">Sound Design</span>
+    </a>
+    <a class="card audio" href="hihat-pattern-studio.html">
+      <h3>🎩 Hi-Hat Studio</h3>
+      <p>Program intricate hi-hat patterns</p>
+      <span class="tag">Hi-Hat</span>
+    </a>
+  </div>
+
+  <!-- 🎹 Chords & Scales -->
+  <h2><span class="emoji">🎹</span>Chords & Scales</h2>
+  <div class="grid">
+    <a class="card audio" href="8string-toolkit-v2.html">
+      <h3>🎸 8-String Toolkit</h3>
+      <p>Full 8-string guitar with scales, chords, drop tuning</p>
+      <span class="tag">Guitar</span>
+    </a>
+    <a class="card audio" href="chord-lab.html">
+      <h3>🔬 Chord Lab</h3>
+      <p>Explore chord voicings and inversions</p>
+      <span class="tag">Chords</span>
+    </a>
+    <a class="card audio" href="chord-explorer-v2.html">
+      <h3>🪗 Chord Explorer</h3>
+      <p>Interactive chord shapes across the neck</p>
+      <span class="tag">Chords</span>
+    </a>
+    <a class="card audio" href="chord-morph.html">
+      <h3>🌀 Chord Morph</h3>
+      <p>Morph between chord types smoothly</p>
+      <span class="tag">Morph</span>
+    </a>
+    <a class="card audio" href="chord-voicer-v2.html">
+      <h3>🎤 Chord Voicer</h3>
+      <p>Humanize and voice chords realistically</p>
+      <span class="tag">Voicing</span>
+    </a>
+    <a class="card audio" href="chord-voicer.html">
+      <h3>🎤 Chord Voicer</h3>
+      <p>Original chord voicing tool</p>
+      <span class="tag">Voicing</span>
+    </a>
+    <a class="card audio" href="deep-house-chord-palette.html">
+      <h3>🏠 Deep House Palette</h3>
+      <p>Chord voicings tuned for deep house music</p>
+      <span class="tag">Genre</span>
+    </a>
+    <a class="card audio" href="arpeggio-engine.html">
+      <h3>🎼 Arpeggio Engine</h3>
+      <p>Scale-based arpeggio sequencer</p>
+      <span class="tag">Arp</span>
+    </a>
+    <a class="card audio" href="key-finder.html">
+      <h3>🔍 Key Finder</h3>
+      <p>Find the key of any audio input</p>
+      <span class="tag">Analysis</span>
+    </a>
+  </div>
+
+  <!-- 🎹 Synths & Pads -->
+  <h2><span class="emoji">🎹</span>Synths & Pads</h2>
+  <div class="grid">
+    <a class="card synth" href="synth.html">
+      <h3>🎹 Synth</h3>
+      <p>Web Audio synthesizer with oscillators and filters</p>
+      <span class="tag">Synth</span>
+    </a>
+    <a class="card synth" href="komplete-kontrol-synth.html">
+      <h3>⌨️ Komplete Kontrol</h3>
+      <p>Keyboard-enabled synth with Komplete-style layout</p>
+      <span class="tag">MIDI</span>
+    </a>
+    <a class="card synth" href="chaos-pad.html">
+      <h3>🌀 Chaos Pad</h3>
+      <p>Generative ambient pad with chaos modulation</p>
+      <span class="tag">Ambient</span>
+    </a>
+    <a class="card synth" href="octave-synth.html">
+      <h3>🎛️ Octave Synth</h3>
+      <p>Multi-octave layered synth engine</p>
+      <span class="tag">Layered</span>
+    </a>
+    <a class="card synth" href="texture-studio.html">
+      <h3>🧻 Texture Studio</h3>
+      <p>Build evolving textural soundscapes</p>
+      <span class="tag">Texture</span>
+    </a>
+    <a class="card synth" href="texture-studio-v2.html">
+      <h3>🧻 Texture Studio v2</h3>
+      <p>Improved texture synthesis engine</p>
+      <span class="tag">Texture v2</span>
+    </a>
+    <a class="card synth" href="loop-station.html">
+      <h3>🔁 Loop Station</h3>
+      <p>Real-time audio looper and phrase sampler</p>
+      <span class="tag">Looper</span>
+    </a>
+    <a class="card synth" href="melodic-sequencer.html">
+      <h3>🎼 Melodic Sequencer</h3>
+      <p>Step-based melodic pattern sequencer</p>
+      <span class="tag">Sequencer</span>
+    </a>
+    <a class="card synth" href="slicer-dice.html">
+      <h3>🎲 Slicer Dice</h3>
+      <p>Random slice-and-dice audio fragmentation</p>
+      <span class="tag">Glitch</span>
+    </a>
+    <a class="card synth" href="studio-companion.html">
+      <h3>🎧 Studio Companion</h3>
+      <p>All-in-one studio utility synth</p>
+      <span class="tag">Utility</span>
+    </a>
+    <a class="card synth" href="void-engine.html">
+      <h3>🌌 Void Engine</h3>
+      <p>Generative art visualizer, mic reactive</p>
+      <span class="tag">Visual</span>
+    </a>
+  </div>
+
+  <!-- 🔊 Effects -->
+  <h2><span class="emoji">🔊</span>Effects</h2>
+  <div class="grid">
+    <a class="card effect" href="echo-lab.html">
+      <h3>📢 Echo Lab</h3>
+      <p>D delay and echo effects</p>
+      <span class="tag">Delay</span>
+    </a>
+    <a class="card effect" href="filter-lab.html">
+      <h3>🎚️ Filter Lab</h3>
+      <p>Sweep through filters and cutoffs</p>
+      <span class="tag">Filter</span>
+    </a>
+    <a class="card effect" href="filter-sweep-lab.html">
+      <h3>🎚️ Filter Sweep Lab</h3>
+      <p>Rhythm-synced filter sweeps</p>
+      <span class="tag">Sync</span>
+    </a>
+    <a class="card effect" href="pan-sphere.html">
+      <h3>🔵 Pan Sphere</h3>
+      <p>Spatial panning and stereo positioning</p>
+      <span class="tag">Stereo</span>
+    </a>
+    <a class="card effect" href="pitch-shifter.html">
+      <h3>🔈 Pitch Shifter</h3>
+      <p>Real-time pitch shifting and harmonization</p>
+      <span class="tag">Pitch</span>
+    </a>
+    <a class="card effect" href="tape-stop.html">
+      <h3>📼 Tape Stop</h3>
+      <p>Tape stop and varispeed effect</p>
+      <span class="tag">Tape</span>
+    </a>
+    <a class="card effect" href="vocal-chopper.html">
+      <h3>🎤 Vocal Chopper</h3>
+      <p>Chop and rearrange vocal samples</p>
+      <span class="tag">Vocal</span>
+    </a>
+    <a class="card effect" href="vocal-chopper-studio.html">
+      <h3>🎤 Vocal Chopper Studio</h3>
+      <p>Advanced vocal chopping and processing</p>
+      <span class="tag">Vocal</span>
+    </a>
+    <a class="card effect" href="signal-lab.html">
+      <h3>📡 Signal Lab</h3>
+      <p>Modulate and transform audio signals</p>
+      <span class="tag">Modulate</span>
+    </a>
+  </div>
+
+  <!-- 🎛️ Mixing & Analysis -->
+  <h2><span class="emoji">🎛️</span>Mixing & Analysis</h2>
+  <div class="grid">
+    <a class="card mix" href="mix-reference-analyzer.html">
+      <h3>📊 Mix Reference Analyzer</h3>
+      <p>Spectrum, LUFS meters, stereo field, band analysis</p>
+      <span class="tag">Analysis</span>
+    </a>
+    <a class="card mix" href="groove-builder.html">
+      <h3>🪘 Groove Builder</h3>
+      <p>Shape and humanize groove and feel</p>
+      <span class="tag">Groove</span>
+    </a>
+    <a class="card mix" href="groove-shuffler.html">
+      <h3>🔀 Groove Shuffler</h3>
+      <p>Apply different groove templates to patterns</p>
+      <span class="tag">Groove</span>
+    </a>
+    <a class="card mix" href="stereo-field.html">
+      <h3>🎛️ Stereo Field</h3>
+      <p>Stereo width and field visualization</p>
+      <span class="tag">Stereo</span>
+    </a>
+    <a class="card mix" href="bpm-synced-lfo.html">
+      <h3>〰️ BPM-Synced LFO</h3>
+      <p>Low-frequency oscillator locked to tempo</p>
+      <span class="tag">Modulation</span>
+    </a>
+  </div>
+
+  <!-- 🎨 Visual & Color -->
+  <h2><span class="emoji">🎨</span>Visual & Color</h2>
+  <div class="grid">
+    <a class="card audio" href="color-lab.html">
+      <h3>🎨 Color Lab</h3>
+      <p>Color mixing and palette generation</p>
+      <span class="tag">Color</span>
+    </a>
+    <a class="card audio" href="color-shape-tap.html">
+      <h3>🔷 Color Shape Tap</h3>
+      <p>Tap shapes to make colorful music</p>
+      <span class="tag">Visual</span>
+    </a>
+  </div>
+
+  <!-- 📚 Learn -->
+  <h2><span class="emoji">📚</span>Learn</h2>
+  <div class="grid">
+    <a class="card learn" href="palabras.html">
+      <h3>🗣️ Palabras</h3>
+      <p>Spanish/English bilingual word cards with speech synthesis</p>
+      <span class="tag">Bilingual</span>
+    </a>
+    <a class="card learn" href="midi-piano-test.html">
+      <h3>🎹 MIDI Piano Test</h3>
+      <p>Test MIDI keyboards and piano inputs</p>
+      <span class="tag">MIDI</span>
+    </a>
+  </div>
+
+  <!-- 🔧 Utility -->
+  <h2><span class="emoji">🔧</span>Utility</h2>
+  <div class="grid">
+    <a class="card util" href="tuner.html">
+      <h3>🎸 Tuner</h3>
+      <p>Chromatic tuner for guitar and other instruments</p>
+      <span class="tag">Tuner</span>
+    </a>
+  </div>
+
+  <footer>
+    <p>🔥 Dreamfyre Delight — built with Web Audio, Web MIDI & ❤️ by Vhagar</p>
+  </footer>
+</body>
+</html>
