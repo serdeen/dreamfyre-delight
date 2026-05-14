@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stutter Repeat</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{--bg:#0c0815;--surface:#18121f;--surface2:#221b33;--accent:#e040fb;--accent2:#40e8ff;--border:rgba(224,64,251,0.18);--text:#f5ecff;--muted:rgba(245,236,255,0.32);}
+body{background:var(--bg);min-height:100vh;font-family:'JetBrains Mono',monospace;color:var(--text);user-select:none;overflow-x:hidden;}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
+.title{font-size:0.65rem;letter-spacing:5px;text-transform:uppercase;color:var(--accent);font-weight:600;}
+.subtitle{font-size:0.55rem;letter-spacing:3px;color:var(--muted);}
+.bpm-row{display:flex;align-items:center;gap:8px;}
+.ctrl-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
+.bpm-box{display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+.bpm-in{background:transparent;border:none;color:var(--accent);font-family:inherit;font-size:0.85rem;width:52px;text-align:center;padding:6px 4px;outline:none;}
+.num-btn{background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:0.8rem;padding:6px 10px;cursor:pointer;transition:all 0.15s;}
+.num-btn:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+
+/* Waveform with stutter window */
+.wave-section{padding:16px 24px;background:var(--surface);}
+.wave-wrap{background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden;height:120px;position:relative;cursor:crosshair;}
+#waveCanvas{width:100%;height:100%;display:block;}
+.slice-marker{position:absolute;top:0;width:2px;height:100%;background:rgba(64,232,255,0.5);pointer-events:none;}
+.slice-window{position:absolute;top:0;height:100%;background:rgba(224,64,251,0.15);border-left:2px solid var(--accent);border-right:2px solid var(--accent);pointer-events:none;}
+
+/* Controls */
+.controls{padding:16px 24px;display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--surface);border-bottom:1px solid var(--border);}
+.ctrl-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.ctrl-card-title{font-size:0.55rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:2px;}
+.knob-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.knob-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);}
+.knob-val{font-size:0.7rem;color:var(--text);}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;}
+
+/* Selector grids */
+.selector-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;}
+.sel-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:inherit;font-size:0.6rem;letter-spacing:1px;padding:7px 4px;border-radius:5px;cursor:pointer;transition:all 0.15s;}
+.sel-btn.selected{border-color:var(--accent);color:var(--accent);background:rgba(224,64,251,0.12);}
+.sel-btn:hover{border-color:rgba(224,64,251,0.4);}
+
+/* Input row */
+.input-row{display:flex;align-items:center;gap:12px;padding:14px 24px;background:var(--surface);border-top:1px solid var(--border);}
+.load-btn{background:transparent;border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:0.65rem;letter-spacing:2px;padding:8px 16px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.load-btn:hover{border-color:var(--accent);}
+input[type=file]{display:none;}
+.filename{font-size:0.6rem;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
+.play-btn{background:var(--accent);border:none;color:#0c0815;font-family:inherit;font-size:0.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:8px 18px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.play-btn:hover{transform:scale(1.04);}
+.play-btn.playing{background:var(--accent2);}
+
+/* Big stutter button */
+.stutter-section{padding:24px;display:flex;gap:16px;justify-content:center;background:var(--surface);border-top:1px solid var(--border);}
+.stutter-btn{background:rgba(224,64,251,0.12);border:2px solid var(--accent);color:var(--accent);font-family:inherit;font-size:0.75rem;font-weight:600;letter-spacing:4px;text-transform:uppercase;padding:22px 56px;border-radius:10px;cursor:pointer;transition:all 0.1s;min-width:220px;}
+.stutter-btn:hover{background:rgba(224,64,251,0.2);transform:scale(1.02);}
+.stutter-btn:active{transform:scale(0.98);}
+.stutter-btn.active{background:var(--accent);color:#0c0815;box-shadow:0 0 30px rgba(224,64,251,0.4);}
+
+/* Transport */
+.transport{display:flex;align-items:center;justify-content:center;gap:14px;padding:18px;background:var(--surface);border-top:1px solid var(--border);}
+.transport-btn{width:48px;height:48px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+.transport-btn svg{width:18px;height:18px;fill:currentColor;}
+.transport-btn:hover{border-color:var(--accent);transform:scale(1.05);}
+
+footer{padding:12px 24px;text-align:center;}
+.footer-text{font-size:0.5rem;letter-spacing:2px;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="title">Stutter Repeat</div>
+    <div class="subtitle">Beat-Sliced Tension FX</div>
+  </div>
+  <div class="bpm-row">
+    <span class="ctrl-label">BPM</span>
+    <div class="bpm-box">
+      <button class="num-btn" id="bpmDown">−</button>
+      <input type="number" class="bpm-in" id="bpmIn" value="124" min="60" max="200">
+      <button class="num-btn" id="bpmUp">+</button>
+    </div>
+  </div>
+</header>
+
+<div class="wave-section">
+  <div class="wave-wrap" id="waveWrap">
+    <canvas id="waveCanvas"></canvas>
+    <div class="slice-window" id="sliceWindow" style="display:none"></div>
+    <div class="slice-marker" id="sliceMarker" style="display:none"></div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="ctrl-card">
+    <div class="ctrl-card-title">Slice Point</div>
+    <div class="knob-row">
+      <span class="knob-label">Position (%)</span>
+      <span class="knob-val" id="posVal">0</span>
+    </div>
+    <input type="range" id="posSlider" min="0" max="100" value="0">
+    <div class="ctrl-card-title" style="margin-top:6px">Slice Length</div>
+    <div class="knob-row">
+      <span class="knob-label">Length</span>
+      <span class="knob-val" id="lenVal">1/32</span>
+    </div>
+    <div class="selector-grid">
+      <button class="sel-btn" data-len="32">1/32</button>
+      <button class="sel-btn selected" data-len="16">1/16</button>
+      <button class="sel-btn" data-len="8">1/8</button>
+      <button class="sel-btn" data-len="4">1/4</button>
+    </div>
+  </div>
+
+  <div class="ctrl-card">
+    <div class="ctrl-card-title">Stutter Settings</div>
+    <div class="knob-row">
+      <span class="knob-label">Repeats</span>
+      <span class="knob-val" id="repVal">4</span>
+    </div>
+    <input type="range" id="repSlider" min="1" max="16" value="4">
+    <div class="knob-row">
+      <span class="knob-label">Rate</span>
+      <span class="knob-val" id="rateVal">1/16</span>
+    </div>
+    <div class="selector-grid">
+      <button class="sel-btn" data-r="32">1/32</button>
+      <button class="sel-btn selected" data-r="16">1/16</button>
+      <button class="sel-btn" data-r="8">1/8</button>
+      <button class="sel-btn" data-r="4">1/4</button>
+    </div>
+  </div>
+</div>
+
+<div class="input-row">
+  <button class="load-btn" id="loadBtn">Load Audio</button>
+  <input type="file" id="audioInput" accept="audio/*" style="display:none">
+  <div class="filename" id="fileName">Click waveform or load file</div>
+  <button class="play-btn" id="playBtn">Play</button>
+</div>
+
+<div class="stutter-section">
+  <button class="stutter-btn" id="stutterBtn">Stutter</button>
+</div>
+
+<div class="transport">
+  <button class="transport-btn" id="stopBtn" title="Stop">
+    <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+  </button>
+  <button class="transport-btn" id="playSliceBtn" title="Preview Slice">
+    <svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg>
+  </button>
+</div>
+
+<footer><div class="footer-text">Stutter Repeat &bull; Deep House Tension FX</div></footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let ctx, audioBuffer, sourceNode;
+let BPM = 124;
+let isPlaying = false;
+let isStuttering = false;
+let stutterTimeout = null;
+
+// Stutter params
+let SLICE_POS = 0; // 0-1 fraction of audio
+let SLICE_LEN_DIV = 16; // division: 32, 16, 8, 4
+let STUTTER_REPS = 4;
+let STUTTER_RATE_DIV = 16; // how often to trigger
+
+function initAudio() {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') ctx.resume();
+}
+
+function loadAudio(file) {
+  initAudio();
+  $('fileName').textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => {
+    ctx.decodeAudioData(e.target.result, buf => {
+      audioBuffer = buf;
+      $('playBtn').textContent = 'Play';
+      isPlaying = false;
+      drawWaveform();
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function drawWaveform() {
+  if (!audioBuffer) return;
+  const canvas = $('waveCanvas');
+  const w = canvas.offsetWidth;
+  const h = canvas.offsetHeight;
+  canvas.width = w;
+  canvas.height = h;
+  const c = canvas.getContext('2d');
+  c.clearRect(0, 0, w, h);
+
+  const data = audioBuffer.getChannelData(0);
+  const step = Math.floor(data.length / w);
+  c.strokeStyle = 'rgba(224,64,251,0.6)';
+  c.lineWidth = 1;
+  c.beginPath();
+  for (let x = 0; x < w; x++) {
+    let mx = 0;
+    for (let j = 0; j < step; j++) {
+      const v = Math.abs(data[x * step + j] || 0);
+      if (v > mx) mx = v;
+    }
+    const y = (0.5 - mx * 0.45) * h;
+    c.moveTo(x, y);
+    c.lineTo(x, h - y);
+  }
+  c.stroke();
+
+  // Playhead line
+  c.strokeStyle = 'rgba(64,232,255,0.8)';
+  c.lineWidth = 1;
+  c.setLineDash([2, 2]);
+  if (isPlaying) {
+    const pos = (sourceNode ? sourceNode.context.currentTime % audioBuffer.duration : 0) / audioBuffer.duration;
+    const px = pos * w;
+    c.beginPath();
+    c.moveTo(px, 0);
+    c.lineTo(px, h);
+    c.stroke();
+  }
+  c.setLineDash([]);
+
+  // Slice window
+  updateSliceOverlay();
+}
+
+function updateSliceOverlay() {
+  if (!audioBuffer) return;
+  const canvas = $('waveCanvas');
+  const w = canvas.offsetWidth;
+  const win = $('sliceWindow');
+  const marker = $('sliceMarker');
+  win.style.display = 'block';
+  marker.style.display = 'block';
+
+  const beatMs = 60000 / BPM;
+  const sliceLenMs = beatMs / SLICE_LEN_DIV;
+  const totalMs = (audioBuffer.duration) * 1000;
+  const posMs = SLICE_POS * totalMs;
+  const posX = (posMs / totalMs) * w;
+  const lenX = (sliceLenMs / totalMs) * w;
+
+  win.style.left = posX + 'px';
+  win.style.width = Math.max(2, lenX) + 'px';
+  marker.style.left = posX + 'px';
+}
+
+function playMain(fromPos) {
+  if (!audioBuffer) return;
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+  sourceNode = ctx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.connect(ctx.destination);
+  sourceNode.start(0, fromPos);
+  sourceNode.onended = () => {
+    isPlaying = false;
+    $('playBtn').classList.remove('playing');
+    $('playBtn').textContent = 'Play';
+    stopStutter();
+  };
+  return sourceNode;
+}
+
+function playSlice() {
+  if (!audioBuffer) return;
+  initAudio();
+  const beatMs = 60000 / BPM;
+  const sliceLenSec = beatMs / SLICE_LEN_DIV / 1000;
+  const offsetSec = SLICE_POS * audioBuffer.duration;
+  const src = ctx.createBufferSource();
+  src.buffer = audioBuffer;
+  src.connect(ctx.destination);
+  src.start(0, offsetSec, sliceLenSec);
+}
+
+function doStutter() {
+  if (isStuttering) { stopStutter(); return; }
+  if (!audioBuffer) return;
+  initAudio();
+  isStuttering = true;
+  isPlaying = true;
+  $('stutterBtn').classList.add('active');
+  $('stutterBtn').textContent = 'Stop Stutter';
+
+  const beatMs = 60000 / BPM;
+  const rateMs = beatMs / STUTTER_RATE_DIV;
+  const sliceLenSec = beatMs / SLICE_LEN_DIV / 1000;
+  const offsetSec = SLICE_POS * audioBuffer.duration;
+  let rep = 0;
+
+  function playStutterSlice() {
+    if (!isStuttering) return;
+    const src = ctx.createBufferSource();
+    src.buffer = audioBuffer;
+    src.connect(ctx.destination);
+    src.start(0, offsetSec, sliceLenSec);
+    rep++;
+    if (rep >= STUTTER_REPS) {
+      isStuttering = false;
+      $('stutterBtn').classList.remove('active');
+      $('stutterBtn').textContent = 'Stutter';
+    } else {
+      stutterTimeout = setTimeout(playStutterSlice, rateMs);
+    }
+  }
+
+  playStutterSlice();
+}
+
+function stopStutter() {
+  isStuttering = false;
+  clearTimeout(stutterTimeout);
+  $('stutterBtn').classList.remove('active');
+  $('stutterBtn').textContent = 'Stutter';
+}
+
+function togglePlayback() {
+  if (isPlaying) {
+    stopStutter();
+    if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+    isPlaying = false;
+    $('playBtn').classList.remove('playing');
+    $('playBtn').textContent = 'Play';
+  } else {
+    if (!audioBuffer) return;
+    initAudio();
+    playMain(SLICE_POS * audioBuffer.duration);
+    isPlaying = true;
+    $('playBtn').classList.add('playing');
+    $('playBtn').textContent = 'Stop';
+  }
+}
+
+// Waveform click to set slice point
+$('waveCanvas').addEventListener('click', e => {
+  if (!audioBuffer) return;
+  const rect = e.currentTarget.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const ratio = x / rect.width;
+  SLICE_POS = Math.max(0, Math.min(0.95, ratio));
+  $('posSlider').value = Math.round(SLICE_POS * 100);
+  $('posVal').textContent = Math.round(SLICE_POS * 100);
+  updateSliceOverlay();
+});
+
+// BPM
+$('bpmIn').addEventListener('change', e => {
+  BPM = Math.max(60, Math.min(200, parseInt(e.target.value) || 124));
+  e.target.value = BPM;
+  updateSliceOverlay();
+});
+$('bpmDown').addEventListener('click', () => { BPM = Math.max(60, BPM - 1); $('bpmIn').value = BPM; updateSliceOverlay(); });
+$('bpmUp').addEventListener('click', () => { BPM = Math.min(200, BPM + 1); $('bpmIn').value = BPM; updateSliceOverlay(); });
+
+// Position slider
+$('posSlider').addEventListener('input', e => {
+  SLICE_POS = parseInt(e.target.value) / 100;
+  $('posVal').textContent = e.target.value;
+  updateSliceOverlay();
+});
+
+// Slice length
+document.querySelectorAll('.sel-btn[data-len]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sel-btn[data-len]').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    SLICE_LEN_DIV = parseInt(btn.dataset.len);
+    $('lenVal').textContent = '1/' + SLICE_LEN_DIV;
+    updateSliceOverlay();
+  });
+});
+
+// Stutter repeats
+$('repSlider').addEventListener('input', e => {
+  STUTTER_REPS = parseInt(e.target.value);
+  $('repVal').textContent = STUTTER_REPS;
+});
+
+// Stutter rate
+document.querySelectorAll('.sel-btn[data-r]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sel-btn[data-r]').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    STUTTER_RATE_DIV = parseInt(btn.dataset.r);
+    $('rateVal').textContent = '1/' + STUTTER_RATE_DIV;
+  });
+});
+
+// Load
+$('loadBtn').addEventListener('click', () => $('audioInput').click());
+$('audioInput').addEventListener('change', e => {
+  if (e.target.files[0]) loadAudio(e.target.files[0]);
+});
+
+// Buttons
+$('playBtn').addEventListener('click', togglePlayback);
+$('stutterBtn').addEventListener('click', doStutter);
+$('stopBtn').addEventListener('click', () => {
+  stopStutter();
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+  isPlaying = false;
+  $('playBtn').classList.remove('playing');
+  $('playBtn').textContent = 'Play';
+});
+$('playSliceBtn').addEventListener('click', playSlice);
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); togglePlayback(); }
+  if (e.code === 'KeyS') doStutter();
+  if (e.code === 'Escape') { stopStutter(); }
+});
+
+// Init
+document.addEventListener('click', () => initAudio(), { once: true });
+</script>
+</body>
+</html>
