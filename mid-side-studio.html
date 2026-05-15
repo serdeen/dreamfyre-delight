@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mid-Side Studio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0c0d10;
+    --surface: #13141a;
+    --surface2: #1a1c24;
+    --surface3: #21242f;
+    --border: #2a2d3a;
+    --cyan: #00e5ff;
+    --gold: #f7b731;
+    --magenta: #ff00aa;
+    --green: #00e676;
+    --text: #d8daf0;
+    --text-dim: #5a5e7a;
+    --glow-c: 0 0 12px rgba(0,229,255,0.3);
+    --glow-g: 0 0 12px rgba(0,230,118,0.3);
+    --glow-m: 0 0 12px rgba(255,0,170,0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 16px 48px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 50% 40% at 15% 50%, rgba(0,229,255,0.03) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 85% 50%, rgba(247,183,49,0.03) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    text-shadow: var(--glow-c);
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .subtitle {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 20px;
+    width: 100%;
+    max-width: 560px;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 14px;
+  }
+
+  /* Goniometer canvas */
+  .gonio-wrap {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px;
+    margin-bottom: 16px;
+  }
+
+  canvas#gonio {
+    width: 100%;
+    height: 200px;
+    display: block;
+    border-radius: 8px;
+  }
+
+  /* Section */
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Correlation bar */
+  .corr-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .corr-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    width: 80px;
+    flex-shrink: 0;
+  }
+
+  .corr-track {
+    flex: 1;
+    height: 8px;
+    background: var(--surface2);
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .corr-fill {
+    position: absolute;
+    left: 50%;
+    top: 0; bottom: 0;
+    background: var(--green);
+    border-radius: 4px;
+    transition: width 0.05s, left 0.05s;
+    box-shadow: var(--glow-g);
+  }
+
+  .corr-needle {
+    position: absolute;
+    top: -2px; bottom: -2px;
+    width: 3px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: left 0.05s;
+    box-shadow: 0 0 6px rgba(255,255,255,0.3);
+  }
+
+  .corr-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--green);
+    width: 42px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Knob grid */
+  .knob-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .knob-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.52rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .knob-wrap {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    cursor: pointer;
+  }
+
+  .knob-svg { width: 52px; height: 52px; }
+
+  .knob-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.56rem;
+    color: var(--cyan);
+    text-align: center;
+  }
+
+  /* Toggle row */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+
+  .toggle-label {
+    font-size: 0.74rem;
+    color: var(--text);
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .toggle-switch input:checked + .toggle-track { background: var(--cyan); border-color: var(--cyan); }
+
+  .toggle-thumb {
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    transition: left 0.2s, background 0.2s;
+  }
+
+  .toggle-switch input:checked + .toggle-track .toggle-thumb {
+    left: 23px;
+    background: var(--bg);
+  }
+
+  /* Meters */
+  .meter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .meter-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    width: 28px;
+    flex-shrink: 0;
+  }
+
+  .meter-bar {
+    flex: 1;
+    height: 5px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.04s;
+  }
+
+  .mid-fill { background: var(--gold); }
+  .side-fill { background: var(--magenta); }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .action-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex: 1;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  .action-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .action-btn.active { background: var(--cyan); border-color: var(--cyan); color: var(--bg); }
+
+  /* Load audio */
+  .load-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .file-input { display: none; }
+
+  .file-btn {
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.68rem;
+    padding: 10px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .file-btn:hover { border-color: var(--cyan); color: var(--cyan); border-style: solid; }
+
+  .file-name {
+    font-size: 0.68rem;
+    color: var(--cyan);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hint {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    text-align: center;
+    margin-top: 14px;
+    line-height: 1.6;
+  }
+
+  /* L/R indicators */
+  .lr-indicators {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+  }
+
+  .lr-ind {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<h1>Mid-Side Studio</h1>
+<p class="subtitle">Stereo width, phase, and correlation tool</p>
+
+<div class="panel">
+  <!-- Goniometer -->
+  <div class="gonio-wrap">
+    <canvas id="gonio"></canvas>
+  </div>
+  <div class="lr-indicators">
+    <span class="lr-ind">L</span>
+    <span class="lr-ind">R</span>
+  </div>
+
+  <!-- Correlation meter -->
+  <div class="section-title">Correlation</div>
+  <div class="corr-row">
+    <span class="corr-label">Mono Comp.</span>
+    <div class="corr-track">
+      <div class="corr-fill" id="corrFill"></div>
+      <div class="corr-needle" id="corrNeedle" style="left:calc(50% - 1.5px)"></div>
+    </div>
+    <span class="corr-val" id="corrVal">+1.0</span>
+  </div>
+
+  <!-- Load audio -->
+  <div class="section-title">Input</div>
+  <div class="load-section">
+    <input type="file" class="file-input" id="audioFile" accept="audio/*">
+    <button class="file-btn" id="loadBtn">Load Stereo File</button>
+    <span class="file-name" id="fileName">— no file loaded —</span>
+  </div>
+
+  <!-- Mid / Side level meters -->
+  <div class="meter-row">
+    <span class="meter-label">MID</span>
+    <div class="meter-bar"><div class="meter-fill mid-fill" id="midMeter" style="width:0%"></div></div>
+  </div>
+  <div class="meter-row">
+    <span class="meter-label">SIDE</span>
+    <div class="meter-bar"><div class="meter-fill side-fill" id="sideMeter" style="width:0%"></div></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="section-title">Mid-Side</div>
+  <div class="knob-grid">
+    <div class="knob-group">
+      <span class="knob-label">Mid Level</span>
+      <div class="knob-wrap" data-param="mid" data-min="0" data-max="2" data-val="1" data-unit="">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d3a" stroke-width="3"/><circle id="arc-mid" cx="26" cy="26" r="22" fill="none" stroke="#f7b731" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#f7b731"/></svg>
+      </div>
+      <span class="knob-value" id="val-mid">0 dB</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Side Level</span>
+      <div class="knob-wrap" data-param="side" data-min="0" data-max="2" data-val="1" data-unit="">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d3a" stroke-width="3"/><circle id="arc-side" cx="26" cy="26" r="22" fill="none" stroke="#ff00aa" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#ff00aa"/></svg>
+      </div>
+      <span class="knob-value" id="val-side">0 dB</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Width</span>
+      <div class="knob-wrap" data-param="width" data-min="0" data-max="2" data-val="1" data-unit="">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d3a" stroke-width="3"/><circle id="arc-width" cx="26" cy="26" r="22" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#00e5ff"/></svg>
+      </div>
+      <span class="knob-value" id="val-width">100%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Output</span>
+      <div class="knob-wrap" data-param="output" data-min="0" data-max="1.5" data-val="1" data-unit="">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d3a" stroke-width="3"/><circle id="arc-output" cx="26" cy="26" r="22" fill="none" stroke="#00e676" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#00e676"/></svg>
+      </div>
+      <span class="knob-value" id="val-output">0 dB</span>
+    </div>
+  </div>
+
+  <!-- Phase flip buttons -->
+  <div class="section-title">Phase</div>
+  <div class="btn-row">
+    <button class="action-btn" id="flipMidBtn">Flip Mid</button>
+    <button class="action-btn" id="flipSideBtn">Flip Side</button>
+    <button class="action-btn" id="swapBtn">Swap L/R</button>
+    <button class="action-btn" id="monoBtn">Mono Fold</button>
+  </div>
+
+  <!-- Mode toggles -->
+  <div class="section-title" style="margin-top:14px">Mode</div>
+  <div class="toggle-row">
+    <span class="toggle-label">Encode L/R → M/S</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="encodeMode" checked>
+      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+    </label>
+  </div>
+  <div class="toggle-row">
+    <span class="toggle-label">Bypass</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="bypassMode">
+      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+    </label>
+  </div>
+
+  <!-- Presets -->
+  <div class="section-title" style="margin-top:12px">Presets</div>
+  <div class="btn-row">
+    <button class="action-btn" data-preset="normal">Normal</button>
+    <button class="action-btn" data-preset="wide">Wide</button>
+    <button class="action-btn" data-preset="midFocused">Mid Focus</button>
+    <button class="action-btn" data-preset="mono">Mono Bass</button>
+  </div>
+
+</div>
+
+<p class="hint">Load a stereo file — adjust width and phase —<br>hear the stereo image change in real time</p>
+
+<script>
+(() => {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const params = {
+    mid: 1.0,
+    side: 1.0,
+    width: 1.0,
+    output: 1.0,
+    flipMid: false,
+    flipSide: false,
+    swap: false,
+    monoFold: false,
+    encode: true,
+    bypass: false,
+  };
+
+  // ── Audio graph ─────────────────────────────────────────────────────────────
+  let sourceNode = null;
+  let audioBuffer = null;
+
+  // Split L/R
+  let splitter = null;
+  // M/S encode → process → decode → output
+  let midGain, sideGain, widthGain, outGain;
+  let merger = null;
+  let analyserL, analyserR, analyserM, analyserS;
+  let gonoAnalyser;
+
+  // We'll build the graph after getting the buffer
+
+  function buildGraph() {
+    // Disconnect old
+    if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+
+    splitter = ctx.createChannelSplitter(2);
+    merger = ctx.createChannelMerger(2);
+    midGain = ctx.createGain();
+    sideGain = ctx.createGain();
+    widthGain = ctx.createGain();
+    outGain = ctx.createGain();
+    analyserL = ctx.createAnalyser();
+    analyserR = ctx.createAnalyser();
+    analyserM = ctx.createAnalyser();
+    analyserS = ctx.createAnalyser();
+    gonoAnalyser = ctx.createAnalyser();
+    gonoAnalyser.fftSize = 512;
+
+    // Mid = (L+R)/2, Side = (L-R)/2
+    // We'll use a ScriptProcessor for M/S encoding/decoding
+    const bufferSize = 4096;
+    const processor = ctx.createScriptProcessor(bufferSize, 2, 2);
+
+    processor.onaudioprocess = (e) => {
+      const inputL = e.inputBuffer.getChannelData(0);
+      const inputR = e.inputBuffer.getChannelData(1);
+      const outL = e.outputBuffer.getChannelData(0);
+      const outR = e.outputBuffer.getChannelData(1);
+
+      if (params.bypass) {
+        outL.set(inputL);
+        outR.set(inputR);
+        return;
+      }
+
+      for (let i = 0; i < inputL.length; i++) {
+        let L = inputL[i];
+        let R = inputR[i];
+
+        if (params.swap) { [L, R] = [R, L]; }
+
+        // Encode to M/S
+        let M = (L + R) * 0.5;
+        let S = (L - R) * 0.5;
+
+        // Apply mid/side gain
+        M *= params.mid;
+        S *= params.side;
+
+        // Apply width (scales side)
+        S *= params.width;
+
+        // Phase flips
+        if (params.flipMid) M = -M;
+        if (params.flipSide) S = -S;
+
+        // Mono fold: blend side into mid
+        if (params.monoFold) {
+          M = M * 0.8 + S * 0.3;
+        }
+
+        // Decode back to L/R
+        L = M + S;
+        R = M - S;
+
+        L *= params.output;
+        R *= params.output;
+
+        outL[i] = L;
+        outR[i] = R;
+      }
+
+      // Feed goniometer
+      // (handled separately via getByteFrequencyData on the analyser)
+    };
+
+    // Source → splitter
+    // splitter → processor (via channel routing in onaudioprocess)
+    // But the processor has its own inputBuffer/outputBuffer
+
+    sourceNode = ctx.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+    sourceNode.loop = true;
+    sourceNode.connect(processor);
+    processor.connect(outGain);
+    outGain.connect(ctx.destination);
+    sourceNode.start();
+
+    // Feed the visualizers
+    // We need to tap into L/R after processing for the goniometer
+    // Re-route: processor → dual analysers
+    processor.connect(analyserL);
+    processor.connect(analyserR);
+  }
+
+  // ── Load audio ─────────────────────────────────────────────────────────────
+  const fileInput = document.getElementById('audioFile');
+  const loadBtn = document.getElementById('loadBtn');
+  const fileName = document.getElementById('fileName');
+
+  loadBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    fileName.textContent = file.name;
+    audioBuffer = await file.arrayBuffer();
+    audioBuffer = await ctx.decodeAudioData(audioBuffer);
+    if (ctx.state === 'suspended') ctx.resume();
+    buildGraph();
+    startViz();
+  });
+
+  // ── Goniometer canvas ─────────────────────────────────────────────────────
+  const gonioCanvas = document.getElementById('gonio');
+  const gctx = gonioCanvas.getContext('2d');
+
+  function resizeGonio() {
+    gonioCanvas.width = gonioCanvas.offsetWidth * 2;
+    gonioCanvas.height = gonioCanvas.offsetHeight * 2;
+    gctx.scale(2, 2);
+  }
+  resizeGonio();
+  window.addEventListener('resize', resizeGonio);
+
+  const gonoHistory = [];
+  const HISTORY_LEN = 400;
+
+  function startViz() {
+    if (!analyserL) return;
+
+    const bufLen = 512;
+    const dataArrayL = new Float32Array(bufLen);
+    const dataArrayR = new Float32Array(bufLen);
+
+    function drawGonio() {
+      requestAnimationFrame(drawGonio);
+
+      if (analyserL && analyserR) {
+        analyserL.getFloatTimeDomainData(dataArrayL);
+        analyserR.getFloatTimeDomainData(dataArrayR);
+
+        // Compute correlation
+        let sumLR = 0, sumL = 0, sumR = 0, sumL2 = 0, sumR2 = 0;
+        const n = bufLen;
+        for (let i = 0; i < n; i++) {
+          sumLR += dataArrayL[i] * dataArrayR[i];
+          sumL += dataArrayL[i];
+          sumR += dataArrayR[i];
+          sumL2 += dataArrayL[i] * dataArrayL[i];
+          sumR2 += dataArrayR[i] * dataArrayR[i];
+        }
+        const denom = Math.sqrt((sumL2 - sumL*sumL/n) * (sumR2 - sumR*sumR/n));
+        const corr = denom > 0 ? sumLR / denom : 1;
+        updateCorrMeter(corr);
+
+        // Mid / Side levels
+        let midSum = 0, sideSum = 0;
+        for (let i = 0; i < n; i++) {
+          const M = (dataArrayL[i] + dataArrayR[i]) * 0.5;
+          const S = (dataArrayL[i] - dataArrayR[i]) * 0.5;
+          midSum += M * M;
+          sideSum += S * S;
+        }
+        const midRMS = Math.sqrt(midSum / n);
+        const sideRMS = Math.sqrt(sideSum / n);
+        document.getElementById('midMeter').style.width = Math.min(100, midRMS * 300) + '%';
+        document.getElementById('sideMeter').style.width = Math.min(100, sideRMS * 300) + '%';
+
+        // Goniometer scatter
+        if (Math.random() < 0.7) { // downsample for clarity
+          const cx = gonioCanvas.offsetWidth / 2;
+          const cy = gonioCanvas.offsetHeight / 2;
+          const scale = Math.min(cx, cy) * 0.85;
+          const x = cx + dataArrayL[0] * scale;
+          const y = cy - dataArrayR[0] * scale;
+          gonoHistory.push([x, y]);
+          if (gonoHistory.length > HISTORY_LEN) gonoHistory.shift();
+        }
+      }
+
+      // Draw
+      const w = gonioCanvas.offsetWidth;
+      const h = gonioCanvas.offsetHeight;
+      const cx = w / 2;
+      const cy = h / 2;
+      const scale = Math.min(cx, cy) * 0.85;
+
+      gctx.clearRect(0, 0, w, h);
+
+      // Background
+      gctx.fillStyle = '#0a0b12';
+      gctx.fillRect(0, 0, w, h);
+
+      // Grid circles
+      gctx.strokeStyle = 'rgba(42,45,58,0.8)';
+      gctx.lineWidth = 1;
+      [0.33, 0.66, 1.0].forEach(r => {
+        gctx.beginPath();
+        gctx.arc(cx, cy, scale * r, 0, Math.PI * 2);
+        gctx.stroke();
+      });
+
+      // Cross
+      gctx.strokeStyle = 'rgba(42,45,58,0.6)';
+      gctx.beginPath();
+      gctx.moveTo(cx, cy - scale); gctx.lineTo(cx, cy + scale);
+      gctx.moveTo(cx - scale, cy); gctx.lineTo(cx + scale, cy);
+      gctx.stroke();
+
+      // Axis labels
+      gctx.fillStyle = 'rgba(90,94,122,0.8)';
+      gctx.font = '9px Space Mono';
+      gctx.textAlign = 'center';
+      gctx.fillText('L', cx - scale - 8, cy + 4);
+      gctx.fillText('R', cx + scale + 8, cy + 4);
+      gctx.fillText('M', cx, cy - scale - 6);
+      gctx.fillText('S', cx, cy + scale + 12);
+
+      // Scatter points
+      const hue = (Date.now() / 50) % 360;
+      gonoHistory.forEach(([x, y], idx) => {
+        const alpha = (idx / gonoHistory.length) * 0.8;
+        const size = 1 + (idx / gonoHistory.length) * 1.5;
+        gctx.fillStyle = `hsla(${180 + idx * 0.5}, 80%, 65%, ${alpha})`;
+        gctx.beginPath();
+        gctx.arc(x, y, size, 0, Math.PI * 2);
+        gctx.fill();
+      });
+    }
+    drawGonio();
+  }
+
+  // Start visualization even without audio
+  startViz();
+
+  // ── Correlation meter ─────────────────────────────────────────────────────
+  function updateCorrMeter(corr) {
+    // corr range: -1 to +1, mapped to 0-100% of the track
+    const pct = (corr + 1) * 0.5 * 100; // 0 = -1, 50 = 0, 100 = +1
+    const needlePct = Math.max(0, Math.min(100, pct));
+
+    document.getElementById('corrFill').style.width = (50 - Math.min(50, 50 - needlePct + 50)) + '%';
+    document.getElementById('corrFill').style.left = Math.min(50, needlePct) + '%';
+    document.getElementById('corrNeedle').style.left = `calc(${needlePct}% - 1.5px)`;
+    document.getElementById('corrVal').textContent = (corr >= 0 ? '+' : '') + corr.toFixed(2);
+
+    const corrVal = document.getElementById('corrVal');
+    if (corr < -0.3) {
+      corrVal.style.color = 'var(--magenta)';
+      document.getElementById('corrFill').style.background = 'var(--magenta)';
+    } else if (corr < 0) {
+      corrVal.style.color = 'var(--gold)';
+      document.getElementById('corrFill').style.background = 'var(--gold)';
+    } else {
+      corrVal.style.color = 'var(--green)';
+      document.getElementById('corrFill').style.background = 'var(--green)';
+    }
+  }
+
+  // ── Knobs ──────────────────────────────────────────────────────────────────
+  const ARC = 138.2;
+
+  function dbStr(val) {
+    if (val === 1) return '0 dB';
+    const db = val === 0 ? '-∞' : (20 * Math.log10(val));
+    return (db >= 0 ? '+' : '') + db.toFixed(1) + ' dB';
+  }
+
+  const knobMap = {};
+
+  document.querySelectorAll('.knob-wrap').forEach(wrap => {
+    const p = wrap.dataset.param;
+    const min = parseFloat(wrap.dataset.min);
+    const max = parseFloat(wrap.dataset.max);
+    const initial = parseFloat(wrap.dataset.val);
+
+    knobMap[p] = { wrap, min, max, arc: document.getElementById('arc-' + p), valEl: document.getElementById('val-' + p) };
+
+    function updateKnob(p, val) {
+      const el = knobMap[p];
+      if (!el) return;
+      const pct = (val - el.min) / (el.max - el.min);
+      el.arc.setAttribute('stroke-dashoffset', ARC * (1 - pct));
+      if (p === 'width') el.valEl.textContent = Math.round(val * 100) + '%';
+      else el.valEl.textContent = dbStr(val);
+    }
+
+    updateKnob(p, initial);
+
+    let drag = false, startY = 0, startVal = 0;
+    wrap.addEventListener('mousedown', e => {
+      drag = true; startY = e.clientY; startVal = params[p];
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!drag) return;
+      const dy = startY - e.clientY;
+      params[p] = Math.max(el_min := el.min, Math.min(el_max := el.max, startVal + (dy / 100) * (el.max - el.min)));
+      updateKnob(p, params[p]);
+    });
+    document.addEventListener('mouseup', () => { drag = false; });
+    wrap.addEventListener('touchstart', e => {
+      drag = true; startY = e.touches[0].clientY; startVal = params[p];
+      e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('touchmove', e => {
+      if (!drag) return;
+      const dy = startY - e.touches[0].clientY;
+      params[p] = Math.max(el.min, Math.min(el.max, startVal + (dy / 100) * (el.max - el.min)));
+      updateKnob(p, params[p]);
+    }, { passive: false });
+    document.addEventListener('touchend', () => { drag = false; });
+  });
+
+  // ── Buttons ────────────────────────────────────────────────────────────────
+  document.getElementById('flipMidBtn').addEventListener('click', (e) => {
+    params.flipMid = !params.flipMid;
+    e.target.classList.toggle('active', params.flipMid);
+  });
+
+  document.getElementById('flipSideBtn').addEventListener('click', (e) => {
+    params.flipSide = !params.flipSide;
+    e.target.classList.toggle('active', params.flipSide);
+  });
+
+  document.getElementById('swapBtn').addEventListener('click', (e) => {
+    params.swap = !params.swap;
+    e.target.classList.toggle('active', params.swap);
+  });
+
+  document.getElementById('monoBtn').addEventListener('click', (e) => {
+    params.monoFold = !params.monoFold;
+    e.target.classList.toggle('active', params.monoFold);
+  });
+
+  document.getElementById('bypassMode').addEventListener('change', (e) => {
+    params.bypass = e.target.checked;
+  });
+
+  document.getElementById('encodeMode').addEventListener('change', (e) => {
+    params.encode = e.target.checked;
+  });
+
+  // ── Presets ────────────────────────────────────────────────────────────────
+  const presets = {
+    normal:     { mid: 1, side: 1, width: 1, output: 1 },
+    wide:       { mid: 0.8, side: 1.4, width: 1.5, output: 1 },
+    midFocused: { mid: 1.2, side: 0.6, width: 0.7, output: 1 },
+    mono:       { mid: 1.5, side: 0, width: 0, output: 1 },
+  };
+
+  document.querySelectorAll('[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = presets[btn.dataset.preset];
+      if (!p) return;
+      Object.assign(params, p);
+      Object.keys(p).forEach(key => {
+        if (knobMap[key]) {
+          const el = knobMap[key];
+          const pct = (params[key] - el.min) / (el.max - el.min);
+          el.arc.setAttribute('stroke-dashoffset', ARC * (1 - pct));
+          if (key === 'width') el.valEl.textContent = Math.round(params[key] * 100) + '%';
+          else el.valEl.textContent = dbStr(params[key]);
+        }
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>
