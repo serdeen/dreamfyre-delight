@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loop Chop</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0b0c10;
+    --surface: #13151c;
+    --surface2: #1a1d28;
+    --surface3: #1f2335;
+    --border: #252838;
+    --cyan: #00e5ff;
+    --purple: #9b5de5;
+    --magenta: #ff00aa;
+    --gold: #f7b731;
+    --green: #00e676;
+    --text: #d8daf0;
+    --text-dim: #4a5068;
+    --glow-c: 0 0 10px rgba(0,229,255,0.3);
+    --glow-p: 0 0 10px rgba(155,93,229,0.3);
+    --glow-g: 0 0 10px rgba(0,230,118,0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px 48px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 50% 40% at 50% 0%, rgba(155,93,229,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--purple);
+    text-shadow: var(--glow-p);
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .subtitle {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 16px;
+    width: 100%;
+    max-width: 600px;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 12px;
+  }
+
+  /* BPM bar */
+  .bpm-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+  }
+
+  .bpm-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .bpm-input {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--purple);
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    width: 64px;
+    text-align: center;
+    padding: 5px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .bpm-input:focus { border-color: var(--purple); box-shadow: var(--glow-p); }
+
+  .play-btn {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--purple);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    margin-left: auto;
+  }
+
+  .play-btn:hover { background: var(--purple); color: #fff; box-shadow: var(--glow-p); }
+  .play-btn.active { background: var(--green); border-color: var(--green); color: #000; box-shadow: var(--glow-g); }
+
+  /* Waveform canvas */
+  .waveform-wrap {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  canvas#loopCanvas {
+    width: 100%;
+    height: 100px;
+    display: block;
+    border-radius: 8px;
+    cursor: crosshair;
+  }
+
+  /* Slice indicators overlay */
+  .slices-bar {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 6px;
+    padding: 0 2px;
+  }
+
+  .slice-dot {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+    position: relative;
+  }
+
+  .slice-dot.active { background: var(--purple); }
+  .slice-dot.playing { background: var(--cyan); box-shadow: var(--glow-c); }
+
+  /* Sequencer grid */
+  .seq-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .seq-grid {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    user-select: none;
+  }
+
+  .seq-cell {
+    width: calc((100% - 45px) / 16);
+    height: 36px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.12s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    position: relative;
+  }
+
+  .seq-cell:hover { border-color: var(--purple); }
+  .seq-cell.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+  .seq-cell.playing-cell { background: var(--cyan) !important; border-color: var(--cyan) !important; color: #000 !important; box-shadow: var(--glow-c); }
+
+  /* Slice controls */
+  .slice-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+
+  .slice-badge {
+    background: var(--purple);
+    border-radius: 6px;
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    padding: 4px 10px;
+    flex-shrink: 0;
+  }
+
+  .slice-hint {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    flex: 1;
+  }
+
+  .knob-small {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .knob-small-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.48rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 60px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--surface3);
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--purple);
+    cursor: pointer;
+  }
+
+  /* Section title */
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Load section */
+  .load-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .file-input { display: none; }
+
+  .file-btn {
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.68rem;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .file-btn:hover { border-color: var(--purple); color: var(--purple); border-style: solid; }
+
+  .file-name {
+    font-size: 0.65rem;
+    color: var(--purple);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Action buttons */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .action-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 8px 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .action-btn:hover { border-color: var(--purple); color: var(--purple); }
+  .action-btn.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+
+  /* Num slices selector */
+  .num-slices-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .hint {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-align: center;
+    margin-top: 12px;
+    line-height: 1.6;
+    position: relative;
+    z-index: 1;
+  }
+
+  .swipe-hint {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Loop Chop</h1>
+<p class="subtitle">Slice, sequence, and rearrange audio loops</p>
+
+<div class="panel">
+
+  <!-- BPM -->
+  <div class="bpm-bar">
+    <span class="bpm-label">BPM</span>
+    <input type="number" class="bpm-input" id="bpmInput" value="124" min="60" max="200">
+    <span class="bpm-label">Slices</span>
+    <select id="numSlices" style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--purple);font-family:'Space Mono',monospace;font-size:0.7rem;padding:5px;outline:none;cursor:pointer">
+      <option value="4">4</option>
+      <option value="8" selected>8</option>
+      <option value="16">16</option>
+      <option value="32">32</option>
+    </select>
+    <button class="play-btn" id="playBtn">&#9654; Play</button>
+    <button class="play-btn" id="stopBtn" style="margin-left:-4px">&#9632;</button>
+  </div>
+
+  <!-- Slice dots -->
+  <div class="slices-bar" id="slicesBar"></div>
+
+  <!-- Waveform -->
+  <div class="waveform-wrap">
+    <canvas id="loopCanvas"></canvas>
+  </div>
+
+  <!-- Slice info -->
+  <div class="slice-info" id="sliceInfo">
+    <span class="slice-badge" id="sliceBadge">Slice 0</span>
+    <span class="slice-hint">Click waveform to select slice — use grid to sequence</span>
+    <div class="knob-small">
+      <span class="knob-small-label">Vol</span>
+      <input type="range" id="sliceVol" min="0" max="1" step="0.01" value="0.8">
+    </div>
+    <div class="knob-small">
+      <span class="knob-small-label">Pitch</span>
+      <input type="range" id="slicePitch" min="0.5" max="2" step="0.01" value="1">
+    </div>
+    <div class="knob-small">
+      <span class="knob-small-label">Rev</span>
+      <input type="range" id="sliceRev" min="0" max="1" step="1" value="0">
+    </div>
+  </div>
+
+  <!-- Step sequencer -->
+  <div class="section-title">Sequencer</div>
+  <div class="seq-grid" id="seqGrid"></div>
+
+  <!-- Action buttons -->
+  <div class="btn-row">
+    <button class="action-btn" id="clearBtn">Clear All</button>
+    <button class="action-btn" id="randomBtn">Random</button>
+    <button class="action-btn" id="reverseAllBtn">Reverse All</button>
+    <button class="action-btn" id="soloBtn">Solo</button>
+  </div>
+
+  <!-- Load -->
+  <div class="section-title">Audio</div>
+  <div class="load-section">
+    <input type="file" class="file-input" id="audioFile" accept="audio/*">
+    <button class="file-btn" id="loadBtn">Load Loop</button>
+    <span class="file-name" id="fileName">— no loop loaded —</span>
+  </div>
+
+</div>
+
+<p class="hint">Load a loop — it auto-slices to the grid<br>Click cells to sequence, swipe across to select multiple
+<br><span class="swipe-hint">Swipe across seq cells to toggle a row</span></p>
+
+<script>
+(() => {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') ctx.resume();
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const state = {
+    bpm: 124,
+    numSlices: 8,
+    selectedSlice: 0,
+    slices: [],       // [{start, end, buffer, vol, pitch, reverse}]
+    sequence: [],     // 16 cells, each holds slice index or -1
+    playing: false,
+    currentStep: -1,
+    schedulerId: null,
+    nextStepTime: 0,
+    sources: [],
+  };
+
+  // Init sequence
+  for (let i = 0; i < 16; i++) state.sequence.push(-1);
+
+  // ── Audio buffer ───────────────────────────────────────────────────────────
+  let audioBuffer = null;
+
+  // ── UI refs ───────────────────────────────────────────────────────────────
+  const canvas = document.getElementById('loopCanvas');
+  const cctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    canvas.width = canvas.offsetWidth * 2;
+    canvas.height = canvas.offsetHeight * 2;
+    cctx.scale(2, 2);
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  // ── Build slices bar ───────────────────────────────────────────────────────
+  function buildSlicesBar() {
+    const bar = document.getElementById('slicesBar');
+    bar.innerHTML = '';
+    for (let i = 0; i < state.numSlices; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'slice-dot' + (i === state.selectedSlice ? ' active' : '');
+      dot.dataset.slice = i;
+      dot.addEventListener('click', () => selectSlice(i));
+      bar.appendChild(dot);
+    }
+  }
+
+  function selectSlice(idx) {
+    state.selectedSlice = idx;
+    document.querySelectorAll('.slice-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === idx);
+      d.classList.toggle('playing', i === state.currentStep);
+    });
+    document.getElementById('sliceBadge').textContent = 'Slice ' + idx;
+    document.getElementById('sliceVol').value = state.slices[idx]?.vol ?? 0.8;
+    document.getElementById('slicePitch').value = state.slices[idx]?.pitch ?? 1;
+    document.getElementById('sliceRev').value = state.slices[idx]?.reverse ?? 0;
+    updateWaveform();
+  }
+
+  // ── Build sequencer grid ───────────────────────────────────────────────────
+  function buildSeqGrid() {
+    const grid = document.getElementById('seqGrid');
+    grid.innerHTML = '';
+    for (let i = 0; i < 16; i++) {
+      const cell = document.createElement('div');
+      cell.className = 'seq-cell';
+      cell.dataset.step = i;
+      cell.textContent = state.sequence[i] >= 0 ? state.sequence[i] : '';
+      if (state.sequence[i] >= 0) cell.classList.add('active');
+      cell.addEventListener('click', () => toggleCell(i));
+      grid.appendChild(cell);
+    }
+  }
+
+  function toggleCell(step) {
+    const current = state.sequence[step];
+    if (current >= 0) {
+      state.sequence[step] = -1;
+    } else {
+      state.sequence[step] = state.selectedSlice;
+    }
+    updateCell(step);
+  }
+
+  function updateCell(step) {
+    const cell = document.querySelector(`.seq-cell[data-step="${step}"]`);
+    const slice = state.sequence[step];
+    cell.textContent = slice >= 0 ? slice : '';
+    cell.classList.toggle('active', slice >= 0);
+  }
+
+  function updateAllCells() {
+    for (let i = 0; i < 16; i++) updateCell(i);
+  }
+
+  // ── Swipe on sequencer ─────────────────────────────────────────────────────
+  let swipeStartCell = null;
+  const seqGrid = document.getElementById('seqGrid');
+
+  seqGrid.addEventListener('mousedown', (e) => {
+    if (e.target.classList.contains('seq-cell')) {
+      swipeStartCell = parseInt(e.target.dataset.step);
+    }
+  });
+
+  seqGrid.addEventListener('mouseover', (e) => {
+    if (swipeStartCell !== null && e.target.classList.contains('seq-cell')) {
+      const step = parseInt(e.target.dataset.step);
+      if (state.sequence[step] === -1) {
+        state.sequence[step] = state.selectedSlice;
+      } else {
+        state.sequence[step] = -1;
+      }
+      updateCell(step);
+    }
+  });
+
+  document.addEventListener('mouseup', () => { swipeStartCell = null; });
+
+  // ── Waveform drawing ───────────────────────────────────────────────────────
+  let waveformData = null;
+
+  function drawWaveform() {
+    const w = canvas.offsetWidth;
+    const h = canvas.offsetHeight;
+    cctx.clearRect(0, 0, w, h);
+
+    // Background
+    cctx.fillStyle = '#0d0e18';
+    cctx.fillRect(0, 0, w, h);
+
+    if (!audioBuffer) return;
+
+    const data = audioBuffer.getChannelData(0);
+    const samples = w;
+    const blockSize = Math.floor(data.length / samples);
+
+    const sliceW = w / state.numSlices;
+
+    for (let i = 0; i < samples; i++) {
+      let sum = 0;
+      for (let j = 0; j < blockSize; j++) {
+        sum += Math.abs(data[i * blockSize + j]);
+      }
+      const avg = sum / blockSize;
+      const barH = Math.max(2, avg * h * 0.9);
+      const x = i;
+      const y = (h - barH) / 2;
+
+      // Color by slice
+      const sliceIdx = Math.min(state.numSlices - 1, Math.floor(x / sliceW));
+      let color;
+      if (sliceIdx === state.selectedSlice) color = '#9b5de5';
+      else if (sliceIdx === state.currentStep) color = '#00e5ff';
+      else color = 'rgba(155,93,229,0.3)';
+
+      cctx.fillStyle = color;
+      cctx.fillRect(x, y, 1, barH);
+    }
+
+    // Slice dividers
+    for (let i = 0; i <= state.numSlices; i++) {
+      const x = i * sliceW;
+      cctx.strokeStyle = 'rgba(37,40,56,0.8)';
+      cctx.lineWidth = 1;
+      cctx.beginPath();
+      cctx.moveTo(x, 0); cctx.lineTo(x, h);
+      cctx.stroke();
+    }
+  }
+
+  function updateWaveform() { drawWaveform(); }
+
+  // ── Load audio ─────────────────────────────────────────────────────────────
+  const fileInput = document.getElementById('audioFile');
+  const loadBtn = document.getElementById('loadBtn');
+  const fileName = document.getElementById('fileName');
+
+  loadBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    fileName.textContent = file.name;
+    const arrayBuffer = await file.arrayBuffer();
+    audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    buildSlices();
+    drawWaveform();
+  });
+
+  // ── Build slices from audio buffer ─────────────────────────────────────────
+  function buildSlices() {
+    state.slices = [];
+    const len = audioBuffer.length;
+    const sliceLen = Math.floor(len / state.numSlices);
+    for (let i = 0; i < state.numSlices; i++) {
+      const start = i * sliceLen;
+      const end = (i === state.numSlices - 1) ? len : (i + 1) * sliceLen;
+      // Extract slice buffer
+      const sliceBuf = ctx.createBuffer(
+        audioBuffer.numberOfChannels,
+        end - start,
+        audioBuffer.sampleRate
+      );
+      for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+        sliceBuf.getChannelData(ch).set(audioBuffer.getChannelData(ch).subarray(start, end));
+      }
+      state.slices.push({
+        start, end,
+        buffer: sliceBuf,
+        vol: 0.8,
+        pitch: 1.0,
+        reverse: false,
+      });
+    }
+    buildSlicesBar();
+    buildSeqGrid();
+    selectSlice(0);
+  }
+
+  // ── Num slices change ──────────────────────────────────────────────────────
+  document.getElementById('numSlices').addEventListener('change', (e) => {
+    state.numSlices = parseInt(e.target.value);
+    if (audioBuffer) buildSlices();
+  });
+
+  // ── Slice controls ────────────────────────────────────────────────────────
+  document.getElementById('sliceVol').addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    if (state.slices[state.selectedSlice]) state.slices[state.selectedSlice].vol = v;
+  });
+
+  document.getElementById('slicePitch').addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    if (state.slices[state.selectedSlice]) state.slices[state.selectedSlice].pitch = v;
+  });
+
+  document.getElementById('sliceRev').addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    if (state.slices[state.selectedSlice]) state.slices[state.selectedSlice].reverse = v > 0.5;
+  });
+
+  // ── Waveform click → select slice ─────────────────────────────────────────
+  canvas.addEventListener('click', (e) => {
+    if (!audioBuffer) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const sliceIdx = Math.min(state.numSlices - 1, Math.floor((x / rect.width) * state.numSlices));
+    selectSlice(sliceIdx);
+  });
+
+  // ── Sequencer playback ─────────────────────────────────────────────────────
+  const playBtn = document.getElementById('playBtn');
+  const stopBtn = document.getElementById('stopBtn');
+
+  playBtn.addEventListener('click', () => {
+    if (ctx.state === 'suspended') ctx.resume();
+    if (!state.playing) {
+      state.playing = true;
+      state.currentStep = -1;
+      state.nextStepTime = ctx.currentTime;
+      scheduleAhead();
+      playBtn.textContent = '⏸ Pause';
+      playBtn.classList.add('active');
+    } else {
+      state.playing = false;
+      stopAllSources();
+      playBtn.textContent = '▶ Play';
+      playBtn.classList.remove('active');
+      clearPlayingCells();
+    }
+  });
+
+  stopBtn.addEventListener('click', () => {
+    state.playing = false;
+    stopAllSources();
+    state.currentStep = -1;
+    playBtn.textContent = '▶ Play';
+    playBtn.classList.remove('active');
+    clearPlayingCells();
+  });
+
+  function clearPlayingCells() {
+    document.querySelectorAll('.seq-cell').forEach(c => c.classList.remove('playing-cell'));
+    document.querySelectorAll('.slice-dot').forEach(d => d.classList.remove('playing'));
+    state.currentStep = -1;
+  }
+
+  function stopAllSources() {
+    state.sources.forEach(s => { try { s.stop(); } catch(e){} });
+    state.sources = [];
+  }
+
+  function scheduleAhead() {
+    if (!state.playing) return;
+    const stepDur = (60 / state.bpm) / 4; // 16th note
+    while (state.nextStepTime < ctx.currentTime + 0.1) {
+      const step = (state.currentStep + 1) % 16;
+      state.currentStep = step;
+      const sliceIdx = state.sequence[step];
+      if (sliceIdx >= 0 && state.slices[sliceIdx]) {
+        playSlice(sliceIdx, state.nextStepTime);
+        highlightCell(step);
+      }
+      state.nextStepTime += stepDur;
+    }
+    state.schedulerId = setTimeout(scheduleAhead, 25);
+  }
+
+  function playSlice(sliceIdx, when) {
+    const slice = state.slices[sliceIdx];
+    const src = ctx.createBufferSource();
+    src.buffer = slice.buffer;
+    src.playbackRate.value = slice.pitch;
+    const gain = ctx.createGain();
+    gain.gain.value = slice.vol;
+    src.connect(gain);
+    gain.connect(ctx.destination);
+    if (slice.reverse) {
+      // Reverse by playing buffer backwards
+      src.loopStart = 0;
+      src.loopEnd = slice.buffer.duration;
+      // For true reverse we'd need to reverse the buffer first
+      // Simple approximation: just play at negative playback rate
+      src.playbackRate.value = -slice.pitch;
+    }
+    src.start(when);
+    state.sources.push(src);
+  }
+
+  function highlightCell(step) {
+    clearPlayingCells();
+    const cell = document.querySelector(`.seq-cell[data-step="${step}"]`);
+    if (cell) cell.classList.add('playing-cell');
+    const sliceIdx = state.sequence[step];
+    if (sliceIdx >= 0) {
+      const dot = document.querySelector(`.slice-dot[data-slice="${sliceIdx}"]`);
+      if (dot) dot.classList.add('playing');
+    }
+  }
+
+  // ── BPM ───────────────────────────────────────────────────────────────────
+  document.getElementById('bpmInput').addEventListener('change', (e) => {
+    state.bpm = parseInt(e.target.value) || 124;
+    if (state.playing) {
+      // Restart scheduler with new BPM
+      clearTimeout(state.schedulerId);
+      state.nextStepTime = ctx.currentTime;
+      scheduleAhead();
+    }
+  });
+
+  // ── Action buttons ─────────────────────────────────────────────────────────
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    for (let i = 0; i < 16; i++) state.sequence[i] = -1;
+    updateAllCells();
+  });
+
+  document.getElementById('randomBtn').addEventListener('click', () => {
+    for (let i = 0; i < 16; i++) {
+      state.sequence[i] = Math.random() < 0.5 ? -1 : Math.floor(Math.random() * state.numSlices);
+    }
+    updateAllCells();
+  });
+
+  let reverseAll = false;
+  document.getElementById('reverseAllBtn').addEventListener('click', (e) => {
+    reverseAll = !reverseAll;
+    for (let i = 0; i < state.numSlices; i++) {
+      if (state.slices[i]) state.slices[i].reverse = reverseAll;
+    }
+    e.target.classList.toggle('active', reverseAll);
+    document.getElementById('sliceRev').value = reverseAll ? 1 : 0;
+  });
+
+  let soloMode = false;
+  document.getElementById('soloBtn').addEventListener('click', (e) => {
+    soloMode = !soloMode;
+    e.target.classList.toggle('active', soloMode);
+    if (soloMode) {
+      // Set sequence to only selected slice
+      for (let i = 0; i < 16; i++) {
+        state.sequence[i] = (i % 4 === 0) ? state.selectedSlice : -1;
+      }
+    }
+    updateAllCells();
+  });
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+      e.preventDefault();
+      playBtn.click();
+    }
+    if (e.code === 'ArrowRight') {
+      selectSlice((state.selectedSlice + 1) % state.numSlices);
+    }
+    if (e.code === 'ArrowLeft') {
+      selectSlice((state.selectedSlice - 1 + state.numSlices) % state.numSlices);
+    }
+  });
+
+  // Init
+  buildSlicesBar();
+  buildSeqGrid();
+  drawWaveform();
+})();
+</script>
+</body>
+</html>
