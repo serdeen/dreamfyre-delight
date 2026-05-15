@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bass Ghost</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #090a0d;
+    --surface: #111318;
+    --surface2: #181b24;
+    --surface3: #1f2330;
+    --border: #252a3a;
+    --cyan: #00e5ff;
+    --gold: #f7b731;
+    --magenta: #ff00aa;
+    --red: #ff3d3d;
+    --green: #00e676;
+    --text: #d4d8f0;
+    --text-dim: #4a5068;
+    --glow-c: 0 0 12px rgba(0,229,255,0.3);
+    --glow-g: 0 0 12px rgba(247,183,49,0.3);
+    --glow-m: 0 0 12px rgba(255,0,170,0.3);
+    --glow-r: 0 0 10px rgba(255,61,61,0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 12px 48px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 100%, rgba(247,183,49,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-shadow: var(--glow-g);
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .subtitle {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 16px;
+    width: 100%;
+    max-width: 520px;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 12px;
+  }
+
+  /* Waveform display */
+  .waveform-wrap {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 14px;
+  }
+
+  canvas#kickWave {
+    width: 100%;
+    height: 100px;
+    display: block;
+    border-radius: 8px;
+  }
+
+  /* BPM bar */
+  .bpm-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+
+  .bpm-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .bpm-input {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--gold);
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    width: 64px;
+    text-align: center;
+    padding: 5px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .bpm-input:focus { border-color: var(--gold); box-shadow: var(--glow-g); }
+
+  .play-btn {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--gold);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    margin-left: auto;
+  }
+
+  .play-btn:hover { background: var(--gold); color: var(--bg); box-shadow: var(--glow-g); }
+  .play-btn.active { background: var(--magenta); border-color: var(--magenta); color: #fff; box-shadow: var(--glow-m); }
+
+  /* Section title */
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Knob grid */
+  .knob-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .knob-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .knob-wrap {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    cursor: pointer;
+  }
+
+  .knob-svg { width: 48px; height: 48px; }
+
+  .knob-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.52rem;
+    color: var(--text);
+    text-align: center;
+  }
+
+  /* Sub section - different color */
+  .knob-wrap[data-color="gold"] svg circle:last-child { fill: var(--gold); }
+  .knob-wrap[data-color="gold"] svg circle:nth-last-child(2) { stroke: var(--gold); }
+  .knob-wrap[data-color="magenta"] svg circle:last-child { fill: var(--magenta); }
+  .knob-wrap[data-color="magenta"] svg circle:nth-last-child(2) { stroke: var(--magenta); }
+  .knob-wrap[data-color="red"] svg circle:last-child { fill: var(--red); }
+  .knob-wrap[data-color="red"] svg circle:nth-last-child(2) { stroke: var(--red); }
+  .knob-wrap[data-color="green"] svg circle:last-child { fill: var(--green); }
+  .knob-wrap[data-color="green"] svg circle:nth-last-child(2) { stroke: var(--green); }
+
+  /* Envelope viz */
+  .env-wrap {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    margin-bottom: 12px;
+  }
+
+  canvas#envCanvas {
+    width: 100%;
+    height: 60px;
+    display: block;
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .action-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 8px 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .action-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .action-btn.active { background: var(--gold); border-color: var(--gold); color: var(--bg); }
+
+  /* Presets */
+  .preset-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .preset-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-size: 0.6rem;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .preset-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  .hint {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-align: center;
+    margin-top: 14px;
+    line-height: 1.6;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Grid lines for waveform */
+  .wave-grid {
+    position: relative;
+  }
+</style>
+</head>
+<body>
+
+<h1>Bass Ghost</h1>
+<p class="subtitle">Kick drum designer — pitch envelope, sub layer, filter sweep</p>
+
+<div class="panel">
+
+  <!-- Waveform canvas -->
+  <div class="waveform-wrap">
+    <canvas id="kickWave"></canvas>
+  </div>
+
+  <!-- BPM + Play -->
+  <div class="bpm-bar">
+    <span class="bpm-label">BPM</span>
+    <input type="number" class="bpm-input" id="bpmInput" value="124" min="60" max="200">
+    <span class="bpm-label" style="margin-left:4px">Key</span>
+    <select id="keySelect" style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--cyan);font-family:'Space Mono',monospace;font-size:0.7rem;padding:5px;outline:none;cursor:pointer">
+      <option value="C">C</option><option value="C#">C#</option><option value="D">D</option>
+      <option value="D#">D#</option><option value="E">E</option><option value="F">F</option>
+      <option value="F#">F#</option><option value="G">G</option><option value="G#">G#</option>
+      <option value="A">A</option><option value="A#">A#</option><option value="B">B</option>
+    </select>
+    <select id="modeSelect" style="background:var(--surface3);border:1px solid var(--border);border-radius:6px;color:var(--text-dim);font-family:'Space Mono',monospace;font-size:0.7rem;padding:5px;outline:none;cursor:pointer">
+      <option value="minor">minor</option><option value="major">major</option><option value="dorian">dorian</option>
+      <option value="phrygian">phrygian</option><option value="lydian">lydian</option><option value="mixolydian">mixolydian</option>
+    </select>
+    <button class="play-btn" id="playBtn">&#9654; Kick</button>
+    <button class="play-btn" id="loopBtn" style="margin-left:-4px">&#8635;</button>
+  </div>
+
+  <!-- Pitch envelope viz -->
+  <div class="section-title">Pitch Envelope</div>
+  <div class="env-wrap">
+    <canvas id="envCanvas"></canvas>
+  </div>
+
+  <!-- Main kick controls -->
+  <div class="section-title">Kick Body</div>
+  <div class="knob-grid">
+    <div class="knob-group">
+      <span class="knob-label">P.Start</span>
+      <div class="knob-wrap" data-param="pStart" data-min="40" data-max="200" data-val="120" data-unit="Hz" data-color="gold">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-pStart" cx="24" cy="24" r="20" fill="none" stroke="#f7b731" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#f7b731"/></svg>
+      </div>
+      <span class="knob-value" id="val-pStart">120 Hz</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">P.End</span>
+      <div class="knob-wrap" data-param="pEnd" data-min="20" data-max="80" data-val="45" data-unit="Hz" data-color="gold">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-pEnd" cx="24" cy="24" r="20" fill="none" stroke="#f7b731" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#f7b731"/></svg>
+      </div>
+      <span class="knob-value" id="val-pEnd">45 Hz</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Attack</span>
+      <div class="knob-wrap" data-param="attack" data-min="0" data-max="30" data-val="2" data-unit="ms" data-color="red">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-attack" cx="24" cy="24" r="20" fill="none" stroke="#ff3d3d" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#ff3d3d"/></svg>
+      </div>
+      <span class="knob-value" id="val-attack">2 ms</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Decay</span>
+      <div class="knob-wrap" data-param="decay" data-min="50" data-max="600" data-val="280" data-unit="ms" data-color="gold">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-decay" cx="24" cy="24" r="20" fill="none" stroke="#f7b731" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#f7b731"/></svg>
+      </div>
+      <span class="knob-value" id="val-decay">280 ms</span>
+    </div>
+  </div>
+
+  <!-- Sub layer -->
+  <div class="section-title">Sub Layer</div>
+  <div class="knob-grid">
+    <div class="knob-group">
+      <span class="knob-label">Sub Hz</span>
+      <div class="knob-wrap" data-param="subHz" data-min="30" data-max="80" data-val="55" data-unit="Hz" data-color="magenta">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-subHz" cx="24" cy="24" r="20" fill="none" stroke="#ff00aa" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#ff00aa"/></svg>
+      </div>
+      <span class="knob-value" id="val-subHz">55 Hz</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Sub Vol</span>
+      <div class="knob-wrap" data-param="subVol" data-min="0" data-max="1" data-val="0.5" data-unit="" data-color="magenta">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-subVol" cx="24" cy="24" r="20" fill="none" stroke="#ff00aa" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#ff00aa"/></svg>
+      </div>
+      <span class="knob-value" id="val-subVol">50%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Sub Decay</span>
+      <div class="knob-wrap" data-param="subDecay" data-min="100" data-max="800" data-val="350" data-unit="ms" data-color="magenta">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-subDecay" cx="24" cy="24" r="20" fill="none" stroke="#ff00aa" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#ff00aa"/></svg>
+      </div>
+      <span class="knob-value" id="val-subDecay">350 ms</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Click Vol</span>
+      <div class="knob-wrap" data-param="clickVol" data-min="0" data-max="1" data-val="0.3" data-unit="" data-color="green">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-clickVol" cx="24" cy="24" r="20" fill="none" stroke="#00e676" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#00e676"/></svg>
+      </div>
+      <span class="knob-value" id="val-clickVol">30%</span>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <div class="section-title">Filter Sweep</div>
+  <div class="knob-grid">
+    <div class="knob-group">
+      <span class="knob-label">Cutoff</span>
+      <div class="knob-wrap" data-param="fCutoff" data-min="200" data-max="12000" data-val="8000" data-unit="Hz" data-color="cyan">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-fCutoff" cx="24" cy="24" r="20" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#00e5ff"/></svg>
+      </div>
+      <span class="knob-value" id="val-fCutoff">8 kHz</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Reso</span>
+      <div class="knob-wrap" data-param="fReso" data-min="0" data-max="20" data-val="2" data-unit="" data-color="cyan">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-fReso" cx="24" cy="24" r="20" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#00e5ff"/></svg>
+      </div>
+      <span class="knob-value" id="val-fReso">2.0</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Sweep</span>
+      <div class="knob-wrap" data-param="fSweep" data-min="0" data-max="1" data-val="0.3" data-unit="" data-color="cyan">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-fSweep" cx="24" cy="24" r="20" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#00e5ff"/></svg>
+      </div>
+      <span class="knob-value" id="val-fSweep">30%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Drive</span>
+      <div class="knob-wrap" data-param="drive" data-min="0" data-max="1" data-val="0.1" data-unit="" data-color="red">
+        <svg class="knob-svg" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20" fill="none" stroke="#252a3a" stroke-width="3"/><circle id="arc-drive" cx="24" cy="24" r="20" fill="none" stroke="#ff3d3d" stroke-width="3" stroke-dasharray="125.66" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 24 24)"/><circle cx="24" cy="24" r="4" fill="#ff3d3d"/></svg>
+      </div>
+      <span class="knob-value" id="val-drive">10%</span>
+    </div>
+  </div>
+
+  <!-- Presets -->
+  <div class="section-title" style="margin-top:8px">Presets</div>
+  <div class="preset-row">
+    <button class="preset-btn" data-preset="subby">Subby 55</button>
+    <button class="preset-btn" data-preset="punchy">Punchy 120</button>
+    <button class="preset-btn" data-preset="tight">Tight 150</button>
+    <button class="preset-btn" data-preset="dusk">Dusk Style</button>
+    <button class="preset-btn" data-preset="clicky">Clicky</button>
+    <button class="preset-btn" data-preset="sweep">Sweep</button>
+  </div>
+
+</div>
+
+<p class="hint">Design your kick — hit Play or Loop to preview<br>at the set BPM and key</p>
+
+<script>
+(() => {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') ctx.resume();
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  const p = {
+    pStart: 120, pEnd: 45, attack: 2, decay: 280,
+    subHz: 55, subVol: 0.5, subDecay: 350, clickVol: 0.3,
+    fCutoff: 8000, fReso: 2, fSweep: 0.3, drive: 0.1,
+    bpm: 124, key: 'C', mode: 'minor'
+  };
+
+  let playing = false;
+  let loopMode = false;
+  let nextKickTime = 0;
+  let kickCount = 0;
+
+  // ── Oscillator-based kick synthesis ───────────────────────────────────────
+  function playKick(when) {
+    const now = when ?? ctx.currentTime;
+    const dur = p.decay / 1000;
+    const subDur = p.subDecay / 1000;
+    const att = p.attack / 1000;
+
+    // Pitch envelope (sine sweep)
+    const pitchOsc = ctx.createOscillator();
+    pitchOsc.type = 'sine';
+    pitchOsc.frequency.setValueAtTime(p.pStart, now);
+    pitchOsc.frequency.exponentialRampToValueAtTime(p.pEnd, now + dur);
+
+    const pitchGain = ctx.createGain();
+    pitchGain.gain.setValueAtTime(1.0, now);
+    pitchGain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+
+    // Sub sine
+    const subOsc = ctx.createOscillator();
+    subOsc.type = 'sine';
+    subOsc.frequency.setValueAtTime(p.subHz, now);
+    const subEnv = ctx.createGain();
+    subEnv.gain.setValueAtTime(p.subVol, now);
+    subEnv.gain.exponentialRampToValueAtTime(0.001, now + subDur);
+
+    // Click (high freq transient)
+    const clickOsc = ctx.createOscillator();
+    clickOsc.type = 'square';
+    clickOsc.frequency.setValueAtTime(2000, now);
+    clickOsc.frequency.exponentialRampToValueAtTime(200, now + 0.015);
+    const clickEnv = ctx.createGain();
+    clickEnv.gain.setValueAtTime(p.clickVol * 0.5, now);
+    clickEnv.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+
+    // Filter
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    const baseCutoff = Math.min(p.fCutoff, 20000);
+    filter.frequency.setValueAtTime(baseCutoff, now);
+    const sweepAmount = p.fSweep * baseCutoff * 0.7;
+    filter.frequency.exponentialRampToValueAtTime(Math.max(100, baseCutoff - sweepAmount), now + dur * 0.7);
+    filter.Q.value = p.fReso;
+
+    // Waveshaper (drive)
+    const driveGain = ctx.createGain();
+    driveGain.gain.value = 1 + p.drive * 3;
+    const waveshaper = ctx.createWaveShaper();
+    const driveAmount = p.drive * 150;
+    waveshaper.curve = makeDistCurve(driveAmount);
+    waveshaper.oversample = '2x';
+
+    // Master
+    const master = ctx.createGain();
+    master.gain.value = 0.9;
+
+    // Connect
+    pitchOsc.connect(pitchGain);
+    pitchGain.connect(filter);
+
+    subOsc.connect(subEnv);
+    subEnv.connect(filter);
+
+    clickOsc.connect(clickEnv);
+    clickEnv.connect(filter);
+
+    filter.connect(driveGain);
+    driveGain.connect(waveshaper);
+    waveshaper.connect(master);
+    master.connect(ctx.destination);
+
+    pitchOsc.start(now); pitchOsc.stop(now + dur + 0.1);
+    subOsc.start(now); subOsc.stop(now + subDur + 0.1);
+    clickOsc.start(now); clickOsc.stop(now + 0.02);
+
+    // Waveform viz
+    drawKickWave(now, dur);
+  }
+
+  function makeDistCurve(amount) {
+    const n = 256;
+    const curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      curve[i] = ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
+    }
+    return curve;
+  }
+
+  // ── Scheduler ─────────────────────────────────────────────────────────────
+  function scheduler() {
+    if (!loopMode && !playing) return;
+    const interval = (60 / p.bpm);
+    while (nextKickTime < ctx.currentTime + 0.1) {
+      playKick(nextKickTime);
+      nextKickTime += interval;
+      kickCount++;
+    }
+  }
+
+  let schedulerId = null;
+  function startScheduler() {
+    nextKickTime = ctx.currentTime;
+    kickCount = 0;
+    schedulerId = setInterval(scheduler, 25);
+  }
+
+  // ── Playback controls ─────────────────────────────────────────────────────
+  const playBtn = document.getElementById('playBtn');
+  const loopBtn = document.getElementById('loopBtn');
+
+  playBtn.addEventListener('click', () => {
+    if (loopMode) {
+      loopMode = false;
+      loopBtn.classList.remove('active');
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    playKick();
+  });
+
+  loopBtn.addEventListener('click', () => {
+    if (ctx.state === 'suspended') ctx.resume();
+    loopMode = !loopMode;
+    loopBtn.classList.toggle('active', loopMode);
+    if (loopMode) {
+      startScheduler();
+    } else {
+      clearInterval(schedulerId);
+    }
+  });
+
+  // ── BPM input ─────────────────────────────────────────────────────────────
+  document.getElementById('bpmInput').addEventListener('change', (e) => {
+    p.bpm = parseInt(e.target.value) || 124;
+    if (loopMode) {
+      clearInterval(schedulerId);
+      startScheduler();
+    }
+  });
+
+  document.getElementById('keySelect').addEventListener('change', (e) => { p.key = e.target.value; });
+  document.getElementById('modeSelect').addEventListener('change', (e) => { p.mode = e.target.value; });
+
+  // ── Knob UI ──────────────────────────────────────────────────────────────
+  const ARC = 125.66;
+
+  function fmtVal(unit, val) {
+    if (unit === 'Hz') {
+      if (val >= 1000) return (val/1000).toFixed(1) + ' kHz';
+      return Math.round(val) + ' Hz';
+    }
+    if (unit === 'ms') return Math.round(val) + ' ms';
+    if (unit === '') return Math.round(val * 100) + '%';
+    return val;
+  }
+
+  const knobMap = {};
+
+  document.querySelectorAll('.knob-wrap').forEach(wrap => {
+    const param = wrap.dataset.param;
+    const min = parseFloat(wrap.dataset.min);
+    const max = parseFloat(wrap.dataset.max);
+    const initial = parseFloat(wrap.dataset.val);
+    const unit = wrap.dataset.unit;
+
+    knobMap[param] = { wrap, min, max, unit, arc: document.getElementById('arc-' + param), valEl: document.getElementById('val-' + param) };
+
+    function update(param, val) {
+      const el = knobMap[param];
+      if (!el) return;
+      const pct = (val - el.min) / (el.max - el.min);
+      el.arc.setAttribute('stroke-dashoffset', ARC * (1 - pct));
+      el.valEl.textContent = fmtVal(el.unit, val);
+      p[param] = val;
+    }
+
+    update(param, initial);
+
+    let drag = false, startY = 0, startVal = 0;
+    wrap.addEventListener('mousedown', e => {
+      drag = true; startY = e.clientY; startVal = p[param];
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!drag) return;
+      const dy = startY - e.clientY;
+      const range = max - min;
+      const newVal = Math.max(min, Math.min(max, startVal + (dy / 100) * range));
+      update(param, newVal);
+      drawEnvViz();
+    });
+    document.addEventListener('mouseup', () => { drag = false; });
+    wrap.addEventListener('touchstart', e => {
+      drag = true; startY = e.touches[0].clientY; startVal = p[param];
+      e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('touchmove', e => {
+      if (!drag) return;
+      const dy = startY - e.touches[0].clientY;
+      const newVal = Math.max(min, Math.min(max, startVal + (dy / 100) * (max - min)));
+      update(param, newVal);
+      drawEnvViz();
+    }, { passive: false });
+    document.addEventListener('touchend', () => { drag = false; });
+  });
+
+  // ── Envelope viz ─────────────────────────────────────────────────────────
+  const envCanvas = document.getElementById('envCanvas');
+  const ectx = envCanvas.getContext('2d');
+
+  function resizeEnv() {
+    envCanvas.width = envCanvas.offsetWidth * 2;
+    envCanvas.height = envCanvas.offsetHeight * 2;
+    ectx.scale(2, 2);
+  }
+  resizeEnv();
+  window.addEventListener('resize', resizeEnv);
+
+  function drawEnvViz() {
+    const w = envCanvas.offsetWidth;
+    const h = envCanvas.offsetHeight;
+    ectx.clearRect(0, 0, w, h);
+
+    ectx.fillStyle = '#0d0e15';
+    ectx.fillRect(0, 0, w, h);
+
+    // Pitch envelope line
+    const decayX = w * 0.75;
+    ectx.strokeStyle = '#f7b731';
+    ectx.lineWidth = 2;
+    ectx.beginPath();
+    ectx.moveTo(0, h * 0.9);
+    // Pitch drop: pStart → pEnd
+    const pStartY = 0.1 + (1 - (p.pStart - 20) / 180) * 0.5;
+    const pEndY = 0.1 + (1 - (p.pEnd - 20) / 180) * 0.5;
+    ectx.lineTo(0, h * pStartY);
+    ectx.lineTo(decayX, h * pEndY);
+    ectx.lineTo(w, h * pEndY);
+    ectx.stroke();
+
+    // Sub envelope
+    const subDecayX = (p.subDecay / 800) * w;
+    ectx.strokeStyle = '#ff00aa';
+    ectx.lineWidth = 1.5;
+    ectx.beginPath();
+    ectx.moveTo(0, h * 0.2);
+    ectx.lineTo(subDecayX, h * (0.2 + p.subVol * 0.4));
+    ectx.lineTo(w, h * 0.9);
+    ectx.stroke();
+
+    // Filter sweep
+    const sweepX = (1 - p.fSweep) * w;
+    ectx.strokeStyle = '#00e5ff';
+    ectx.lineWidth = 1.5;
+    ectx.beginPath();
+    ectx.moveTo(0, h * 0.8);
+    ectx.lineTo(sweepX, h * 0.2);
+    ectx.lineTo(w, h * 0.2);
+    ectx.stroke();
+
+    // Labels
+    ectx.fillStyle = 'rgba(90,94,122,0.6)';
+    ectx.font = '8px Space Mono';
+    ectx.fillText('PITCH', 3, h - 3);
+    ectx.fillText('SUB', w * 0.3, h - 3);
+    ectx.fillText('FILTER', w * 0.6, h - 3);
+  }
+  drawEnvViz();
+
+  // ── Waveform canvas ──────────────────────────────────────────────────────
+  const kickCanvas = document.getElementById('kickWave');
+  const wctx = kickCanvas.getContext('2d');
+
+  function resizeKick() {
+    kickCanvas.width = kickCanvas.offsetWidth * 2;
+    kickCanvas.height = kickCanvas.offsetHeight * 2;
+    wctx.scale(2, 2);
+  }
+  resizeKick();
+  window.addEventListener('resize', resizeKick);
+
+  let waveHistory = [];
+  const WAVE_HISTORY = 32;
+
+  function drawKickWave(when, dur) {
+    const w = kickCanvas.offsetWidth;
+    const h = kickCanvas.offsetHeight;
+
+    wctx.fillStyle = '#0d0e15';
+    wctx.fillRect(0, 0, w, h);
+
+    // Draw envelope shape
+    const decayX = (p.decay / 600) * w;
+    const attackX = (p.attack / 30) * w;
+
+    // Pitch envelope (gold)
+    wctx.strokeStyle = '#f7b731';
+    wctx.lineWidth = 2;
+    wctx.beginPath();
+    wctx.moveTo(0, h * 0.5);
+    wctx.lineTo(attackX, h * 0.2);
+    wctx.lineTo(decayX, h * 0.85);
+    wctx.stroke();
+
+    // Sub (magenta)
+    const subDecayX = (p.subDecay / 800) * w;
+    wctx.strokeStyle = '#ff00aa';
+    wctx.lineWidth = 1.5;
+    wctx.beginPath();
+    wctx.moveTo(0, h * 0.5);
+    wctx.lineTo(attackX, h * (0.5 - p.subVol * 0.3));
+    wctx.lineTo(subDecayX, h * 0.9);
+    wctx.stroke();
+
+    // Click (green, very short)
+    wctx.strokeStyle = '#00e676';
+    wctx.lineWidth = 1;
+    wctx.beginPath();
+    wctx.moveTo(0, h * 0.5);
+    wctx.lineTo(Math.min(8, w * 0.05), h * (0.5 - p.clickVol * 0.4));
+    wctx.stroke();
+
+    // Grid
+    wctx.strokeStyle = 'rgba(37,42,58,0.5)';
+    wctx.lineWidth = 1;
+    for (let i = 1; i < 4; i++) {
+      wctx.beginPath();
+      wctx.moveTo(0, h * i / 4); wctx.lineTo(w, h * i / 4);
+      wctx.stroke();
+    }
+    wctx.beginPath();
+    wctx.moveTo(w * 0.5, 0); wctx.lineTo(w * 0.5, h);
+    wctx.stroke();
+
+    // Phase labels
+    wctx.fillStyle = 'rgba(90,94,122,0.5)';
+    wctx.font = '8px Space Mono';
+    wctx.fillText('ATK', 1, 10);
+    wctx.fillText('DECAY', decayX - 28, 10);
+    if (subDecayX > decayX) wctx.fillText('SUB', subDecayX - 18, 10);
+  }
+  drawKickWave();
+
+  // ── Presets ───────────────────────────────────────────────────────────────
+  const presets = {
+    subby:   { pStart: 80,  pEnd: 35,  attack: 5,  decay: 400, subHz: 45, subVol: 0.7, subDecay: 500, clickVol: 0.1, fCutoff: 5000, fSweep: 0.2, drive: 0.05 },
+    punchy:  { pStart: 150, pEnd: 50,  attack: 0,  decay: 180, subHz: 60, subVol: 0.4, subDecay: 200, clickVol: 0.5, fCutoff: 10000, fSweep: 0.1, drive: 0.2 },
+    tight:   { pStart: 180, pEnd: 60,  attack: 0,  decay: 100, subHz: 65, subVol: 0.3, subDecay: 120, clickVol: 0.4, fCutoff: 12000, fSweep: 0.05, drive: 0.1 },
+    dusk:    { pStart: 100, pEnd: 40,  attack: 3,  decay: 320, subHz: 50, subVol: 0.55, subDecay: 400, clickVol: 0.2, fCutoff: 7000, fSweep: 0.4, drive: 0.15 },
+    clicky:  { pStart: 200, pEnd: 55,  attack: 0,  decay: 150, subHz: 55, subVol: 0.3, subDecay: 180, clickVol: 0.7, fCutoff: 8000, fSweep: 0.1, drive: 0.15 },
+    sweep:   { pStart: 110, pEnd: 42,  attack: 3,  decay: 350, subHz: 55, subVol: 0.5, subDecay: 420, clickVol: 0.2, fCutoff: 10000, fSweep: 0.8, drive: 0.2 },
+  };
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pr = presets[btn.dataset.preset];
+      if (!pr) return;
+      Object.keys(pr).forEach(key => {
+        if (knobMap[key]) {
+          const el = knobMap[key];
+          const val = pr[key];
+          const pct = (val - el.min) / (el.max - el.min);
+          el.arc.setAttribute('stroke-dashoffset', ARC * (1 - pct));
+          el.valEl.textContent = fmtVal(el.unit, val);
+          p[key] = val;
+        }
+      });
+      drawEnvViz();
+      drawKickWave();
+    });
+  });
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+      e.preventDefault();
+      playBtn.click();
+    }
+    if (e.code === 'KeyL' && e.target.tagName !== 'INPUT') {
+      loopBtn.click();
+    }
+  });
+})();
+</script>
+</body>
+</html>
