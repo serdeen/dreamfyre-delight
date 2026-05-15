@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stem Preview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0b0f;
+    --surface: #12141c;
+    --surface2: #1a1d28;
+    --border: #252838;
+    --cyan: #00e5ff;
+    --magenta: #ff00aa;
+    --purple: #9b5de5;
+    --text: #e8eaf0;
+    --text-dim: #6b7080;
+    --glow-cyan: 0 0 12px rgba(0,229,255,0.4);
+    --glow-mag: 0 0 12px rgba(255,0,170,0.4);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    text-shadow: var(--glow-cyan);
+    margin-bottom: 8px;
+  }
+
+  .subtitle {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    margin-bottom: 32px;
+  }
+
+  .bpm-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    margin-bottom: 28px;
+  }
+
+  .bpm-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .bpm-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--cyan);
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    width: 72px;
+    text-align: center;
+    padding: 6px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .bpm-input:focus {
+    border-color: var(--cyan);
+    box-shadow: var(--glow-cyan);
+  }
+
+  .play-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--cyan);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+  }
+
+  .play-btn:hover {
+    background: var(--cyan);
+    color: var(--bg);
+    box-shadow: var(--glow-cyan);
+  }
+
+  .play-btn.playing {
+    background: var(--magenta);
+    color: #fff;
+    border-color: var(--magenta);
+    box-shadow: var(--glow-mag);
+  }
+
+  .stems-container {
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .stem-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 90px 1fr 80px 60px 60px;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.2s;
+    cursor: default;
+    user-select: none;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stem-row::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--stem-color, var(--cyan));
+    opacity: 0.7;
+  }
+
+  .stem-row.active {
+    border-color: var(--stem-color, var(--cyan));
+    box-shadow: 0 0 16px rgba(0,229,255,0.08);
+  }
+
+  .stem-row.muted { opacity: 0.4; }
+  .stem-row.soloed { border-color: var(--purple); }
+
+  .stem-name {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--stem-color, var(--cyan));
+    text-shadow: 0 0 8px var(--stem-color, rgba(0,229,255,0.3));
+  }
+
+  .stem-waveform {
+    height: 36px;
+    background: var(--surface2);
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    padding: 0 4px;
+  }
+
+  .waveform-bars {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    height: 100%;
+    width: 100%;
+  }
+
+  .waveform-bar {
+    flex: 1;
+    background: var(--stem-color, var(--cyan));
+    border-radius: 1px;
+    opacity: 0.3;
+    height: 30%;
+    transition: height 0.1s, opacity 0.1s;
+    min-width: 2px;
+  }
+
+  .stem-row.active .waveform-bar.playing {
+    opacity: 0.9;
+    animation: waveAnim 0.3s ease-in-out infinite alternate;
+  }
+
+  @keyframes waveAnim {
+    from { height: 20%; }
+    to { height: 80%; }
+  }
+
+  .vol-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--surface2);
+    outline: none;
+    cursor: pointer;
+  }
+
+  .vol-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--stem-color, var(--cyan));
+    cursor: pointer;
+    box-shadow: 0 0 6px var(--stem-color, rgba(0,229,255,0.5));
+    transition: transform 0.1s;
+  }
+
+  .vol-slider::-webkit-slider-thumb:hover {
+    transform: scale(1.3);
+  }
+
+  .mute-btn, .solo-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 6px 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .mute-btn:hover { border-color: var(--magenta); color: var(--magenta); }
+  .mute-btn.active { background: var(--magenta); border-color: var(--magenta); color: #fff; box-shadow: var(--glow-mag); }
+
+  .solo-btn:hover { border-color: var(--purple); color: var(--purple); }
+  .solo-btn.active { background: var(--purple); border-color: var(--purple); color: #fff; box-shadow: 0 0 10px rgba(155,93,229,0.5); }
+
+  .load-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .file-input {
+    display: none;
+  }
+
+  .file-label {
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-size: 0.6rem;
+    letter-spacing: 0.06em;
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+  }
+
+  .file-label:hover { border-color: var(--cyan); color: var(--cyan); }
+  .file-label.loaded { border-style: solid; border-color: var(--stem-color, var(--cyan)); color: var(--stem-color, var(--cyan)); }
+
+  .hint {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    margin-top: 28px;
+    text-align: center;
+    line-height: 1.6;
+  }
+
+  .swipe-hint {
+    display: inline-block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--text-dim);
+    margin-top: 8px;
+  }
+
+  /* Playing position indicator */
+  .playhead {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 2px;
+    background: var(--cyan);
+    box-shadow: var(--glow-cyan);
+    transition: left 0.05s linear;
+    pointer-events: none;
+    z-index: 2;
+    display: none;
+  }
+
+  .stem-row.active .playhead { display: block; }
+</style>
+</head>
+<body>
+
+<h1>Stem Preview</h1>
+<p class="subtitle">Drop stems, set BPM, audition your mix</p>
+
+<div class="bpm-bar">
+  <span class="bpm-label">BPM</span>
+  <input type="number" class="bpm-input" id="bpmInput" value="124" min="60" max="200">
+  <button class="play-btn" id="masterPlay">&#9654; Play</button>
+  <button class="play-btn" id="stopBtn" style="margin-left:-4px">&#9632;</button>
+</div>
+
+<div class="stems-container" id="stemsContainer">
+
+  <div class="stem-row active" data-stem="0" style="--stem-color: #00e5ff;">
+    <div>
+      <div class="stem-name">Vocals</div>
+      <div class="load-row" style="margin-top:6px">
+        <input type="file" class="file-input" id="file0" accept="audio/*">
+        <label class="file-label" for="file0" id="label0">Load...</label>
+      </div>
+    </div>
+    <div class="stem-waveform">
+      <div class="playhead"></div>
+      <div class="waveform-bars" id="wave0"></div>
+    </div>
+    <input type="range" class="vol-slider" id="vol0" min="0" max="1" step="0.01" value="0.85">
+    <button class="mute-btn" id="mute0">M</button>
+    <button class="solo-btn" id="solo0">S</button>
+  </div>
+
+  <div class="stem-row" data-stem="1" style="--stem-color: #ff00aa;">
+    <div>
+      <div class="stem-name">Drums</div>
+      <div class="load-row" style="margin-top:6px">
+        <input type="file" class="file-input" id="file1" accept="audio/*">
+        <label class="file-label" for="file1" id="label1">Load...</label>
+      </div>
+    </div>
+    <div class="stem-waveform">
+      <div class="playhead"></div>
+      <div class="waveform-bars" id="wave1"></div>
+    </div>
+    <input type="range" class="vol-slider" id="vol1" min="0" max="1" step="0.01" value="0.85">
+    <button class="mute-btn" id="mute1">M</button>
+    <button class="solo-btn" id="solo1">S</button>
+  </div>
+
+  <div class="stem-row" data-stem="2" style="--stem-color: #9b5de5;">
+    <div>
+      <div class="stem-name">Bass</div>
+      <div class="load-row" style="margin-top:6px">
+        <input type="file" class="file-input" id="file2" accept="audio/*">
+        <label class="file-label" for="file2" id="label2">Load...</label>
+      </div>
+    </div>
+    <div class="stem-waveform">
+      <div class="playhead"></div>
+      <div class="waveform-bars" id="wave2"></div>
+    </div>
+    <input type="range" class="vol-slider" id="vol2" min="0" max="1" step="0.01" value="0.85">
+    <button class="mute-btn" id="mute2">M</button>
+    <button class="solo-btn" id="solo2">S</button>
+  </div>
+
+  <div class="stem-row" data-stem="3" style="--stem-color: #f7b731;">
+    <div>
+      <div class="stem-name">Synth</div>
+      <div class="load-row" style="margin-top:6px">
+        <input type="file" class="file-input" id="file3" accept="audio/*">
+        <label class="file-label" for="file3" id="label3">Load...</label>
+      </div>
+    </div>
+    <div class="stem-waveform">
+      <div class="playhead"></div>
+      <div class="waveform-bars" id="wave3"></div>
+    </div>
+    <input type="range" class="vol-slider" id="vol3" min="0" max="1" step="0.01" value="0.85">
+    <button class="mute-btn" id="mute3">M</button>
+    <button class="solo-btn" id="solo3">S</button>
+  </div>
+
+</div>
+
+<p class="hint">
+  Load audio stems — set BPM — hit play<br>
+  Each stem loops to the BPM grid automatically
+  <br><span class="swipe-hint">Swipe across M/S buttons to mute/solo all</span>
+</p>
+
+<script>
+(() => {
+  const NUM_STEMS = 4;
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const masterGain = audioCtx.createGain();
+  masterGain.gain.value = 1.0;
+  masterGain.connect(audioCtx.destination);
+
+  const state = {
+    playing: false,
+    startTime: 0,
+    bpm: 124,
+    loopLen: 0,
+    muted: Array(NUM_STEMS).fill(false),
+    soloed: Array(NUM_STEMS).fill(false),
+    volumes: Array(NUM_STEMS).fill(0.85),
+    buffers: Array(NUM_STEMS).fill(null),
+    sources: Array(NUM_STEMS).fill(null),
+    gains: Array(NUM_STEMS).fill(null),
+    animFrames: [],
+    lastStem: null,
+    swipeStartX: null,
+    swipeY: null,
+  };
+
+  // Init per-stem gains
+  for (let i = 0; i < NUM_STEMS; i++) {
+    state.gains[i] = audioCtx.createGain();
+    state.gains[i].gain.value = 0.85;
+    state.gains[i].connect(masterGain);
+  }
+
+  // ── File Loading ──────────────────────────────────────────────────────────
+  for (let i = 0; i < NUM_STEMS; i++) {
+    const fileInput = document.getElementById('file' + i);
+    const label = document.getElementById('label' + i);
+    const row = document.querySelector(`[data-stem="${i}"]`);
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      label.textContent = file.name.substring(0, 18) + (file.name.length > 18 ? '…' : '');
+      label.classList.add('loaded');
+      row.classList.add('active');
+
+      const arrayBuffer = await file.arrayBuffer();
+      state.buffers[i] = await audioCtx.decodeAudioData(arrayBuffer);
+
+      // Draw waveform
+      drawWaveform(i, state.buffers[i]);
+
+      // If not playing yet, don't start — user hits play
+    });
+  }
+
+  // ── Waveform Drawing ──────────────────────────────────────────────────────
+  function drawWaveform(stemIdx, buffer) {
+    const container = document.getElementById('wave' + stemIdx);
+    container.innerHTML = '';
+    const data = buffer.getChannelData(0);
+    const samples = 60;
+    const blockSize = Math.floor(data.length / samples);
+    for (let j = 0; j < samples; j++) {
+      let sum = 0;
+      for (let k = 0; k < blockSize; k++) {
+        sum += Math.abs(data[j * blockSize + k]);
+      }
+      const avg = sum / blockSize;
+      const h = Math.max(4, Math.min(32, avg * 120));
+      const bar = document.createElement('div');
+      bar.className = 'waveform-bar';
+      bar.style.height = h + 'px';
+      container.appendChild(bar);
+    }
+  }
+
+  // ── BPM / Loop ────────────────────────────────────────────────────────────
+  function getLoopLen() {
+    return (60 / state.bpm) * 8; // 8-bar loop at given BPM
+  }
+
+  document.getElementById('bpmInput').addEventListener('change', (e) => {
+    state.bpm = parseInt(e.target.value) || 124;
+    if (state.playing) {
+      stopAllSources();
+      startAllSources();
+    }
+  });
+
+  // ── Master Play/Stop ──────────────────────────────────────────────────────
+  const masterPlayBtn = document.getElementById('masterPlay');
+  const stopBtn = document.getElementById('stopBtn');
+
+  masterPlayBtn.addEventListener('click', () => {
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!state.playing) {
+      state.playing = true;
+      state.startTime = audioCtx.currentTime;
+      startAllSources();
+      masterPlayBtn.textContent = '⏸ Pause';
+      masterPlayBtn.classList.add('playing');
+    } else {
+      state.playing = false;
+      stopAllSources();
+      masterPlayBtn.textContent = '▶ Play';
+      masterPlayBtn.classList.remove('playing');
+      resetPlayheads();
+    }
+  });
+
+  stopBtn.addEventListener('click', () => {
+    state.playing = false;
+    stopAllSources();
+    masterPlayBtn.textContent = '▶ Play';
+    masterPlayBtn.classList.remove('playing');
+    resetPlayheads();
+    state.animFrames.forEach(id => cancelAnimationFrame(id));
+    state.animFrames = [];
+    document.querySelectorAll('.waveform-bar').forEach(b => b.classList.remove('playing'));
+  });
+
+  function resetPlayheads() {
+    document.querySelectorAll('.playhead').forEach(ph => ph.style.left = '0%');
+  }
+
+  // ── Audio Sources ──────────────────────────────────────────────────────────
+  function startAllSources() {
+    const loopLen = getLoopLen();
+    const offset = (audioCtx.currentTime - state.startTime) % loopLen;
+
+    for (let i = 0; i < NUM_STEMS; i++) {
+      if (!state.buffers[i]) continue;
+      const src = audioCtx.createBufferSource();
+      src.buffer = state.buffers[i];
+      src.loop = true;
+      src.loopStart = 0;
+      src.loopEnd = loopLen;
+      src.connect(state.gains[i]);
+      src.start(0, offset);
+      state.sources[i] = src;
+      applyMuteSolo(i);
+    }
+
+    animatePlayheads();
+  }
+
+  function stopAllSources() {
+    for (let i = 0; i < NUM_STEMS; i++) {
+      if (state.sources[i]) {
+        try { state.sources[i].stop(); } catch(e) {}
+        state.sources[i] = null;
+      }
+    }
+    state.animFrames.forEach(id => cancelAnimationFrame(id));
+    state.animFrames = [];
+  }
+
+  // ── Playhead Animation ─────────────────────────────────────────────────────
+  function animatePlayheads() {
+    const loopLen = getLoopLen();
+    const elapsed = (audioCtx.currentTime - state.startTime) % loopLen;
+    const pct = (elapsed / loopLen) * 100;
+
+    document.querySelectorAll('.playhead').forEach((ph, i) => {
+      if (state.buffers[i]) ph.style.left = pct + '%';
+    });
+
+    if (state.playing) {
+      const id = requestAnimationFrame(animatePlayheads);
+      state.animFrames.push(id);
+    }
+  }
+
+  // ── Volume ─────────────────────────────────────────────────────────────────
+  for (let i = 0; i < NUM_STEMS; i++) {
+    document.getElementById('vol' + i).addEventListener('input', (e) => {
+      const v = parseFloat(e.target.value);
+      state.volumes[i] = v;
+      state.gains[i].gain.setTargetAtTime(v, audioCtx.currentTime, 0.02);
+    });
+  }
+
+  // ── Mute/Solo ──────────────────────────────────────────────────────────────
+  for (let i = 0; i < NUM_STEMS; i++) {
+    const row = document.querySelector(`[data-stem="${i}"]`);
+
+    document.getElementById('mute' + i).addEventListener('click', () => {
+      state.muted[i] = !state.muted[i];
+      document.getElementById('mute' + i).classList.toggle('active', state.muted[i]);
+      row.classList.toggle('muted', state.muted[i]);
+      applyMuteSolo(i);
+    });
+
+    document.getElementById('solo' + i).addEventListener('click', () => {
+      state.soloed[i] = !state.soloed[i];
+      document.getElementById('solo' + i).classList.toggle('active', state.soloed[i]);
+      row.classList.toggle('soloed', state.soloed[i]);
+      applyMuteSolo(i);
+    });
+  }
+
+  function applyMuteSolo(i) {
+    const anySoloed = state.soloed.some(s => s);
+    if (state.muted[i]) {
+      state.gains[i].gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
+    } else if (anySoloed && !state.soloed[i]) {
+      state.gains[i].gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
+    } else {
+      state.gains[i].gain.setTargetAtTime(state.volumes[i], audioCtx.currentTime, 0.02);
+    }
+  }
+
+  // ── Swipe to Mute/Solo All ─────────────────────────────────────────────────
+  const stemsContainer = document.getElementById('stemsContainer');
+
+  stemsContainer.addEventListener('mousedown', (e) => {
+    state.swipeStartX = e.clientX;
+    state.swipeY = e.clientY;
+  });
+
+  stemsContainer.addEventListener('mouseup', (e) => {
+    if (state.swipeStartX === null) return;
+    const dx = Math.abs(e.clientX - state.swipeStartX);
+    const dy = Math.abs(e.clientY - state.swipeY);
+    if (dy > 40) { state.swipeStartX = null; return; } // vertical swipe — ignore
+
+    if (dx < 10) { state.swipeStartX = null; return; } // click, not swipe
+
+    const target = e.target;
+    const isMute = target.id && target.id.startsWith('mute');
+    const isSolo = target.id && target.id.startsWith('solo');
+
+    if (isMute) {
+      const idx = parseInt(target.id.replace('mute', ''));
+      const newVal = !state.muted[idx];
+      state.muted[idx] = newVal;
+      for (let i = 0; i < NUM_STEMS; i++) {
+        state.muted[i] = newVal;
+        document.getElementById('mute' + i).classList.toggle('active', newVal);
+        document.querySelector(`[data-stem="${i}"]`).classList.toggle('muted', newVal);
+        applyMuteSolo(i);
+      }
+    } else if (isSolo) {
+      const idx = parseInt(target.id.replace('solo', ''));
+      const newVal = !state.soloed[idx];
+      state.soloed[idx] = newVal;
+      for (let i = 0; i < NUM_STEMS; i++) {
+        state.soloed[i] = newVal;
+        document.getElementById('solo' + i).classList.toggle('active', newVal);
+        document.querySelector(`[data-stem="${i}"]`).classList.toggle('soloed', newVal);
+        applyMuteSolo(i);
+      }
+    }
+
+    state.swipeStartX = null;
+  });
+
+  // ── Keyboard shortcuts ─────────────────────────────────────────────────────
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+      e.preventDefault();
+      masterPlayBtn.click();
+    }
+  });
+})();
+</script>
+</body>
+</html>
