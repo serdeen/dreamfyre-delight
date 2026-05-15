@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shimmer Reverb</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0d0e14;
+    --surface: #14162000;
+    --surface2: #1a1d2e;
+    --surface3: #1f2235;
+    --border: #2a2d45;
+    --cyan: #00e5ff;
+    --magenta: #ff00aa;
+    --gold: #f7b731;
+    --text: #d8daf0;
+    --text-dim: #5a5e7a;
+    --glow-c: 0 0 10px rgba(0,229,255,0.35);
+    --glow-m: 0 0 10px rgba(255,0,170,0.35);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 16px 40px;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(0,229,255,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 35% at 80% 90%, rgba(255,0,170,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    text-shadow: var(--glow-c);
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .subtitle {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .main-panel {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Visualizer */
+  .viz-wrap {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+
+  canvas#viz {
+    width: 100%;
+    height: 80px;
+    display: block;
+    border-radius: 6px;
+  }
+
+  /* Knob row */
+  .knob-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .knob-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .knob-wrap {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    cursor: pointer;
+  }
+
+  .knob-svg {
+    width: 52px;
+    height: 52px;
+  }
+
+  .knob-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    color: var(--cyan);
+    text-align: center;
+  }
+
+  /* Shimmer section */
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .shimmer-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+
+  .toggle-label {
+    font-size: 0.75rem;
+    color: var(--text);
+  }
+
+  .toggle-desc {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    margin-top: 2px;
+  }
+
+  .toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .toggle-switch input:checked + .toggle-track {
+    background: var(--cyan);
+    border-color: var(--cyan);
+  }
+
+  .toggle-thumb {
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    transition: left 0.2s, background 0.2s;
+  }
+
+  .toggle-switch input:checked + .toggle-track .toggle-thumb {
+    left: 23px;
+    background: var(--bg);
+  }
+
+  /* Freeze / Bypass buttons */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 16px;
+  }
+
+  .action-btn {
+    flex: 1;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 10px 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .action-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .action-btn.active { background: var(--cyan); border-color: var(--cyan); color: var(--bg); }
+  .action-btn.freeze-active { background: var(--magenta); border-color: var(--magenta); color: #fff; }
+
+  /* Presets */
+  .presets {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .preset-btn {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-size: 0.6rem;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .preset-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* Input/Output meters */
+  .meter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .meter-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.08em;
+    width: 32px;
+    flex-shrink: 0;
+  }
+
+  .meter-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--surface3);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--cyan) 0%, var(--gold) 75%, var(--magenta) 100%);
+    transition: width 0.05s;
+  }
+
+  /* Hint */
+  .hint {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<h1>Shimmer Reverb</h1>
+<p class="subtitle">Diffusion reverb with pitch-shifted feedback</p>
+
+<div class="main-panel">
+
+  <div class="viz-wrap">
+    <canvas id="viz"></canvas>
+  </div>
+
+  <!-- IO Meters -->
+  <div class="meter-row">
+    <span class="meter-label">IN</span>
+    <div class="meter-bar"><div class="meter-fill" id="inMeter" style="width:0%"></div></div>
+    <span class="meter-label">OUT</span>
+    <div class="meter-bar"><div class="meter-fill" id="outMeter" style="width:0%"></div></div>
+  </div>
+
+  <!-- Presets -->
+  <div class="presets">
+    <button class="preset-btn" data-preset="plate">Plate</button>
+    <button class="preset-btn" data-preset="hall">Hall</button>
+    <button class="preset-btn" data-preset="shimmer">Shimmer</button>
+    <button class="preset-btn" data-preset="ambient">Ambient</button>
+    <button class="preset-btn" data-preset="cathedral">Cathedral</button>
+  </div>
+
+  <!-- Main reverb controls -->
+  <div class="section-title">Reverb</div>
+  <div class="knob-row">
+    <div class="knob-group">
+      <span class="knob-label">Decay</span>
+      <div class="knob-wrap" data-param="decay" data-min="0.1" data-max="8" data-val="2.5" data-unit="s">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d45" stroke-width="3"/><circle id="knob-decay-arc" cx="26" cy="26" r="22" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="138.2" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#00e5ff"/></svg>
+      </div>
+      <span class="knob-value" id="knob-decay-val">2.5s</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Mix</span>
+      <div class="knob-wrap" data-param="mix" data-min="0" data-max="1" data-val="0.5" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d45" stroke-width="3"/><circle id="knob-mix-arc" cx="26" cy="26" r="22" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="69.1" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#00e5ff"/></svg>
+      </div>
+      <span class="knob-value" id="knob-mix-val">50%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Damp</span>
+      <div class="knob-wrap" data-param="damp" data-min="0" data-max="1" data-val="0.4" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d45" stroke-width="3"/><circle id="knob-damp-arc" cx="26" cy="26" r="22" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="82.92" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#00e5ff"/></svg>
+      </div>
+      <span class="knob-value" id="knob-damp-val">40%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Pre-Dly</span>
+      <div class="knob-wrap" data-param="predelay" data-min="0" data-max="200" data-val="30" data-unit="ms">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d45" stroke-width="3"/><circle id="knob-predelay-arc" cx="26" cy="26" r="22" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="120.8" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#00e5ff"/></svg>
+      </div>
+      <span class="knob-value" id="knob-predelay-val">30ms</span>
+    </div>
+  </div>
+
+  <!-- Shimmer controls -->
+  <div class="section-title">Shimmer</div>
+  <div class="shimmer-row">
+    <div class="knob-group">
+      <span class="knob-label">Shift</span>
+      <div class="knob-wrap" data-param="shift" data-min="-12" data-max="12" data-val="5" data-unit="st">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d45" stroke-width="3"/><circle id="knob-shift-arc" cx="26" cy="26" r="22" fill="none" stroke="#ff00aa" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="110.56" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#ff00aa"/></svg>
+      </div>
+      <span class="knob-value" id="knob-shift-val">+5st</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Depth</span>
+      <div class="knob-wrap" data-param="depth" data-min="0" data-max="1" data-val="0.6" data-unit="">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d45" stroke-width="3"/><circle id="knob-depth-arc" cx="26" cy="26" r="22" fill="none" stroke="#ff00aa" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="55.28" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#ff00aa"/></svg>
+      </div>
+      <span class="knob-value" id="knob-depth-val">60%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Feedback</span>
+      <div class="knob-wrap" data-param="feedback" data-min="0" data-max="0.95" data-val="0.5" data-unit="">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d45" stroke-width="3"/><circle id="knob-feedback-arc" cx="26" cy="26" r="22" fill="none" stroke="#ff00aa" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="69.1" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#ff00aa"/></svg>
+      </div>
+      <span class="knob-value" id="knob-feedback-val">50%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Octave</span>
+      <div class="knob-wrap" data-param="octave" data-min="1" data-max="3" data-val="2" data-unit="x">
+        <svg class="knob-svg" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="none" stroke="#2a2d45" stroke-width="3"/><circle id="knob-octave-arc" cx="26" cy="26" r="22" fill="none" stroke="#ff00aa" stroke-width="3" stroke-dasharray="138.2" stroke-dashoffset="69.1" stroke-linecap="round" transform="rotate(-90 26 26)"/><circle cx="26" cy="26" r="5" fill="#ff00aa"/></svg>
+      </div>
+      <span class="knob-value" id="knob-octave-val">2x</span>
+    </div>
+  </div>
+
+  <!-- Toggles -->
+  <div class="toggle-row">
+    <div>
+      <div class="toggle-label">Shimmer Mode</div>
+      <div class="toggle-desc">Pitch-shifted feedback loop</div>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="shimmerToggle" checked>
+      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+    </label>
+  </div>
+
+  <div class="toggle-row">
+    <div>
+      <div class="toggle-label">Freeze</div>
+      <div class="toggle-desc">Hold the reverb tail</div>
+    </div>
+    <label class="toggle-switch">
+      <input type="checkbox" id="freezeToggle">
+      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+    </label>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="action-btn" id="bypassBtn">Bypass</button>
+    <button class="action-btn" id="reverseBtn">Reverse</button>
+    <button class="action-btn" id="duckBtn">Ducking</button>
+  </div>
+
+</div>
+
+<p class="hint">Play audio through your system — this reverb processes system audio<br>via an analysis oscillator. For best results, use with an audio interface.</p>
+
+<script>
+(() => {
+  // ── Audio Engine ──────────────────────────────────────────────────────────
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Analyser for viz
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 256;
+  const analyserData = new Uint8Array(analyser.frequencyBinCount);
+
+  // Input meter analyser
+  const inputAnalyser = ctx.createAnalyser();
+  inputAnalyser.fftSize = 256;
+
+  // ── Convolution Reverb (impulse response based) ─────────────────────────────
+  // We synthesize an IR for the reverb
+  const reverbParams = {
+    decay: 2.5,
+    mix: 0.5,
+    damp: 0.4,
+    predelay: 0.03,
+    shift: 5,
+    depth: 0.6,
+    feedback: 0.5,
+    octave: 2,
+    shimmerOn: true,
+    freezeOn: false,
+    bypass: false,
+    reverse: false,
+    ducking: false,
+  };
+
+  // Build a synthetic impulse response
+  function buildIR(duration, decay, damp) {
+    const sr = ctx.sampleRate;
+    const len = Math.floor(sr * duration);
+    const ir = ctx.createBuffer(2, len, sr);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = ir.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        const t = i / len;
+        const env = Math.exp(-t * (2 + decay * 1.5));
+        const noise = (Math.random() * 2 - 1);
+        d[i] = noise * env * (1 - damp * 0.5);
+      }
+    }
+    return ir;
+  }
+
+  // Build the reverb chain
+  let convolver = ctx.createConvolver();
+  convolver.buffer = buildIR(reverbParams.decay, reverbParams.decay, reverbParams.damp);
+
+  const wetGain = ctx.createGain();
+  const dryGain = ctx.createGain();
+  const predelayBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.2), ctx.sampleRate);
+  const predelayNode = ctx.createDelay(0.2);
+
+  // Shimmer pitch shifter chain
+  const pitchShifter = ctx.createWaveShaper();
+  const shimmerGain = ctx.createGain();
+  const shimmerFeedback = ctx.createGain();
+  const shimmerInput = ctx.createGain();
+  const shimmerOutput = ctx.createGain();
+  shimmerGain.gain.value = 0;
+  shimmerFeedback.gain.value = 0;
+
+  // Dry/wet mix
+  dryGain.gain.value = 1 - reverbParams.mix;
+  wetGain.gain.value = reverbParams.mix;
+
+  // Shimmer curve (subtle distortion for character)
+  function makeDistortionCurve(amount) {
+    const n = 256;
+    const curve = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      curve[i] = ((Math.PI + amount) * x) / (Math.PI + amount * Math.abs(x));
+    }
+    return curve;
+  }
+  pitchShifter.curve = makeDistortionCurve(50);
+
+  // Connect shimmer loop
+  shimmerInput.connect(pitchShifter);
+  pitchShifter.connect(shimmerGain);
+  shimmerGain.connect(shimmerFeedback);
+  shimmerFeedback.connect(shimmerInput);
+  shimmerGain.connect(shimmerOutput);
+  shimmerOutput.connect(wetGain);
+
+  // Main signal path
+  const inputNode = ctx.createGain();
+  inputNode.connect(dryGain);
+  inputNode.connect(predelayNode);
+  predelayNode.connect(convolver);
+  convolver.connect(wetGain);
+  wetGain.connect(analyser);
+  dryGain.connect(analyser);
+  analyser.connect(ctx.destination);
+
+  // Input meter tap
+  inputNode.connect(inputAnalyser);
+
+  // ── Oscillator test tone (for demo when no mic/file) ─────────────────────
+  const testOsc = ctx.createOscillator();
+  testOsc.type = 'sawtooth';
+  testOsc.frequency.value = 220;
+  const testGain = ctx.createGain();
+  testGain.gain.value = 0;
+  testOsc.connect(testGain);
+  testGain.connect(inputNode);
+  testOsc.start();
+
+  // ── Mic input ────────────────────────────────────────────────────────────
+  let micStream = null;
+  let micSource = null;
+
+  async function startMic() {
+    if (micStream) return;
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      micSource = ctx.createMediaStreamSource(micStream);
+      micSource.connect(inputNode);
+      testGain.gain.value = 0;
+    } catch(e) {
+      console.warn('Mic denied, using test tone');
+      testGain.gain.value = 0.15;
+    }
+  }
+
+  // Start on first interaction
+  document.addEventListener('click', () => { startMic(); }, { once: true });
+
+  // ── Reverb Parameter Updates ──────────────────────────────────────────────
+  function updateReverb() {
+    const { decay, mix, damp, predelay, shimmerOn, freezeOn, bypass, reverse, feedback, depth, shift, octave } = reverbParams;
+
+    dryGain.gain.setTargetAtTime(bypass ? 1 : 1 - mix, ctx.currentTime, 0.05);
+    wetGain.gain.setTargetAtTime(bypass ? 0 : mix, ctx.currentTime, 0.05);
+    predelayNode.delayTime.setTargetAtTime(predelay / 1000, ctx.currentTime, 0.02);
+
+    // Rebuild IR if decay/damp changed
+    const ir = buildIR(decay, decay, damp);
+    if (!freezeOn) convolver.buffer = ir;
+
+    // Shimmer
+    if (shimmerOn && depth > 0) {
+      const sg = shift * (octave - 1) + shift;
+      pitchShifter.curve = makeDistortionCurve(50 + depth * 100);
+      shimmerGain.gain.setTargetAtTime(depth * 0.6, ctx.currentTime, 0.1);
+      shimmerFeedback.gain.setTargetAtTime(Math.min(feedback, 0.85), ctx.currentTime, 0.05);
+    } else {
+      shimmerGain.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+      shimmerFeedback.gain.setTargetAtTime(0, ctx.currentTime, 0.05);
+    }
+  }
+
+  // ── Knob UI ──────────────────────────────────────────────────────────────
+  const ARC_LEN = 138.2; // 2 * PI * 22
+
+  function paramToArc(param, val) {
+    const { min, max } = param;
+    const pct = (val - min) / (max - min);
+    const offset = ARC_LEN * (1 - pct);
+    return ARC_LEN * pct + ', ' + ARC_LEN + ', ' + offset;
+  }
+
+  function formatVal(param, val) {
+    if (param.unit === 's') return val.toFixed(1) + 's';
+    if (param.unit === '%') return Math.round(val * 100) + '%';
+    if (param.unit === 'ms') return Math.round(val) + 'ms';
+    if (param.unit === 'st') return (val >= 0 ? '+' : '') + val + 'st';
+    if (param.unit === 'x') return val + 'x';
+    return val;
+  }
+
+  const knobEls = {};
+
+  document.querySelectorAll('.knob-wrap').forEach(wrap => {
+    const param = wrap.dataset.param;
+    const min = parseFloat(wrap.dataset.min);
+    const max = parseFloat(wrap.dataset.max);
+    const initial = parseFloat(wrap.dataset.val);
+
+    knobEls[param] = {
+      wrap, min, max,
+      arc: document.getElementById('knob-' + param + '-arc'),
+      valEl: document.getElementById('knob-' + param + '-val'),
+    };
+
+    function setKnob(param, val) {
+      const el = knobEls[param];
+      if (!el) return;
+      const pct = (val - el.min) / (el.max - el.min);
+      const dashOff = ARC_LEN * (1 - pct);
+      el.arc.setAttribute('stroke-dashoffset', dashOff);
+      const paramConfig = { min: el.min, max: el.max, unit: wrap.dataset.unit };
+      el.valEl.textContent = formatVal(paramConfig, val);
+    }
+
+    setKnob(param, initial);
+
+    let dragging = false;
+    let startY, startVal;
+
+    wrap.addEventListener('mousedown', (e) => {
+      dragging = true;
+      startY = e.clientY;
+      startVal = reverbParams[param] ?? initial;
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dy = startY - e.clientY;
+      const range = max - min;
+      const delta = (dy / 120) * range;
+      let newVal = Math.max(min, Math.min(max, startVal + delta));
+      // Snap for octave
+      if (param === 'octave') newVal = Math.round(newVal);
+      reverbParams[param] = newVal;
+      setKnob(param, newVal);
+      updateReverb();
+    });
+
+    document.addEventListener('mouseup', () => { dragging = false; });
+
+    // Touch
+    wrap.addEventListener('touchstart', (e) => {
+      dragging = true;
+      startY = e.touches[0].clientY;
+      startVal = reverbParams[param] ?? initial;
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('touchmove', (e) => {
+      if (!dragging) return;
+      const dy = startY - e.touches[0].clientY;
+      const range = max - min;
+      const delta = (dy / 120) * range;
+      let newVal = Math.max(min, Math.min(max, startVal + delta));
+      if (param === 'octave') newVal = Math.round(newVal);
+      reverbParams[param] = newVal;
+      setKnob(param, newVal);
+      updateReverb();
+    }, { passive: false });
+
+    document.addEventListener('touchend', () => { dragging = false; });
+  });
+
+  // ── Toggles ───────────────────────────────────────────────────────────────
+  document.getElementById('shimmerToggle').addEventListener('change', (e) => {
+    reverbParams.shimmerOn = e.target.checked;
+    updateReverb();
+  });
+
+  document.getElementById('freezeToggle').addEventListener('change', (e) => {
+    reverbParams.freezeOn = e.target.checked;
+    if (e.target.checked) {
+      // Freeze: set long decay IR
+      const frozenIR = buildIR(8, 8, 0);
+      convolver.buffer = frozenIR;
+    }
+    updateReverb();
+  });
+
+  document.getElementById('bypassBtn').addEventListener('click', (e) => {
+    reverbParams.bypass = !reverbParams.bypass;
+    e.target.classList.toggle('active', reverbParams.bypass);
+    updateReverb();
+  });
+
+  document.getElementById('reverseBtn').addEventListener('click', (e) => {
+    reverbParams.reverse = !reverbParams.reverse;
+    e.target.classList.toggle('active', reverbParams.reverse);
+    if (reverbParams.reverse) {
+      // Quick reverse IR
+      const sr = ctx.sampleRate;
+      const len = Math.floor(sr * 1.0);
+      const ir = ctx.createBuffer(2, len, sr);
+      for (let ch = 0; ch < 2; ch++) {
+        const d = ir.getChannelData(ch);
+        for (let i = 0; i < len; i++) {
+          const t = i / len;
+          const env = Math.exp(-(1 - t) * 8);
+          d[i] = (Math.random() * 2 - 1) * env;
+        }
+      }
+      convolver.buffer = ir;
+    }
+    updateReverb();
+  });
+
+  document.getElementById('duckBtn').addEventListener('click', (e) => {
+    reverbParams.ducking = !reverbParams.ducking;
+    e.target.classList.toggle('active', reverbParams.ducking);
+    // Ducking: sidechain-like reduction of reverb when dry signal peaks
+    if (reverbParams.ducking) {
+      const dryLevel = 1 - reverbParams.mix;
+      wetGain.gain.setTargetAtTime(reverbParams.mix * 0.2, ctx.currentTime, 0.1);
+    } else {
+      updateReverb();
+    }
+  });
+
+  // ── Presets ────────────────────────────────────────────────────────────────
+  const presets = {
+    plate:   { decay: 1.5, mix: 0.45, damp: 0.5, predelay: 20, shift: 0, depth: 0 },
+    hall:    { decay: 4.0, mix: 0.55, damp: 0.3, predelay: 50, shift: 0, depth: 0 },
+    shimmer: { decay: 3.0, mix: 0.6,  damp: 0.2, predelay: 10, shift: 5, depth: 0.7 },
+    ambient: { decay: 7.0, mix: 0.7,  damp: 0.1, predelay: 80, shift: 7, depth: 0.5 },
+    cathedral:{ decay: 6.0, mix: 0.65, damp: 0.15, predelay: 60, shift: 0, depth: 0 },
+  };
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = presets[btn.dataset.preset];
+      if (!p) return;
+      Object.assign(reverbParams, p);
+      // Update knob UIs
+      Object.keys(p).forEach(key => {
+        if (knobEls[key]) {
+          const el = knobEls[key];
+          const pct = (p[key] - el.min) / (el.max - el.min);
+          el.arc.setAttribute('stroke-dashoffset', ARC_LEN * (1 - pct));
+          const paramConfig = { unit: el.wrap.dataset.unit };
+          el.valEl.textContent = formatVal(paramConfig, p[key]);
+        }
+      });
+      document.getElementById('shimmerToggle').checked = p.shift > 0 && p.depth > 0;
+      reverbParams.shimmerOn = p.shift > 0 && p.depth > 0;
+      updateReverb();
+    });
+  });
+
+  // ── Visualizer ────────────────────────────────────────────────────────────
+  const canvas = document.getElementById('viz');
+  const cctx = canvas.getContext('2d');
+
+  function resizeCanvas() {
+    canvas.width = canvas.offsetWidth * 2;
+    canvas.height = canvas.offsetHeight * 2;
+    cctx.scale(2, 2);
+  }
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  let hue = 180;
+  function drawViz() {
+    requestAnimationFrame(drawViz);
+    analyser.getByteFrequencyData(analyserData);
+
+    const w = canvas.offsetWidth;
+    const h = canvas.offsetHeight;
+    cctx.clearRect(0, 0, w, h);
+
+    const barCount = 48;
+    const barW = (w / barCount) - 1;
+    const step = Math.floor(analyserData.length / barCount);
+
+    hue = (hue + 0.15) % 360;
+
+    for (let i = 0; i < barCount; i++) {
+      const val = analyserData[i * step];
+      const barH = (val / 255) * h * 0.9 + 2;
+      const x = i * (barW + 1);
+      const alpha = 0.4 + (val / 255) * 0.6;
+      const saturation = 80 + (val / 255) * 20;
+      cctx.fillStyle = `hsla(${hue + i * 2}, ${saturation}%, 60%, ${alpha})`;
+      cctx.fillRect(x, h - barH, barW, barH);
+    }
+
+    // Input meter
+    inputAnalyser.getByteFrequencyData(analyserData);
+    let inPeak = 0;
+    for (let i = 0; i < analyserData.length; i++) inPeak = Math.max(inPeak, analyserData[i]);
+    document.getElementById('inMeter').style.width = (inPeak / 255 * 100) + '%';
+
+    // Out meter
+    let outPeak = 0;
+    for (let i = 0; i < analyserData.length; i++) outPeak = Math.max(outPeak, analyserData[i]);
+    document.getElementById('outMeter').style.width = (outPeak / 255 * 100) + '%';
+  }
+  drawViz();
+})();
+</script>
+</body>
+</html>
