@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tape Wobble</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0b0f;
+    --surface: #12141c;
+    --surface2: #1a1d28;
+    --surface3: #1f2335;
+    --border: #252838;
+    --amber: #f59e0b;
+    --gold: #f7b731;
+    --orange: #ff6b35;
+    --cyan: #00e5ff;
+    --text: #e0e4f0;
+    --text-dim: #555870;
+    --glow-a: 0 0 12px rgba(245,158,11,0.3);
+    --glow-c: 0 0 12px rgba(0,229,255,0.3);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 28px 16px 48px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 30%, rgba(245,158,11,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--amber);
+    text-shadow: var(--glow-a);
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .subtitle {
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px 20px;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    z-index: 1;
+    margin-bottom: 12px;
+  }
+
+  /* Tape spool viz */
+  .spool-wrap {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px;
+    margin-bottom: 16px;
+  }
+
+  canvas#spoolCanvas {
+    width: 100%;
+    height: 120px;
+    display: block;
+    border-radius: 8px;
+  }
+
+  /* Meters */
+  .meter-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .meter-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    width: 28px;
+    flex-shrink: 0;
+  }
+
+  .meter-bar {
+    flex: 1;
+    height: 5px;
+    background: var(--surface2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .meter-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--amber), var(--orange));
+    transition: width 0.04s;
+  }
+
+  /* Section title */
+  .section-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Knob grid */
+  .knob-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .knob-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .knob-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--text-dim);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .knob-wrap {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+  }
+
+  .knob-svg { width: 50px; height: 50px; }
+
+  .knob-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.54rem;
+    color: var(--amber);
+    text-align: center;
+  }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+
+  .toggle-label { font-size: 0.74rem; }
+
+  .toggle-switch {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+  }
+
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .toggle-switch input:checked + .toggle-track { background: var(--amber); border-color: var(--amber); }
+
+  .toggle-thumb {
+    position: absolute;
+    left: 3px;
+    top: 3px;
+    width: 16px;
+    height: 16px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    transition: left 0.2s, background 0.2s;
+  }
+
+  .toggle-switch input:checked + .toggle-track .toggle-thumb {
+    left: 23px;
+    background: var(--bg);
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .action-btn {
+    flex: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 9px 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .action-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .action-btn.active { background: var(--amber); border-color: var(--amber); color: var(--bg); }
+
+  /* Load file */
+  .load-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .file-input { display: none; }
+
+  .file-btn {
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    color: var(--text-dim);
+    font-size: 0.68rem;
+    padding: 9px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .file-btn:hover { border-color: var(--amber); color: var(--amber); border-style: solid; }
+
+  .file-name {
+    font-size: 0.65rem;
+    color: var(--amber);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Presets */
+  .preset-row {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+  }
+
+  .preset-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-dim);
+    font-size: 0.6rem;
+    padding: 5px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .preset-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+  .hint {
+    font-size: 0.62rem;
+    color: var(--text-dim);
+    text-align: center;
+    margin-top: 14px;
+    line-height: 1.6;
+    position: relative;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+<h1>Tape Wobble</h1>
+<p class="subtitle">Wow, flutter, and analog tape warmth</p>
+
+<div class="panel">
+
+  <!-- Spool animation canvas -->
+  <div class="spool-wrap">
+    <canvas id="spoolCanvas"></canvas>
+  </div>
+
+  <!-- Meters -->
+  <div class="meter-row">
+    <span class="meter-label">IN</span>
+    <div class="meter-bar"><div class="meter-fill" id="inMeter" style="width:0%"></div></div>
+    <span class="meter-label">WET</span>
+    <div class="meter-bar"><div class="meter-fill" id="wetMeter" style="width:0%"></div></div>
+    <span class="meter-label">OUT</span>
+    <div class="meter-bar"><div class="meter-fill" id="outMeter" style="width:0%"></div></div>
+  </div>
+
+  <!-- Load audio -->
+  <div class="section-title">Input</div>
+  <div class="load-section">
+    <input type="file" class="file-input" id="audioFile" accept="audio/*">
+    <button class="file-btn" id="loadBtn">Load Audio</button>
+    <span class="file-name" id="fileName">— no file loaded —</span>
+  </div>
+  <div class="load-section">
+    <button class="file-btn" id="micBtn" style="border-style:dashed">Use Microphone</button>
+  </div>
+
+  <!-- Wow & Flutter -->
+  <div class="section-title">Tape Warp</div>
+  <div class="knob-grid">
+    <div class="knob-group">
+      <span class="knob-label">Wow</span>
+      <div class="knob-wrap" data-param="wow" data-min="0" data-max="1" data-val="0.2" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 50 50"><circle cx="25" cy="25" r="21" fill="none" stroke="#252838" stroke-width="3"/><circle id="arc-wow" cx="25" cy="25" r="21" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 25 25)"/><circle cx="25" cy="25" r="4.5" fill="#f59e0b"/></svg>
+      </div>
+      <span class="knob-value" id="val-wow">20%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Flutter</span>
+      <div class="knob-wrap" data-param="flutter" data-min="0" data-max="1" data-val="0.15" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 50 50"><circle cx="25" cy="25" r="21" fill="none" stroke="#252838" stroke-width="3"/><circle id="arc-flutter" cx="25" cy="25" r="21" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 25 25)"/><circle cx="25" cy="25" r="4.5" fill="#f59e0b"/></svg>
+      </div>
+      <span class="knob-value" id="val-flutter">15%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Speed</span>
+      <div class="knob-wrap" data-param="speed" data-min="0.9" data-max="1.1" data-val="1.0" data-unit="x">
+        <svg class="knob-svg" viewBox="0 0 50 50"><circle cx="25" cy="25" r="21" fill="none" stroke="#252838" stroke-width="3"/><circle id="arc-speed" cx="25" cy="25" r="21" fill="none" stroke="#ff6b35" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 25 25)"/><circle cx="25" cy="25" r="4.5" fill="#ff6b35"/></svg>
+      </div>
+      <span class="knob-value" id="val-speed">1.000x</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Mix</span>
+      <div class="knob-wrap" data-param="mix" data-min="0" data-max="1" data-val="1.0" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 50 50"><circle cx="25" cy="25" r="21" fill="none" stroke="#252838" stroke-width="3"/><circle id="arc-mix" cx="25" cy="25" r="21" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 25 25)"/><circle cx="25" cy="25" r="4.5" fill="#00e5ff"/></svg>
+      </div>
+      <span class="knob-value" id="val-mix">100%</span>
+    </div>
+  </div>
+
+  <!-- Tone -->
+  <div class="section-title">Tone & Character</div>
+  <div class="knob-grid">
+    <div class="knob-group">
+      <span class="knob-label">Drive</span>
+      <div class="knob-wrap" data-param="drive" data-min="0" data-max="1" data-val="0.1" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 50 50"><circle cx="25" cy="25" r="21" fill="none" stroke="#252838" stroke-width="3"/><circle id="arc-drive" cx="25" cy="25" r="21" fill="none" stroke="#ff6b35" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 25 25)"/><circle cx="25" cy="25" r="4.5" fill="#ff6b35"/></svg>
+      </div>
+      <span class="knob-value" id="val-drive">10%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Sag</span>
+      <div class="knob-wrap" data-param="sag" data-min="0" data-max="1" data-val="0.15" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 50 50"><circle cx="25" cy="25" r="21" fill="none" stroke="#252838" stroke-width="3"/><circle id="arc-sag" cx="25" cy="25" r="21" fill="none" stroke="#f59e0b" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 25 25)"/><circle cx="25" cy="25" r="4.5" fill="#f59e0b"/></svg>
+      </div>
+      <span class="knob-value" id="val-sag">15%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Noise</span>
+      <div class="knob-wrap" data-param="noise" data-min="0" data-max="1" data-val="0.05" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 50 50"><circle cx="25" cy="25" r="21" fill="none" stroke="#252838" stroke-width="3"/><circle id="arc-noise" cx="25" cy="25" r="21" fill="none" stroke="#888" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 25 25)"/><circle cx="25" cy="25" r="4.5" fill="#888"/></svg>
+      </div>
+      <span class="knob-value" id="val-noise">5%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Output</span>
+      <div class="knob-wrap" data-param="output" data-min="0" data-max="1" data-val="0.85" data-unit="%">
+        <svg class="knob-svg" viewBox="0 0 50 50"><circle cx="25" cy="25" r="21" fill="none" stroke="#252838" stroke-width="3"/><circle id="arc-output" cx="25" cy="25" r="21" fill="none" stroke="#00e5ff" stroke-width="3" stroke-dasharray="131.95" stroke-dashoffset="0" stroke-linecap="round" transform="rotate(-90 25 25)"/><circle cx="25" cy="25" r="4.5" fill="#00e5ff"/></svg>
+      </div>
+      <span class="knob-value" id="val-output">85%</span>
+    </div>
+  </div>
+
+  <!-- Toggles -->
+  <div class="toggle-row">
+    <span class="toggle-label">Enable Wobble</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="wobbleToggle" checked>
+      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+    </label>
+  </div>
+  <div class="toggle-row">
+    <span class="toggle-label">Saturation</span>
+    <label class="toggle-switch">
+      <input type="checkbox" id="satToggle" checked>
+      <span class="toggle-track"><span class="toggle-thumb"></span></span>
+    </label>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="action-btn" id="bypassBtn">Dry</button>
+    <button class="action-btn" id="revBtn">Reverse</button>
+  </div>
+
+  <!-- Presets -->
+  <div class="section-title" style="margin-top:10px">Presets</div>
+  <div class="preset-row">
+    <button class="preset-btn" data-preset="clean">Clean</button>
+    <button class="preset-btn" data-preset="warm">Warm</button>
+    <button class="preset-btn" data-preset="worn">Worn Tape</button>
+    <button class="preset-btn" data-preset="cinema">Cinema</button>
+    <button class="preset-btn" data-preset="ambient">Ambient</button>
+  </div>
+
+</div>
+
+<p class="hint">Load audio or use your mic — dial in the wobble<br>for instant vintage tape character</p>
+
+<script>
+(() => {
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  if (ctx.state === 'suspended') ctx.resume();
+
+  // ── Params ────────────────────────────────────────────────────────────────
+  const params = {
+    wow: 0.2, flutter: 0.15, speed: 1.0, mix: 1.0,
+    drive: 0.1, sag: 0.15, noise: 0.05, output: 0.85,
+    wobbleOn: true, satOn: true, bypass: false, reverse: false,
+  };
+
+  // ── Audio nodes ──────────────────────────────────────────────────────────
+  let sourceNode = null;
+  let audioBuffer = null;
+  let analyserIn = null;
+  let analyserOut = null;
+
+  // Wobble: pitch modulation via VariableRateBufferReader simulation
+  // We'll use a ScriptProcessor to modulate pitch
+  let processor = null;
+  let noiseNode = null;
+
+  // Tape noise buffer
+  let noiseBuffer = null;
+
+  // LFO state
+  let wowPhase = 0;
+  let flutterPhase = 0;
+
+  function buildNoiseBuffer() {
+    const len = ctx.sampleRate * 3;
+    noiseBuffer = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = noiseBuffer.getChannelData(0);
+    // Brown noise (integrated white noise)
+    let last = 0;
+    for (let i = 0; i < len; i++) {
+      const white = Math.random() * 2 - 1;
+      d[i] = (last + 0.02 * white) / 1.02;
+      last = d[i];
+      d[i] *= 3.5;
+    }
+  }
+  buildNoiseBuffer();
+
+  // Waveshaper for saturation
+  function makeSatCurve(amount) {
+    const n = 256;
+    const curve = new Float32Array(n);
+    const drive = amount * 20 + 0.001;
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      curve[i] = Math.tanh(drive * x) / Math.tanh(drive);
+    }
+    return curve;
+  }
+
+  const waveshaper = ctx.createWaveShaper();
+  waveshaper.curve = makeSatCurve(params.drive);
+  waveshaper.oversample = '4x';
+
+  // Input gain (for metering)
+  const inputGain = ctx.createGain();
+  inputGain.gain.value = 1.0;
+
+  // Output gain
+  const outputGain = ctx.createGain();
+  outputGain.gain.value = params.output;
+
+  // Wet/Dry
+  const wetGain = ctx.createGain();
+  dryGain = ctx.createGain();
+
+  analyserIn = ctx.createAnalyser();
+  analyserIn.fftSize = 256;
+  analyserOut = ctx.createAnalyser();
+  analyserOut.fftSize = 256;
+
+  // Mic input
+  let micStream = null;
+
+  async function startMic() {
+    if (micStream) return;
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const micSource = ctx.createMediaStreamSource(micStream);
+      micSource.connect(inputGain);
+      inputGain.connect(analyserIn);
+      inputGain.connect(ctx.destination); // dry listen
+      startProcessing();
+    } catch(e) {
+      console.warn('Mic denied');
+    }
+  }
+
+  document.getElementById('micBtn').addEventListener('click', () => { startMic(); }, { once: true });
+
+  // File input
+  const fileInput = document.getElementById('audioFile');
+  const loadBtn = document.getElementById('loadBtn');
+  const fileName = document.getElementById('fileName');
+
+  loadBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    fileName.textContent = file.name;
+    const arrayBuffer = await file.arrayBuffer();
+    audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    if (ctx.state === 'suspended') ctx.resume();
+
+    // Disconnect old
+    if (processor) { processor.disconnect(); }
+    if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+
+    // Source
+    sourceNode = ctx.createBufferSource();
+    sourceNode.buffer = audioBuffer;
+    sourceNode.loop = true;
+
+    inputGain.gain.value = 1.0;
+    sourceNode.connect(inputGain);
+    inputGain.connect(analyserIn);
+
+    startProcessing();
+
+    sourceNode.start();
+  });
+
+  function startProcessing() {
+    if (processor) { processor.disconnect(); }
+
+    const bufferSize = 4096;
+    processor = ctx.createScriptProcessor(bufferSize, 0, 2);
+    processor.onaudioprocess = (e) => {
+      // Get input from inputGain if it has a connected source
+      // Since we're using ScriptProcessor (0 inputs), we need a different approach
+      // We'll use the inputBuffer to read the signal fed to inputGain
+    };
+
+    // Actually use the input to this processor (which comes from inputGain)
+    // Reconnect properly
+    processor.disconnect();
+    const proc2 = ctx.createScriptProcessor(bufferSize, 2, 2);
+    proc2.onaudioprocess = (e) => {
+      const inL = e.inputBuffer.getChannelData(0);
+      const inR = e.inputBuffer.getChannelData(1);
+      const outL = e.outputBuffer.getChannelData(0);
+      const outR = e.outputBuffer.getChannelData(1);
+
+      const mix = params.mix;
+      const wowAmt = params.wow * 0.02;
+      const flutAmt = params.flutter * 0.01;
+      const speed = params.speed;
+
+      wowPhase += 0.3;
+      flutterPhase += 8.0;
+
+      const wowDev = Math.sin(wowPhase * 0.3) * wowAmt;
+      const flutDev = Math.sin(flutterPhase) * flutAmt;
+      const pitchMod = speed + wowDev + flutDev;
+
+      for (let i = 0; i < inL.length; i++) {
+        const dryL = inL[i];
+        const dryR = inR[i];
+
+        let wetL = dryL;
+        let wetR = dryR;
+
+        if (!params.bypass) {
+          // Pitch modulation via resampling
+          const readIdx = (i / pitchMod) | 0;
+          const frac = (i / pitchMod) - readIdx;
+          const idx0 = Math.max(0, Math.min(inL.length - 1, readIdx));
+          const idx1 = Math.max(0, Math.min(inL.length - 1, readIdx + 1));
+          wetL = inL[idx0] * (1 - frac) + inL[idx1] * frac;
+          wetR = inR[idx0] * (1 - frac) + inR[idx1] * frac;
+
+          // Sag (tape compression)
+          if (params.sag > 0) {
+            const sagAmt = params.sag * 0.15;
+            wetL = wetL / (1 + sagAmt * Math.abs(wetL));
+            wetR = wetR / (1 + sagAmt * Math.abs(wetR));
+          }
+
+          // Saturation
+          if (params.satOn && params.drive > 0) {
+            const drive = params.drive * 15 + 0.1;
+            wetL = Math.tanh(drive * wetL) / Math.tanh(drive);
+            wetR = Math.tanh(drive * wetR) / Math.tanh(drive);
+          }
+        }
+
+        // Tape noise
+        if (params.noise > 0 && !params.bypass) {
+          const noiseAmt = params.noise * 0.01;
+          const noiseL = (Math.random() * 2 - 1) * noiseAmt;
+          const noiseR = (Math.random() * 2 - 1) * noiseAmt;
+          wetL += noiseL;
+          wetR += noiseR;
+        }
+
+        // Mix wet/dry
+        outL[i] = dryL * (1 - mix) + wetL * mix;
+        outR[i] = dryR * (1 - mix) + wetR * mix;
+      }
+    };
+
+    inputGain.connect(proc2);
+    proc2.connect(wetGain);
+    wetGain.connect(outputGain);
+    outputGain.connect(analyserOut);
+    analyserOut.connect(ctx.destination);
+    processor = proc2;
+  }
+
+  // ── Knob UI ──────────────────────────────────────────────────────────────
+  const ARC = 131.95;
+
+  function fmtVal(unit, val) {
+    if (unit === '%') return Math.round(val * 100) + '%';
+    if (unit === 'x') return val.toFixed(3) + 'x';
+    return val.toFixed(2);
+  }
+
+  const knobMap = {};
+
+  document.querySelectorAll('.knob-wrap').forEach(wrap => {
+    const param = wrap.dataset.param;
+    const min = parseFloat(wrap.dataset.min);
+    const max = parseFloat(wrap.dataset.max);
+    const initial = parseFloat(wrap.dataset.val);
+    const unit = wrap.dataset.unit;
+
+    knobMap[param] = { wrap, min, max, unit,
+      arc: document.getElementById('arc-' + param),
+      valEl: document.getElementById('val-' + param)
+    };
+
+    function update(param, val) {
+      const el = knobMap[param];
+      if (!el) return;
+      const pct = (val - el.min) / (el.max - el.min);
+      el.arc.setAttribute('stroke-dashoffset', ARC * (1 - pct));
+      el.valEl.textContent = fmtVal(el.unit, val);
+      params[param] = val;
+      // Update saturation curve
+      if (param === 'drive') {
+        waveshaper.curve = makeSatCurve(val);
+      }
+      outputGain.gain.setTargetAtTime(params.output, ctx.currentTime, 0.02);
+    }
+
+    update(param, initial);
+
+    let drag = false, startY = 0, startVal = 0;
+    wrap.addEventListener('mousedown', e => {
+      drag = true; startY = e.clientY; startVal = params[param];
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!drag) return;
+      const dy = startY - e.clientY;
+      const range = max - min;
+      const newVal = Math.max(min, Math.min(max, startVal + (dy / 100) * range));
+      update(param, newVal);
+    });
+    document.addEventListener('mouseup', () => { drag = false; });
+    wrap.addEventListener('touchstart', e => {
+      drag = true; startY = e.touches[0].clientY; startVal = params[param];
+      e.preventDefault();
+    }, { passive: false });
+    document.addEventListener('touchmove', e => {
+      if (!drag) return;
+      const dy = startY - e.touches[0].clientY;
+      const newVal = Math.max(min, Math.min(max, startVal + (dy / 100) * (max - min)));
+      update(param, newVal);
+    }, { passive: false });
+    document.addEventListener('touchend', () => { drag = false; });
+  });
+
+  // ── Toggles ──────────────────────────────────────────────────────────────
+  document.getElementById('wobbleToggle').addEventListener('change', (e) => {
+    params.wobbleOn = e.target.checked;
+  });
+
+  document.getElementById('satToggle').addEventListener('change', (e) => {
+    params.satOn = e.target.checked;
+  });
+
+  document.getElementById('bypassBtn').addEventListener('click', (e) => {
+    params.bypass = !params.bypass;
+    e.target.classList.toggle('active', params.bypass);
+    e.target.textContent = params.bypass ? 'Wet' : 'Dry';
+  });
+
+  document.getElementById('revBtn').addEventListener('click', () => {
+    params.reverse = !params.reverse;
+  });
+
+  // ── Presets ──────────────────────────────────────────────────────────────
+  const presets = {
+    clean:  { wow: 0.0, flutter: 0.0, speed: 1.0, mix: 0.5, drive: 0.0, sag: 0.0, noise: 0.0, output: 0.85 },
+    warm:   { wow: 0.1, flutter: 0.08, speed: 1.0, mix: 1.0, drive: 0.2, sag: 0.1, noise: 0.03, output: 0.8 },
+    worn:   { wow: 0.4, flutter: 0.3, speed: 0.98, mix: 1.0, drive: 0.35, sag: 0.25, noise: 0.08, output: 0.75 },
+    cinema: { wow: 0.05, flutter: 0.02, speed: 1.0, mix: 0.7, drive: 0.1, sag: 0.05, noise: 0.02, output: 0.85 },
+    ambient:{ wow: 0.2, flutter: 0.15, speed: 0.95, mix: 1.0, drive: 0.4, sag: 0.3, noise: 0.06, output: 0.7 },
+  };
+
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pr = presets[btn.dataset.preset];
+      if (!pr) return;
+      Object.keys(pr).forEach(key => {
+        if (knobMap[key]) {
+          const el = knobMap[key];
+          const val = pr[key];
+          const pct = (val - el.min) / (el.max - el.min);
+          el.arc.setAttribute('stroke-dashoffset', ARC * (1 - pct));
+          el.valEl.textContent = fmtVal(el.unit, val);
+          params[key] = val;
+        }
+      });
+    });
+  });
+
+  // ── Spool Canvas ────────────────────────────────────────────────────────
+  const spoolCanvas = document.getElementById('spoolCanvas');
+  const sctx = spoolCanvas.getContext('2d');
+
+  function resizeSpool() {
+    spoolCanvas.width = spoolCanvas.offsetWidth * 2;
+    spoolCanvas.height = spoolCanvas.offsetHeight * 2;
+    sctx.scale(2, 2);
+  }
+  resizeSpool();
+  window.addEventListener('resize', resizeSpool);
+
+  let spoolAngle = 0;
+  let lastTime = 0;
+
+  function drawSpool(time) {
+    requestAnimationFrame(drawSpool);
+    const dt = (time - lastTime) / 1000;
+    lastTime = time;
+
+    // Spool rotation speed based on wow/flutter amount
+    const speed = params.speed * (1 + params.wow * 0.5);
+    spoolAngle += dt * speed * 0.8;
+
+    const w = spoolCanvas.offsetWidth;
+    const h = spoolCanvas.offsetHeight;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    sctx.clearRect(0, 0, w, h);
+    sctx.fillStyle = '#0d0e18';
+    sctx.fillRect(0, 0, w, h);
+
+    // Two spools
+    const r1 = Math.min(cx, cy) * 0.7;
+    const r2 = r1 * 0.85;
+
+    function drawSpool(cx, cy, r, angle) {
+      // Reel circle
+      sctx.strokeStyle = '#f59e0b';
+      sctx.lineWidth = 2;
+      sctx.beginPath();
+      sctx.arc(cx, cy, r, 0, Math.PI * 2);
+      sctx.stroke();
+
+      // Spokes
+      const numSpokes = 6;
+      for (let i = 0; i < numSpokes; i++) {
+        const a = angle + (i / numSpokes) * Math.PI * 2;
+        sctx.strokeStyle = 'rgba(245,158,11,0.4)';
+        sctx.lineWidth = 1.5;
+        sctx.beginPath();
+        sctx.moveTo(cx, cy);
+        sctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+        sctx.stroke();
+      }
+
+      // Center hub
+      sctx.fillStyle = '#1a1d28';
+      sctx.beginPath();
+      sctx.arc(cx, cy, r * 0.15, 0, Math.PI * 2);
+      sctx.fill();
+      sctx.strokeStyle = '#f59e0b';
+      sctx.lineWidth = 1;
+      sctx.stroke();
+
+      // Tape winding (rounded rect segments)
+      const tapeR = r * 0.82;
+      sctx.strokeStyle = 'rgba(245,158,11,0.25)';
+      sctx.lineWidth = r * 0.12;
+      sctx.beginPath();
+      sctx.arc(cx, cy, tapeR, 0, Math.PI * 2);
+      sctx.stroke();
+    }
+
+    drawSpool(cx - r1 * 0.8, cy, r1, spoolAngle);
+    drawSpool(cx + r1 * 0.8, cy, r2, -spoolAngle * 1.3);
+
+    // Tape between spools
+    sctx.strokeStyle = 'rgba(245,158,11,0.3)';
+    sctx.lineWidth = 2;
+    sctx.beginPath();
+    const x1 = cx - r1 * 0.8 + Math.cos(spoolAngle) * r1;
+    const y1 = cy + Math.sin(spoolAngle) * r1;
+    const x2 = cx + r1 * 0.8 + Math.cos(-spoolAngle * 1.3) * r2;
+    const y2 = cy + Math.sin(-spoolAngle * 1.3) * r2;
+    sctx.moveTo(x1, y1);
+    sctx.quadraticCurveTo(cx, cy, x2, y2);
+    sctx.stroke();
+
+    // Labels
+    sctx.fillStyle = 'rgba(85,88,112,0.6)';
+    sctx.font = '8px Space Mono';
+    sctx.textAlign = 'center';
+    sctx.fillText('REEL A', cx - r1 * 0.8, cy + r1 + 12);
+    sctx.fillText('REEL B', cx + r1 * 0.8, cy + r2 + 12);
+  }
+  drawSpool(0);
+
+  // ── Meters ───────────────────────────────────────────────────────────────
+  function updateMeters() {
+    requestAnimationFrame(updateMeters);
+
+    if (analyserIn) {
+      const data = new Uint8Array(analyserIn.frequencyBinCount);
+      analyserIn.getByteTimeDomainData(data);
+      let peak = 0;
+      for (let i = 0; i < data.length; i++) peak = Math.max(peak, Math.abs(data[i] - 128));
+      document.getElementById('inMeter').style.width = Math.min(100, peak * 2 * 100) + '%';
+    }
+
+    if (analyserOut) {
+      const data = new Uint8Array(analyserOut.frequencyBinCount);
+      analyserOut.getByteTimeDomainData(data);
+      let peak = 0;
+      for (let i = 0; i < data.length; i++) peak = Math.max(peak, Math.abs(data[i] - 128));
+      document.getElementById('outMeter').style.width = Math.min(100, peak * 2 * 100) + '%';
+      document.getElementById('wetMeter').style.width = Math.min(100, params.mix * 100) + '%';
+    }
+  }
+  updateMeters();
+})();
+</script>
+</body>
+</html>
