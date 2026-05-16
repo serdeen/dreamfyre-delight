@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fader Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0f;
+    --surface: #161618;
+    --surface2: #1e1e22;
+    --border: #2a2a30;
+    --text: #c8c8d0;
+    --muted: #5a5a66;
+    --amber: #e8a832;
+    --amber-dim: #a07420;
+    --cyan: #00d4c8;
+    --red: #e85050;
+    --green: #50e880;
+    --knob-track: #252528;
+    --knob-fill: #e8a832;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    color: var(--amber);
+    text-transform: uppercase;
+  }
+  .logo span { color: var(--muted); font-weight: 400; }
+  .header-actions { display: flex; gap: 10px; align-items: center; }
+  .load-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .load-btn:hover { border-color: var(--amber); background: var(--surface2); }
+  .load-btn:active { transform: scale(0.97); }
+  #fileInput { display: none; }
+  .sample-name {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+  }
+
+  /* Waveform */
+  .waveform-section {
+    flex-shrink: 0;
+    padding: 12px 20px 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .waveform-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  #waveformCanvas {
+    width: 100%;
+    height: 80px;
+    display: block;
+    border-radius: 4px;
+    background: var(--bg);
+    cursor: pointer;
+  }
+
+  /* Transport */
+  .transport {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+  }
+  .transport-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .transport-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .transport-btn.active { background: var(--amber); border-color: var(--amber); color: #000; }
+  .transport-btn:active { transform: scale(0.92); }
+  .transport-btn svg { width: 14px; height: 14px; }
+  .loop-btn { margin-left: 4px; }
+  .loop-btn.active { border-color: var(--cyan); color: var(--cyan); }
+  .time-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    color: var(--amber);
+    letter-spacing: 1px;
+    min-width: 100px;
+  }
+  .gain-display {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
+  }
+  .gain-display span { color: var(--amber); }
+
+  /* Strip container */
+  .strip-scroll {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    display: flex;
+    align-items: stretch;
+    padding: 12px 20px;
+    gap: 0;
+  }
+  .strip-scroll::-webkit-scrollbar { height: 4px; }
+  .strip-scroll::-webkit-scrollbar-track { background: var(--bg); }
+  .strip-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Individual sections */
+  .section-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+  .section-block + .section-block { margin-left: 10px; }
+
+  .section-title {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    font-weight: 600;
+  }
+
+  /* Knobs */
+  .knob-row {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 52px;
+  }
+  .knob-wrap {
+    position: relative;
+    width: 52px;
+    height: 52px;
+    cursor: grab;
+  }
+  .knob-wrap:active { cursor: grabbing; }
+  .knob-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.6));
+  }
+  .knob-label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+  .knob-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 9px;
+    color: var(--amber);
+    text-align: center;
+    min-height: 12px;
+  }
+
+  /* Wide knob (gain) */
+  .knob-wide .knob-wrap { width: 64px; height: 64px; }
+  .knob-wide { min-width: 64px; }
+
+  /* Filter section */
+  .filter-section { width: 120px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 8px; }
+  .filter-section .section-title { width: 100%; }
+  .filter-section .knob-row { min-width: 48px; flex: 0; }
+
+  /* EQ section */
+  .eq-section { width: 180px; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .eq-section .section-title { width: 100%; }
+  .eq-section .knob-row { min-width: 48px; flex: 0; }
+
+  /* Comp section */
+  .comp-section { width: 140px; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .comp-section .section-title { width: 100%; }
+  .comp-section .knob-row { min-width: 48px; flex: 0; }
+
+  /* Sat section */
+  .sat-section { width: 90px; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .sat-section .section-title { width: 100%; }
+  .sat-section .knob-row { min-width: 48px; flex: 0; }
+
+  /* Dry/Wet section */
+  .wet-section { width: 80px; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .wet-section .section-title { width: 100%; }
+  .wet-section .knob-row { min-width: 60px; flex: 0; }
+
+  /* Output meter */
+  .meter-section {
+    width: 70px;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+  }
+  .meter-section .section-title { width: 100%; }
+  #meterCanvas {
+    width: 20px;
+    height: 200px;
+    border-radius: 3px;
+    background: var(--bg);
+    cursor: default;
+  }
+  .meter-labels {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 200px;
+    font-family: 'Space Mono', monospace;
+    font-size: 8px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  /* Playhead overlay on waveform */
+  .waveform-container { position: relative; }
+  #playhead {
+    position: absolute;
+    top: 0; left: 0;
+    width: 2px;
+    height: 80px;
+    background: var(--cyan);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    box-shadow: 0 0 6px var(--cyan);
+  }
+  #playhead.visible { opacity: 1; }
+
+  /* Compare button */
+  .compare-btn {
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    color: var(--muted);
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .compare-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .compare-btn.active {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #000;
+  }
+  .compare-btn:active { transform: scale(0.96); }
+
+  /* Hint bar */
+  .hint-bar {
+    padding: 6px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 10px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .hint-bar kbd {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 9px;
+    color: var(--text);
+  }
+
+  /* Drag over overlay */
+  .drag-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(232,168,50,0.08);
+    border: 3px dashed var(--amber);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .drag-overlay.visible { display: flex; }
+  .drag-overlay-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 16px;
+    color: var(--amber);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Fader<span>Lab</span></div>
+  <div class="header-actions">
+    <span class="sample-name" id="sampleName">no sample loaded</span>
+    <button class="load-btn" id="loadBtn">Load Audio</button>
+    <input type="file" id="fileInput" accept="audio/*">
+  </div>
+</header>
+
+<div class="main-area">
+  <div class="waveform-section">
+    <div class="waveform-label">Waveform</div>
+    <div class="waveform-container">
+      <canvas id="waveformCanvas"></canvas>
+      <div id="playhead"></div>
+    </div>
+  </div>
+
+  <div class="transport">
+    <button class="transport-btn" id="playBtn" title="Play/Pause (Space)">
+      <svg viewBox="0 0 24 24" fill="currentColor" id="playIcon"><polygon points="5,3 19,12 5,21"/></svg>
+    </button>
+    <button class="transport-btn loop-btn" id="loopBtn" title="Loop (L)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="17 1 21 5 17 9"></polyline>
+        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+        <polyline points="7 23 3 19 7 15"></polyline>
+        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+      </svg>
+    </button>
+    <div class="time-display" id="timeDisplay">0:00.0 / 0:00.0</div>
+    <button class="compare-btn" id="compareBtn">A / B</button>
+    <div class="gain-display">Input: <span id="inputGain">0 dB</span></div>
+  </div>
+
+  <div class="strip-scroll">
+    <!-- Gain -->
+    <div class="section-block knob-wide" id="gainBlock">
+      <div class="section-title">Input</div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="gainKnob" data-min="-24" data-max="12" data-val="0" data-label="Gain">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="gainArc" cx="26" cy="26" r="23" fill="none" stroke="var(--knob-fill)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="gainNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Gain</div>
+        <div class="knob-value" id="gainVal">0 dB</div>
+      </div>
+    </div>
+
+    <!-- HPF / LPF -->
+    <div class="section-block filter-section">
+      <div class="section-title">Filter</div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="hpfKnob" data-min="20" data-max="2000" data-val="20" data-label="HPF" data-log="true">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="hpfArc" cx="26" cy="26" r="23" fill="none" stroke="var(--cyan)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="hpfNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">HPF</div>
+        <div class="knob-value" id="hpfVal">20 Hz</div>
+      </div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="lpfKnob" data-min="200" data-max="20000" data-val="20000" data-label="LPF" data-log="true">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="lpfArc" cx="26" cy="26" r="23" fill="none" stroke="var(--cyan)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="lpfNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">LPF</div>
+        <div class="knob-value" id="lpfVal">20 kHz</div>
+      </div>
+    </div>
+
+    <!-- EQ -->
+    <div class="section-block eq-section">
+      <div class="section-title">3-Band EQ</div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="eqLowKnob" data-min="-12" data-max="12" data-val="0" data-label="Low">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="eqLowArc" cx="26" cy="26" r="23" fill="none" stroke="#e87032" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="eqLowNeedle" x1="26" y1="26" x2="26" y2="11" stroke="#e87032" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Low</div>
+        <div class="knob-value" id="eqLowVal">0 dB</div>
+      </div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="eqMidKnob" data-min="-12" data-max="12" data-val="0" data-label="Mid">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="eqMidArc" cx="26" cy="26" r="23" fill="none" stroke="var(--amber)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="eqMidNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--amber)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Mid</div>
+        <div class="knob-value" id="eqMidVal">0 dB</div>
+      </div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="eqHighKnob" data-min="-12" data-max="12" data-val="0" data-label="High">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="eqHighArc" cx="26" cy="26" r="23" fill="none" stroke="var(--cyan)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="eqHighNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">High</div>
+        <div class="knob-value" id="eqHighVal">0 dB</div>
+      </div>
+    </div>
+
+    <!-- Compressor -->
+    <div class="section-block comp-section">
+      <div class="section-title">Compressor</div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="compThreshKnob" data-min="-60" data-max="0" data-val="-20" data-label="Thresh">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="compThreshArc" cx="26" cy="26" r="23" fill="none" stroke="var(--red)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="compThreshNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--red)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Thresh</div>
+        <div class="knob-value" id="compThreshVal">-20 dB</div>
+      </div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="compRatioKnob" data-min="1" data-max="20" data-val="4" data-label="Ratio">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="compRatioArc" cx="26" cy="26" r="23" fill="none" stroke="var(--red)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="compRatioNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--red)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Ratio</div>
+        <div class="knob-value" id="compRatioVal">4:1</div>
+      </div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="compAttackKnob" data-min="0.001" data-max="0.2" data-val="0.01" data-label="Attack" data-log="true">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="compAttackArc" cx="26" cy="26" r="23" fill="none" stroke="var(--red)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="compAttackNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--red)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Attack</div>
+        <div class="knob-value" id="compAttackVal">10ms</div>
+      </div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="compReleaseKnob" data-min="0.05" data-max="1" data-val="0.25" data-label="Release" data-log="true">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="compReleaseArc" cx="26" cy="26" r="23" fill="none" stroke="var(--red)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="compReleaseNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--red)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Release</div>
+        <div class="knob-value" id="compReleaseVal">250ms</div>
+      </div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="compMakeupKnob" data-min="0" data-max="24" data-val="0" data-label="Makeup">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="compMakeupArc" cx="26" cy="26" r="23" fill="none" stroke="var(--red)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="compMakeupNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--red)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Makeup</div>
+        <div class="knob-value" id="compMakeupVal">0 dB</div>
+      </div>
+    </div>
+
+    <!-- Saturation -->
+    <div class="section-block sat-section">
+      <div class="section-title">Saturation</div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="satDriveKnob" data-min="0" data-max="100" data-val="0" data-label="Drive">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="satDriveArc" cx="26" cy="26" r="23" fill="none" stroke="#e850e8" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="satDriveNeedle" x1="26" y1="26" x2="26" y2="11" stroke="#e850e8" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Drive</div>
+        <div class="knob-value" id="satDriveVal">0%</div>
+      </div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="satMixKnob" data-min="0" data-max="100" data-val="100" data-label="Mix">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="satMixArc" cx="26" cy="26" r="23" fill="none" stroke="#e850e8" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="satMixNeedle" x1="26" y1="26" x2="26" y2="11" stroke="#e850e8" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Mix</div>
+        <div class="knob-value" id="satMixVal">100%</div>
+      </div>
+    </div>
+
+    <!-- Dry/Wet -->
+    <div class="section-block wet-section">
+      <div class="section-title">Dry / Wet</div>
+      <div class="knob-row">
+        <div class="knob-wrap" id="wetKnob" data-min="0" data-max="100" data-val="100" data-label="Wet">
+          <svg class="knob-svg" viewBox="0 0 52 52">
+            <circle cx="26" cy="26" r="23" fill="none" stroke="var(--knob-track)" stroke-width="3"/>
+            <circle id="wetArc" cx="26" cy="26" r="23" fill="none" stroke="var(--green)" stroke-width="3"
+              stroke-dasharray="0 144.5" stroke-linecap="round"
+              transform="rotate(-150 26 26)"/>
+            <circle cx="26" cy="26" r="16" fill="var(--surface2)" stroke="var(--border)" stroke-width="1"/>
+            <line id="wetNeedle" x1="26" y1="26" x2="26" y2="11" stroke="var(--green)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="knob-label">Wet</div>
+        <div class="knob-value" id="wetVal">100%</div>
+      </div>
+    </div>
+
+    <!-- Meter -->
+    <div class="section-block meter-section">
+      <div class="section-title">Output</div>
+      <canvas id="meterCanvas" width="20" height="200"></canvas>
+    </div>
+  </div>
+</div>
+
+<div class="hint-bar">
+  <kbd>Space</kbd> play/pause &nbsp;·&nbsp; <kbd>L</kbd> loop &nbsp;·&nbsp; <kbd>A</kbd> dry/wet compare &nbsp;·&nbsp; drag audio file to load &nbsp;·&nbsp; scroll knobs to adjust
+</div>
+
+<div class="drag-overlay" id="dragOverlay">
+  <div class="drag-overlay-text">Drop Audio</div>
+</div>
+
+<script>
+(function() {
+  // ===== Audio Engine =====
+  let audioCtx = null;
+  let drySource = null;
+  let dryGain = null;
+  let audioBuffer = null;
+  let isPlaying = false;
+  let loopEnabled = false;
+  let startTime = 0;
+  let pauseOffset = 0;
+  let compareMode = false; // true = dry, false = wet
+
+  // Processing chain
+  let inputGainNode = null;
+  let hpfNode = null, lpfNode = null;
+  let eqLowNode = null, eqMidNode = null, eqHighNode = null;
+  let compNode = null, compMakeupNode = null;
+  let satNode = null;
+  let wetGain = null, dryPostGain = null;
+  let analyserNode = null;
+  let masterGain = null;
+
+  // DSP values
+  const DSP = {
+    gain: 0,
+    hpfFreq: 20,
+    lpfFreq: 20000,
+    eqLow: 0, eqMid: 0, eqHigh: 0,
+    compThresh: -20, compRatio: 4, compAttack: 0.01, compRelease: 0.25, compMakeup: 0,
+    satDrive: 0, satMix: 100,
+    wet: 100
+  };
+
+  function getCookie(name) {
+    let match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+  }
+
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Build chain
+    inputGainNode = audioCtx.createGain();
+    inputGainNode.gain.value = dBToGain(DSP.gain);
+
+    hpfNode = audioCtx.createBiquadFilter();
+    hpfNode.type = 'highpass';
+    hpfNode.frequency.value = DSP.hpfFreq;
+
+    lpfNode = audioCtx.createBiquadFilter();
+    lpfNode.type = 'lowpass';
+    lpfNode.frequency.value = DSP.lpfFreq;
+
+    // EQ via 3 peaking filters
+    eqLowNode = audioCtx.createBiquadFilter();
+    eqLowNode.type = 'peaking';
+    eqLowNode.frequency.value = 200;
+    eqLowNode.Q.value = 0.7;
+    eqLowNode.gain.value = DSP.eqLow;
+
+    eqMidNode = audioCtx.createBiquadFilter();
+    eqMidNode.type = 'peaking';
+    eqMidNode.frequency.value = 1000;
+    eqMidNode.Q.value = 1.0;
+    eqMidNode.gain.value = DSP.eqMid;
+
+    eqHighNode = audioCtx.createBiquadFilter();
+    eqHighNode.type = 'peaking';
+    eqHighNode.frequency.value = 5000;
+    eqHighNode.Q.value = 0.8;
+    eqHighNode.gain.value = DSP.eqHigh;
+
+    // Compressor
+    compNode = audioCtx.createDynamicsCompressor();
+    compNode.threshold.value = DSP.compThresh;
+    compNode.ratio.value = DSP.compRatio;
+    compNode.attack.value = DSP.compAttack;
+    compNode.release.value = DSP.compRelease;
+
+    compMakeupNode = audioCtx.createGain();
+    compMakeupNode.gain.value = dBToGain(DSP.compMakeup);
+
+    // Saturation via waveshaper
+    satNode = audioCtx.createWaveShaper();
+    satNode.curve = makeSatCurve(0);
+    satNode.oversample = '4x';
+
+    // Wet/dry mix
+    wetGain = audioCtx.createGain();
+    wetGain.gain.value = DSP.wet / 100;
+    dryPostGain = audioCtx.createGain();
+    dryPostGain.gain.value = 1 - DSP.wet / 100;
+
+    // Meter
+    analyserNode = audioCtx.createAnalyser();
+    analyserNode.fftSize = 256;
+
+    // Master
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 1.0;
+
+    // Connect chain: inputGain -> hpf -> lpf -> eqLow -> eqMid -> eqHigh -> comp -> compMakeup -> sat -> wetGain
+    // dry route: inputGain -> hpf... -> dryPostGain
+    inputGainNode.connect(hpfNode);
+    hpfNode.connect(lpfNode);
+    lpfNode.connect(eqLowNode);
+    eqLowNode.connect(eqMidNode);
+    eqMidNode.connect(eqHighNode);
+    eqHighNode.connect(compNode);
+    compNode.connect(compMakeupNode);
+    compMakeupNode.connect(satNode);
+
+    satNode.connect(wetGain);
+    satNode.connect(dryPostGain);
+
+    wetGain.connect(analyserNode);
+    dryPostGain.connect(analyserNode);
+    analyserNode.connect(masterGain);
+    masterGain.connect(audioCtx.destination);
+  }
+
+  function makeSatCurve(drive) {
+    if (drive === 0) return null;
+    const samples = 44100;
+    const curve = new Float32Array(samples);
+    const k = drive * 0.5;
+    for (let i = 0; i < samples; i++) {
+      const x = (i * 2) / samples - 1;
+      curve[i] = (Math.PI + k) * x / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+  }
+
+  function dBToGain(db) { return Math.pow(10, db / 20); }
+
+  // ===== File Loading =====
+  const fileInput = document.getElementById('fileInput');
+  const loadBtn = document.getElementById('loadBtn');
+  const sampleName = document.getElementById('sampleName');
+
+  loadBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) loadAudioFile(e.target.files[0]);
+  });
+
+  async function loadAudioFile(file) {
+    initAudio();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    try {
+      audioBuffer = await audioCtx.decodeAudioData(await file.arrayBuffer());
+      sampleName.textContent = file.name;
+      pauseOffset = 0;
+      drawWaveform();
+      if (isPlaying) stopPlayback();
+    } catch(e) {
+      sampleName.textContent = 'decode error: ' + file.name;
+    }
+  }
+
+  // ===== Drag and Drop =====
+  const dragOverlay = document.getElementById('dragOverlay');
+  document.addEventListener('dragover', (e) => { e.preventDefault(); dragOverlay.classList.add('visible'); });
+  document.addEventListener('dragleave', (e) => { if (e.relatedTarget === null) dragOverlay.classList.remove('visible'); });
+  document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dragOverlay.classList.remove('visible');
+    if (e.dataTransfer.files[0]) loadAudioFile(e.dataTransfer.files[0]);
+  });
+
+  // ===== Playback =====
+  const playBtn = document.getElementById('playBtn');
+  const playIcon = document.getElementById('playIcon');
+  const loopBtn = document.getElementById('loopBtn');
+  const timeDisplay = document.getElementById('timeDisplay');
+  const playhead = document.getElementById('playhead');
+
+  function playAudio() {
+    if (!audioBuffer) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    stopPlayback();
+    const src = audioCtx.createBufferSource();
+    src.buffer = audioBuffer;
+    src.loop = loopEnabled;
+    src.connect(inputGainNode);
+    src.start(0, pauseOffset);
+    src.onended = () => {
+      if (!loopEnabled && isPlaying) {
+        isPlaying = false;
+        pauseOffset = 0;
+        playIcon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+        playhead.classList.remove('visible');
+      }
+    };
+    drySource = src;
+    startTime = audioCtx.currentTime - pauseOffset;
+    isPlaying = true;
+    playIcon.innerHTML = '<rect x="5" y="3" width="5" height="18"/><rect x="14" y="3" width="5" height="18"/>';
+    playhead.classList.add('visible');
+    requestAnimationFrame(updatePlayhead);
+  }
+
+  function stopPlayback() {
+    if (drySource) {
+      try { drySource.onended = null; drySource.stop(); } catch(e) {}
+      drySource.disconnect();
+      drySource = null;
+    }
+  }
+
+  function togglePlay() {
+    if (!audioBuffer) return;
+    if (isPlaying) {
+      pauseOffset = audioCtx.currentTime - startTime;
+      stopPlayback();
+      isPlaying = false;
+      playIcon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+      playhead.classList.remove('visible');
+    } else {
+      playAudio();
+    }
+  }
+
+  function updatePlayhead() {
+    if (!isPlaying || !audioBuffer) return;
+    const elapsed = audioCtx.currentTime - startTime;
+    const progress = elapsed / audioBuffer.duration;
+    const canvas = document.getElementById('waveformCanvas');
+    const px = progress * canvas.width;
+    playhead.style.left = (canvas.offsetLeft + px) + 'px';
+    timeDisplay.textContent = fmtTime(elapsed) + ' / ' + fmtTime(audioBuffer.duration);
+    if (elapsed >= audioBuffer.duration && !loopEnabled) {
+      isPlaying = false; pauseOffset = 0;
+      playIcon.innerHTML = '<polygon points="5,3 19,12 5,21"/>';
+      playhead.classList.remove('visible');
+      return;
+    }
+    requestAnimationFrame(updatePlayhead);
+  }
+
+  function fmtTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = Math.floor(s % 60);
+    const ms = Math.floor((s % 1) * 10);
+    return m + ':' + String(sec).padStart(2,'0') + '.' + ms;
+  }
+
+  playBtn.addEventListener('click', togglePlay);
+  loopBtn.addEventListener('click', () => {
+    loopEnabled = !loopEnabled;
+    loopBtn.classList.toggle('active', loopEnabled);
+    if (drySource) drySource.loop = loopEnabled;
+  });
+
+  // Keyboard
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
+    if (e.code === 'KeyL') { loopEnabled = !loopEnabled; loopBtn.classList.toggle('active', loopEnabled); }
+    if (e.code === 'KeyA') toggleCompare();
+  });
+
+  // ===== Compare (A/B Dry/Wet) =====
+  const compareBtn = document.getElementById('compareBtn');
+  function toggleCompare() {
+    compareMode = !compareMode;
+    compareBtn.classList.toggle('active', compareMode);
+    if (compareMode) {
+      wetGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.01);
+      dryPostGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.01);
+    } else {
+      wetGain.gain.setTargetAtTime(DSP.wet / 100, audioCtx.currentTime, 0.01);
+      dryPostGain.gain.setTargetAtTime(1 - DSP.wet / 100, audioCtx.currentTime, 0.01);
+    }
+  }
+
+  // ===== Waveform Drawing =====
+  const waveformCanvas = document.getElementById('waveformCanvas');
+  const wfCtx = waveformCanvas.getContext('2d');
+  let waveformData = null;
+
+  function drawWaveform() {
+    if (!audioBuffer) return;
+    const w = waveformCanvas.offsetWidth;
+    const h = waveformCanvas.offsetHeight;
+    waveformCanvas.width = w;
+    waveformCanvas.height = h;
+    wfCtx.clearRect(0, 0, w, h);
+
+    // Background grid
+    wfCtx.strokeStyle = 'rgba(42,42,48,0.5)';
+    wfCtx.lineWidth = 1;
+    for (let i = 0; i < 8; i++) {
+      const x = (i / 8) * w;
+      wfCtx.beginPath(); wfCtx.moveTo(x, 0); wfCtx.lineTo(x, h); wfCtx.stroke();
+    }
+
+    const data = audioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / w);
+    const amp = h / 2;
+    wfCtx.strokeStyle = '#2a9d9a';
+    wfCtx.lineWidth = 1;
+    wfCtx.beginPath();
+    for (let x = 0; x < w; x++) {
+      let min = 1.0, max = -1.0;
+      for (let j = 0; j < step; j++) {
+        const d = data[x * step + j] || 0;
+        if (d < min) min = d;
+        if (d > max) max = d;
+      }
+      const yMin = amp + min * amp * 0.9;
+      const yMax = amp + max * amp * 0.9;
+      if (x === 0) wfCtx.moveTo(x, yMin);
+      else wfCtx.lineTo(x, yMax);
+    }
+    wfCtx.stroke();
+
+    // Center line
+    wfCtx.strokeStyle = 'rgba(232,168,50,0.2)';
+    wfCtx.beginPath();
+    wfCtx.moveTo(0, amp); wfCtx.lineTo(w, amp);
+    wfCtx.stroke();
+  }
+
+  window.addEventListener('resize', () => { if (audioBuffer) drawWaveform(); });
+
+  // ===== Knob System =====
+  function valToArc(val, min, max) {
+    const pct = (val - min) / (max - min);
+    return pct * 300; // 300 degrees range (-150 to +150)
+  }
+
+  function renderKnob(id, arcId, needleId, val, min, max, isLog) {
+    let effectiveVal = val;
+    if (isLog && min > 0) {
+      const logMin = Math.log(min);
+      const logMax = Math.log(max);
+      effectiveVal = Math.log(val);
+      const pct = (effectiveVal - logMin) / (logMax - logMin);
+      const arcLen = pct * 144.5;
+      const arcEl = document.getElementById(arcId);
+      arcEl.setAttribute('stroke-dasharray', arcLen + ' 144.5');
+      const needle = document.getElementById(needleId);
+      const angle = -150 + pct * 300;
+      const rad = angle * Math.PI / 180;
+      const nx = 26 + 15 * Math.sin(rad);
+      const ny = 26 - 15 * Math.cos(rad);
+      needle.setAttribute('x2', nx.toFixed(1));
+      needle.setAttribute('y2', ny.toFixed(1));
+    } else {
+      const pct = (val - min) / (max - min);
+      const arcLen = pct * 144.5;
+      const arcEl = document.getElementById(arcId);
+      arcEl.setAttribute('stroke-dasharray', arcLen + ' 144.5');
+      const needle = document.getElementById(needleId);
+      const angle = -150 + pct * 300;
+      const rad = angle * Math.PI / 180;
+      const nx = 26 + 15 * Math.sin(rad);
+      const ny = 26 - 15 * Math.cos(rad);
+      needle.setAttribute('x2', nx.toFixed(1));
+      needle.setAttribute('y2', ny.toFixed(1));
+    }
+  }
+
+  function setupKnob(elId, dspKey, min, max, onChange, fmt, isLog) {
+    const el = document.getElementById(elId);
+    let val = DSP[dspKey] !== undefined ? DSP[dspKey] : parseFloat(el.dataset.val);
+    el.dataset.val = val;
+
+    const arcId = elId.replace('Knob', 'Arc');
+    const needleId = elId.replace('Knob', 'Needle');
+
+    function update(val) {
+      val = Math.max(min, Math.min(max, val));
+      el.dataset.val = val;
+      DSP[dspKey] = val;
+      renderKnob(elId, arcId, needleId, val, min, max, isLog);
+      if (onChange) onChange(val);
+    }
+
+    update(val);
+
+    let dragging = false, startY = 0, startVal = 0;
+    el.addEventListener('mousedown', (e) => {
+      dragging = true; startY = e.clientY; startVal = parseFloat(el.dataset.val);
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dy = startY - e.clientY;
+      const range = max - min;
+      let newVal;
+      if (isLog && min > 0) {
+        const logMin = Math.log(min), logMax = Math.log(max);
+        const logStart = Math.log(startVal);
+        const logRange = logMax - logMin;
+        const logNew = logStart + (dy / 120) * logRange;
+        newVal = Math.exp(Math.max(logMin, Math.min(logMax, logNew)));
+      } else {
+        newVal = startVal + (dy / 120) * range;
+      }
+      update(newVal);
+    });
+    document.addEventListener('mouseup', () => { dragging = false; });
+
+    el.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const range = max - min;
+      const step = range / 100;
+      let newVal = parseFloat(el.dataset.val) + (e.deltaY < 0 ? step : -step);
+      update(newVal);
+    });
+
+    el.addEventListener('dblclick', () => {
+      // Reset to default
+      const def = parseFloat(el.dataset.default || ((min + max) / 2));
+      update(def);
+    });
+  }
+
+  // ===== DSP Parameter Updates =====
+  function updateGain(v) {
+    DSP.gain = v;
+    if (inputGainNode) inputGainNode.gain.setTargetAtTime(dBToGain(v), audioCtx.currentTime, 0.005);
+    document.getElementById('gainVal').textContent = v.toFixed(1) + ' dB';
+    document.getElementById('inputGain').textContent = v.toFixed(1) + ' dB';
+  }
+
+  function updateHPF(v) {
+    DSP.hpfFreq = v;
+    if (hpfNode) hpfNode.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    document.getElementById('hpfVal').textContent = v >= 1000 ? (v/1000).toFixed(1) + ' kHz' : Math.round(v) + ' Hz';
+  }
+
+  function updateLPF(v) {
+    DSP.lpfFreq = v;
+    if (lpfNode) lpfNode.frequency.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    document.getElementById('lpfVal').textContent = v >= 1000 ? (v/1000).toFixed(1) + ' kHz' : Math.round(v) + ' Hz';
+  }
+
+  function updateEQ(band, v) {
+    DSP[band] = v;
+    const node = band === 'eqLow' ? eqLowNode : band === 'eqMid' ? eqMidNode : eqHighNode;
+    if (node) node.gain.setTargetAtTime(v, audioCtx.currentTime, 0.01);
+    const valEl = document.getElementById(band + 'Val');
+    if (valEl) valEl.textContent = v.toFixed(1) + ' dB';
+  }
+
+  function updateComp(param, v) {
+    DSP['comp' + param] = v;
+    if (!compNode) return;
+    const t = audioCtx.currentTime;
+    if (param === 'Thresh') compNode.threshold.setTargetAtTime(v, t, 0.01);
+    if (param === 'Ratio') compNode.ratio.setTargetAtTime(v, t, 0.01);
+    if (param === 'Attack') compNode.attack.setTargetAtTime(v, t, 0.001);
+    if (param === 'Release') compNode.release.setTargetAtTime(v, t, 0.01);
+    if (param === 'Makeup') {
+      DSP.compMakeup = v;
+      if (compMakeupNode) compMakeupNode.gain.setTargetAtTime(dBToGain(v), t, 0.01);
+      document.getElementById('compMakeupVal').textContent = v.toFixed(1) + ' dB';
+    }
+    const valEl = document.getElementById('comp' + param + 'Val');
+    if (param === 'Thresh') valEl.textContent = v.toFixed(0) + ' dB';
+    if (param === 'Ratio') valEl.textContent = v.toFixed(1) + ':1';
+    if (param === 'Attack') valEl.textContent = Math.round(v * 1000) + 'ms';
+    if (param === 'Release') valEl.textContent = Math.round(v * 1000) + 'ms';
+  }
+
+  function updateSat(param, v) {
+    DSP['sat' + param] = v;
+    if (param === 'Drive') {
+      if (satNode) satNode.curve = makeSatCurve(v / 100);
+      document.getElementById('satDriveVal').textContent = Math.round(v) + '%';
+    }
+    if (param === 'Mix') {
+      document.getElementById('satMixVal').textContent = Math.round(v) + '%';
+    }
+  }
+
+  function updateWet(v) {
+    DSP.wet = v;
+    if (!compareMode && wetGain && dryPostGain) {
+      wetGain.gain.setTargetAtTime(v / 100, audioCtx.currentTime, 0.01);
+      dryPostGain.gain.setTargetAtTime(1 - v / 100, audioCtx.currentTime, 0.01);
+    }
+    document.getElementById('wetVal').textContent = Math.round(v) + '%';
+  }
+
+  // ===== Initialize Knobs =====
+  setupKnob('gainKnob', 'gain', -24, 12, updateGain, v => v.toFixed(1) + ' dB', false);
+  setupKnob('hpfKnob', 'hpfFreq', 20, 2000, updateHPF, v => v + ' Hz', true);
+  setupKnob('lpfKnob', 'lpfFreq', 200, 20000, updateLPF, v => v + ' Hz', true);
+  setupKnob('eqLowKnob', 'eqLow', -12, 12, v => updateEQ('eqLow', v), null, false);
+  setupKnob('eqMidKnob', 'eqMid', -12, 12, v => updateEQ('eqMid', v), null, false);
+  setupKnob('eqHighKnob', 'eqHigh', -12, 12, v => updateEQ('eqHigh', v), null, false);
+  setupKnob('compThreshKnob', 'compThresh', -60, 0, v => updateComp('Thresh', v), null, false);
+  setupKnob('compRatioKnob', 'compRatio', 1, 20, v => updateComp('Ratio', v), null, false);
+  setupKnob('compAttackKnob', 'compAttack', 0.001, 0.2, v => updateComp('Attack', v), null, true);
+  setupKnob('compReleaseKnob', 'compRelease', 0.05, 1, v => updateComp('Release', v), null, true);
+  setupKnob('compMakeupKnob', 'compMakeup', 0, 24, v => updateComp('Makeup', v), null, false);
+  setupKnob('satDriveKnob', 'satDrive', 0, 100, v => updateSat('Drive', v), null, false);
+  setupKnob('satMixKnob', 'satMix', 0, 100, v => updateSat('Mix', v), null, false);
+  setupKnob('wetKnob', 'wet', 0, 100, updateWet, null, false);
+
+  // ===== Meter =====
+  const meterCanvas = document.getElementById('meterCanvas');
+  const mCtx = meterCanvas.getContext('2d');
+  const meterData = new Uint8Array(128);
+
+  function drawMeter() {
+    if (!analyserNode) { requestAnimationFrame(drawMeter); return; }
+    analyserNode.getByteTimeDomainData(meterData);
+
+    // RMS level
+    let sum = 0;
+    for (let i = 0; i < meterData.length; i++) {
+      const val = (meterData[i] - 128) / 128;
+      sum += val * val;
+    }
+    const rms = Math.sqrt(sum / meterData.length);
+    const db = 20 * Math.log10(Math.max(rms, 0.0001));
+    const pct = Math.max(0, Math.min(1, (db + 60) / 60));
+
+    const w = meterCanvas.width;
+    const h = meterCanvas.height;
+    mCtx.clearRect(0, 0, w, h);
+
+    // Background
+    mCtx.fillStyle = '#161618';
+    mCtx.fillRect(0, 0, w, h);
+
+    // Gradient: green -> amber -> red
+    const grad = mCtx.createLinearGradient(0, h, 0, 0);
+    grad.addColorStop(0, '#50e880');
+    grad.addColorStop(0.6, '#e8a832');
+    grad.addColorStop(0.85, '#e85050');
+    grad.addColorStop(1, '#ff3030');
+
+    const barH = pct * h;
+    mCtx.fillStyle = grad;
+    mCtx.fillRect(0, h - barH, w, barH);
+
+    // Peak marker line
+    if (pct > 0.02) {
+      mCtx.fillStyle = pct > 0.85 ? '#ff3030' : '#ffffff';
+      mCtx.fillRect(0, h - barH, w, 2);
+    }
+
+    // dB markings
+    mCtx.fillStyle = '#5a5a66';
+    mCtx.font = '7px Space Mono, monospace';
+    mCtx.textAlign = 'right';
+    const marks = [0, -6, -12, -18, -24, -36, -48, -60];
+    for (const dbm of marks) {
+      const py = h - ((dbm + 60) / 60) * h;
+      mCtx.fillText(dbm + '', w - 2, py + 3);
+    }
+
+    requestAnimationFrame(drawMeter);
+  }
+  drawMeter();
+
+  // ===== Compare Button =====
+  compareBtn.addEventListener('click', toggleCompare);
+
+  // ===== Touch support =====
+  document.addEventListener('touchmove', (e) => {
+    if (e.target.closest('.knob-wrap')) {
+      // Let knob handle it
+    }
+  }, { passive: true });
+
+})();
+</script>
+</body>
+</html>
