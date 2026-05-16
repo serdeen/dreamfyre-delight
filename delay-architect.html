@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delay Architect</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #090910;
+    --surface: #101018;
+    --surface2: #181828;
+    --surface3: #202038;
+    --border: #222240;
+    --text: #c0c0d0;
+    --muted: #4a4a68;
+    --amber: #e8a832;
+    --amber-dim: #7a5418;
+    --cyan: #00d4c8;
+    --pink: #e840a0;
+    --green: #50e880;
+    --red: #e85050;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+    user-select: none;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 3px;
+    color: var(--amber); text-transform: uppercase; flex-shrink: 0;
+  }
+  .logo em { color: var(--muted); font-style: normal; }
+
+  /* BPM */
+  .bpm-control {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 5px 10px;
+  }
+  .bpm-value {
+    font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700;
+    color: var(--amber); min-width: 52px; text-align: center;
+  }
+  .bpm-label { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); line-height: 1.3; }
+  .bpm-btns { display: flex; flex-direction: column; gap: 2px; }
+  .bpm-btn {
+    width: 20px; height: 14px; background: var(--border); border: none;
+    border-radius: 3px; color: var(--text); cursor: pointer;
+    font-size: 9px; display: flex; align-items: center; justify-content: center;
+    transition: background 0.1s;
+  }
+  .bpm-btn:hover { background: var(--amber); color: #000; }
+  .tap-btn {
+    background: var(--surface2); border: 1px solid var(--amber-dim); color: var(--amber);
+    padding: 5px 10px; border-radius: 6px; font-family: 'Space Mono', monospace;
+    font-size: 10px; cursor: pointer; letter-spacing: 1px; transition: all 0.1s;
+  }
+  .tap-btn:hover { background: var(--amber-dim); }
+  .tap-btn:active { background: var(--amber); color: #000; transform: scale(0.95); }
+
+  /* Transport */
+  .transport { display: flex; align-items: center; gap: 6px; }
+  .transport-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1.5px solid var(--border); background: var(--surface2);
+    color: var(--text); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .transport-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+  .transport-btn.active { background: var(--cyan); border-color: var(--cyan); color: #000; }
+  .transport-btn:active { transform: scale(0.92); }
+  .transport-btn svg { width: 14px; height: 14px; }
+
+  .main { flex: 1; padding: 14px 20px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+
+  /* BPM display strip */
+  .bpm-strip {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px; text-align: center;
+  }
+  .bpm-big {
+    font-family: 'Space Mono', monospace; font-size: 56px; font-weight: 700;
+    color: var(--amber); letter-spacing: -2px;
+    line-height: 1;
+  }
+  .bpm-big-label {
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted);
+    margin-top: 4px;
+  }
+  .bpm-ms-info {
+    font-family: 'Space Mono', monospace; font-size: 11px; color: var(--muted);
+    margin-top: 6px;
+  }
+  .bpm-ms-info span { color: var(--cyan); }
+
+  /* Subdivision grid */
+  .subd-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px;
+  }
+  .subd-title {
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .subd-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 6px;
+  }
+  .subd-cell {
+    background: var(--surface2); border: 1.5px solid var(--border);
+    border-radius: 6px; padding: 8px 6px; cursor: pointer;
+    transition: all 0.1s; text-align: center;
+  }
+  .subd-cell:hover { border-color: var(--cyan); }
+  .subd-cell.selected { background: var(--cyan); border-color: var(--cyan); }
+  .subd-cell.selected .subd-name { color: #000; }
+  .subd-cell.selected .subd-time { color: #000; }
+  .subd-name {
+    font-size: 10px; font-weight: 600; color: var(--text); letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+  .subd-time {
+    font-family: 'Space Mono', monospace; font-size: 14px; font-weight: 700; color: var(--amber);
+  }
+
+  /* Reverb pre-delay */
+  .predelay-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px;
+  }
+  .predelay-title {
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .predelay-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .predelay-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; cursor: pointer;
+    transition: all 0.1s; text-align: center;
+  }
+  .predelay-card:hover { border-color: var(--pink); }
+  .predelay-card.selected { border-color: var(--pink); background: rgba(232,64,160,0.1); }
+  .predelay-card.selected .predelay-ms { color: var(--pink); }
+  .predelay-name {
+    font-size: 10px; font-weight: 600; color: var(--text); letter-spacing: 0.5px;
+    margin-bottom: 4px;
+  }
+  .predelay-desc {
+    font-size: 8px; color: var(--muted); margin-bottom: 6px; line-height: 1.4;
+  }
+  .predelay-ms {
+    font-family: 'Space Mono', monospace; font-size: 13px; font-weight: 700; color: var(--amber);
+  }
+
+  /* Echo tester */
+  .echo-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px;
+  }
+  .echo-title {
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .echo-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .echo-btn {
+    background: var(--surface2); border: 1.5px solid var(--cyan);
+    color: var(--cyan); padding: 8px 16px; border-radius: 8px;
+    font-family: 'Space Mono', monospace; font-size: 11px; cursor: pointer;
+    letter-spacing: 1px; transition: all 0.1s; flex-shrink: 0;
+  }
+  .echo-btn:hover { background: var(--cyan); color: #000; }
+  .echo-btn:active { transform: scale(0.95); }
+  .echo-info {
+    font-family: 'Space Mono', monospace; font-size: 10px; color: var(--muted);
+    flex: 1;
+  }
+  .echo-info span { color: var(--amber); font-weight: 700; }
+  .echo-bars {
+    display: flex; align-items: flex-end; gap: 3px; height: 28px;
+  }
+  .echo-bar {
+    width: 4px; background: var(--cyan); border-radius: 2px;
+    transition: height 0.1s, opacity 0.1s;
+  }
+  .echo-bars.idle .echo-bar { opacity: 0.2; }
+
+  /* Copy button */
+  .copy-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .copy-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 7px 14px; border-radius: 6px;
+    font-size: 11px; cursor: pointer; transition: all 0.1s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .copy-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .copy-btn.copied { border-color: var(--green); color: var(--green); }
+
+  /* Hint bar */
+  .hint-bar {
+    padding: 6px 20px; border-top: 1px solid var(--border);
+    background: var(--surface); font-size: 10px; color: var(--muted);
+    font-family: 'Space Mono', monospace; letter-spacing: 0.5px; flex-shrink: 0;
+  }
+  .hint-bar kbd {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 3px; padding: 1px 5px; font-size: 9px; color: var(--text);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Delay<em>Architect</em></div>
+
+  <div class="bpm-control">
+    <div>
+      <div class="bpm-value" id="bpmDisplay">122</div>
+      <div class="bpm-label">BPM</div>
+    </div>
+    <div class="bpm-btns">
+      <button class="bpm-btn" id="bpmUp">▲</button>
+      <button class="bpm-btn" id="bpmDown">▼</button>
+    </div>
+  </div>
+  <button class="tap-btn" id="tapBtn">TAP</button>
+
+  <div class="transport">
+    <button class="transport-btn" id="testBtn" title="Test echo (E)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="main">
+  <!-- BPM strip -->
+  <div class="bpm-strip">
+    <div class="bpm-big" id="bpmBig">122.0</div>
+    <div class="bpm-big-label">Beats Per Minute</div>
+    <div class="bpm-ms-info">Quarter note: <span id="quarterMs">491.8</span> ms &nbsp;·&nbsp; Half note: <span id="halfMs">983.6</span> ms</div>
+  </div>
+
+  <!-- Subdivision grid -->
+  <div class="subd-section">
+    <div class="subd-title">Delay Subdivisions</div>
+    <div class="subd-grid" id="subdGrid"></div>
+    <div class="copy-row" style="margin-top:10px;">
+      <button class="copy-btn" id="copyMsBtn">Copy ms</button>
+      <button class="copy-btn" id="copyHzBtn">Copy Hz</button>
+    </div>
+  </div>
+
+  <!-- Reverb pre-delay -->
+  <div class="predelay-section">
+    <div class="predelay-title">Reverb Pre-Delay (BPM-locked)</div>
+    <div class="predelay-grid" id="predelayGrid"></div>
+  </div>
+
+  <!-- Echo tester -->
+  <div class="echo-section">
+    <div class="echo-title">Echo Tester</div>
+    <div class="echo-row">
+      <button class="echo-btn" id="echoBtn">▶ Play + Echo</button>
+      <div class="echo-info">delay: <span id="echoMs">245.9</span> ms &nbsp;·&nbsp; freq: <span id="echoHz">4.07</span> Hz</div>
+      <div class="echo-bars idle" id="echoBars">
+        <div class="echo-bar" style="height:8px;"></div>
+        <div class="echo-bar" style="height:14px;"></div>
+        <div class="echo-bar" style="height:20px;"></div>
+        <div class="echo-bar" style="height:28px;"></div>
+        <div class="echo-bar" style="height:20px;"></div>
+        <div class="echo-bar" style="height:14px;"></div>
+        <div class="echo-bar" style="height:8px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hint-bar">
+  <kbd>T</kbd> tap tempo &nbsp;·&nbsp; <kbd>E</kbd> test echo &nbsp;·&nbsp; <kbd>↑↓</kbd> BPM fine &nbsp;·&nbsp; click subdivision to select &nbsp;·&nbsp; swipe cells to multi-select
+</div>
+
+<script>
+(function() {
+  let bpm = 122;
+  let selectedSubds = new Set();
+  let selectedPredelay = 1; // index
+
+  // Subdivision definitions
+  const subdivisions = [
+    { name: '¼', mult: 1, label: 'Quarter' },
+    { name: '⅛', mult: 0.5, label: '8th' },
+    { name: '1/16', mult: 0.25, label: '16th' },
+    { name: '¼ D', mult: 1.5, label: 'Dotted ¼' },
+    { name: '⅛ D', mult: 0.75, label: 'Dotted 8th' },
+    { name: '1/16 D', mult: 0.375, label: 'Dotted 16th' },
+    { name: '¼ T', mult: 2/3, label: 'Triplet ¼' },
+    { name: '⅛ T', mult: 1/3, label: 'Triplet 8th' },
+    { name: '1/16 T', mult: 1/6, label: 'Triplet 16th' },
+    { name: '½', mult: 2, label: 'Half' },
+    { name: '1 bar', mult: 4, label: 'Full bar' },
+    { name: '1½ bar', mult: 6, label: 'Bar + ½' },
+    { name: '2 bar', mult: 8, label: '2 bars' },
+    { name: '♩+', mult: 1.125, label: 'Dotted 8th +' },
+    { name: '¼ triplet gap', mult: 1/3, label: 'Quarter triplet' },
+    { name: '1/8 +', mult: 0.625, label: '8th +' },
+  ];
+
+  const predelays = [
+    { name: 'Tight', desc: 'Short tail, clear attack. Vocals, snare', msBase: 10, factor: 0.0 },
+    { name: 'Medium', desc: 'Moderate pre-delay. Piano, melodic', msBase: 30, factor: 0.5 },
+    { name: 'Spacious', desc: 'Long pre-delay. Wide, atmospheric', msBase: 60, factor: 1.0 },
+    { name: 'Washed', desc: 'Very long. Ethereal, washed out', msBase: 120, factor: 1.5 },
+  ];
+
+  // ===== Computed values =====
+  function quarterMs() { return 60000 / bpm; }
+  function subdMs(subd) { return quarterMs() * subd.mult; }
+  function subdHz(subd) { return 1000 / subdMs(subd); }
+
+  // ===== UI Rendering =====
+  function renderSubdGrid() {
+    const grid = document.getElementById('subdGrid');
+    grid.innerHTML = '';
+    subdivisions.forEach((subd, idx) => {
+      const ms = subdMs(subd);
+      const cell = document.createElement('div');
+      cell.className = 'subd-cell' + (selectedSubds.has(idx) ? ' selected' : '');
+      cell.dataset.idx = idx;
+      cell.innerHTML = `<div class="subd-name">${subd.name}</div><div class="subd-time">${ms.toFixed(1)}</div>`;
+      cell.addEventListener('click', () => {
+        if (selectedSubds.has(idx)) selectedSubds.delete(idx);
+        else selectedSubds.add(idx);
+        renderSubdGrid();
+        updateEchoInfo();
+      });
+      grid.appendChild(cell);
+    });
+
+    // Swipe support
+    let swipeStart = null;
+    grid.addEventListener('mousedown', e => {
+      const cell = e.target.closest('.subd-cell');
+      if (!cell) return;
+      swipeStart = parseInt(cell.dataset.idx);
+      selectedSubds.clear();
+      selectedSubds.add(swipeStart);
+      renderSubdGrid();
+    });
+    grid.addEventListener('mousemove', e => {
+      if (swipeStart === null) return;
+      const cell = e.target.closest('.subd-cell');
+      if (!cell) return;
+      const idx = parseInt(cell.dataset.idx);
+      const start = Math.min(swipeStart, idx);
+      const end = Math.max(swipeStart, idx);
+      selectedSubds.clear();
+      for (let i = start; i <= end; i++) selectedSubds.add(i);
+      renderSubdGrid();
+    });
+    grid.addEventListener('mouseup', () => { swipeStart = null; updateEchoInfo(); });
+  }
+
+  function renderPredelayGrid() {
+    const grid = document.getElementById('predelayGrid');
+    grid.innerHTML = '';
+    const qMs = quarterMs();
+    predelays.forEach((pd, idx) => {
+      const ms = pd.factor > 0 ? pd.msBase + pd.factor * qMs * 0.1 : pd.msBase;
+      const cell = document.createElement('div');
+      cell.className = 'predelay-card' + (selectedPredelay === idx ? ' selected' : '');
+      cell.innerHTML = `<div class="predelay-name">${pd.name}</div><div class="predelay-desc">${pd.desc}</div><div class="predelay-ms">${Math.round(ms)} ms</div>`;
+      cell.addEventListener('click', () => {
+        selectedPredelay = idx;
+        renderPredelayGrid();
+      });
+      grid.appendChild(cell);
+    });
+  }
+
+  function updateBpmDisplay() {
+    const qMs = quarterMs();
+    document.getElementById('bpmDisplay').textContent = Math.round(bpm * 10) / 10;
+    document.getElementById('bpmBig').textContent = Math.round(bpm * 10) / 10;
+    document.getElementById('quarterMs').textContent = qMs.toFixed(1);
+    document.getElementById('halfMs').textContent = (qMs * 2).toFixed(1);
+    renderSubdGrid();
+    updateEchoInfo();
+  }
+
+  function updateEchoInfo() {
+    if (selectedSubds.size === 0) {
+      document.getElementById('echoMs').textContent = '—';
+      document.getElementById('echoHz').textContent = '—';
+      return;
+    }
+    // Use first selected subd for echo info
+    const idx = [...selectedSubds][0];
+    const ms = subdMs(subdivisions[idx]);
+    const hz = 1000 / ms;
+    document.getElementById('echoMs').textContent = ms.toFixed(1);
+    document.getElementById('echoHz').textContent = hz.toFixed(2);
+  }
+
+  // ===== BPM controls =====
+  document.getElementById('bpmUp').addEventListener('click', () => { bpm = Math.min(300, bpm + 1); updateBpmDisplay(); });
+  document.getElementById('bpmDown').addEventListener('click', () => { bpm = Math.max(20, bpm - 1); updateBpmDisplay(); });
+
+  // Tap tempo
+  let tapTimes = [];
+  document.getElementById('tapBtn').addEventListener('click', () => {
+    const now = performance.now();
+    tapTimes.push(now);
+    if (tapTimes.length > 4) tapTimes.shift();
+    if (tapTimes.length >= 2) {
+      const intervals = tapTimes.slice(1).map((t, i) => t - tapTimes[i]);
+      const avg = intervals.reduce((a,b) => a+b) / intervals.length;
+      bpm = Math.max(20, Math.min(300, Math.round(60000 / avg)));
+      updateBpmDisplay();
+    }
+    setTimeout(() => { if (tapTimes.length && (performance.now() - tapTimes[tapTimes.length-1]) > 2000) tapTimes = []; }, 2100);
+  });
+
+  // Arrow key BPM
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'ArrowUp') { e.preventDefault(); bpm = Math.min(300, bpm + 1); updateBpmDisplay(); }
+    if (e.code === 'ArrowDown') { e.preventDefault(); bpm = Math.max(20, bpm - 1); updateBpmDisplay(); }
+    if (e.code === 'KeyT') document.getElementById('tapBtn').click();
+    if (e.code === 'KeyE') playEcho();
+  });
+
+  // ===== Audio Echo Tester =====
+  let audioCtx = null;
+  let currentEchoMs = 0;
+
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+
+  function playEcho() {
+    initAudio();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (selectedSubds.size === 0) return;
+    const idx = [...selectedSubds][0];
+    const ms = subdMs(subdivisions[idx]);
+    currentEchoMs = ms;
+
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    const echoGain = audioCtx.createGain();
+
+    // Click
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    g.gain.setValueAtTime(0.4, now);
+    g.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+    // Echo delay
+    const delay = audioCtx.createDelay(2.0);
+    delay.delayTime.value = ms / 1000;
+    echoGain.gain.setValueAtTime(0, now);
+    echoGain.gain.linearRampToValueAtTime(0.25, now + ms / 1000);
+    echoGain.gain.exponentialRampToValueAtTime(0.001, now + ms / 1000 + 0.04);
+
+    osc.connect(g);
+    osc.connect(delay);
+    delay.connect(echoGain);
+    g.connect(audioCtx.destination);
+    echoGain.connect(audioCtx.destination);
+
+    osc.start(now);
+    osc.stop(now + ms / 1000 + 0.06);
+
+    // Animate bars
+    const bars = document.querySelectorAll('.echo-bar');
+    const heights = [8, 14, 20, 28, 20, 14, 8];
+    bars.forEach((b, i) => { b.style.opacity = '0.2'; b.style.height = heights[i] + 'px'; });
+    const echoBars = document.getElementById('echoBars');
+    echoBars.classList.remove('idle');
+
+    // Animate the echo visual
+    function animateBars(time) {
+      const elapsed = (audioCtx.currentTime - now) * 1000;
+      const phase = elapsed / ms;
+      bars.forEach((b, i) => {
+        const h = heights[i];
+        const proximity = Math.exp(-Math.pow((phase - i * 0.3) * 0.5, 2));
+        b.style.height = Math.max(2, h * proximity) + 'px';
+        b.style.opacity = Math.max(0.1, proximity);
+        b.style.background = phase > 1 ? 'var(--amber)' : 'var(--cyan)';
+      });
+      if (elapsed < ms * 4) requestAnimationFrame(animateBars);
+      else {
+        echoBars.classList.add('idle');
+        bars.forEach((b, i) => {
+          b.style.height = heights[i] + 'px';
+          b.style.opacity = '0.2';
+          b.style.background = 'var(--cyan)';
+        });
+      }
+    }
+    requestAnimationFrame(animateBars);
+  }
+
+  document.getElementById('echoBtn').addEventListener('click', playEcho);
+  document.getElementById('testBtn').addEventListener('click', playEcho);
+
+  // ===== Copy buttons =====
+  document.getElementById('copyMsBtn').addEventListener('click', () => {
+    const texts = [...selectedSubds].map(idx => {
+      const s = subdivisions[idx];
+      return `${s.name}: ${subdMs(s).toFixed(1)}ms`;
+    }).join('\n');
+    navigator.clipboard.writeText(texts).then(() => {
+      const btn = document.getElementById('copyMsBtn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy ms'; btn.classList.remove('copied'); }, 1500);
+    });
+  });
+
+  document.getElementById('copyHzBtn').addEventListener('click', () => {
+    const texts = [...selectedSubds].map(idx => {
+      const s = subdivisions[idx];
+      return `${s.name}: ${subdHz(s).toFixed(3)}Hz`;
+    }).join('\n');
+    navigator.clipboard.writeText(texts).then(() => {
+      const btn = document.getElementById('copyHzBtn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'Copy Hz'; btn.classList.remove('copied'); }, 1500);
+    });
+  });
+
+  // ===== Init =====
+  renderSubdGrid();
+  renderPredelayGrid();
+  updateBpmDisplay();
+})();
+</script>
+</body>
+</html>
