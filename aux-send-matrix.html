@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aux Send Matrix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080810;
+    --surface: #0e0e1a;
+    --surface2: #161628;
+    --surface3: #1e1e38;
+    --border: #222240;
+    --text: #c0c0d0;
+    --muted: #4a4a68;
+    --amber: #e8a832;
+    --cyan: #00d4c8;
+    --pink: #e840a0;
+    --green: #50e880;
+    --red: #e85050;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+  }
+  header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 20px; border-bottom: 1px solid var(--border);
+    background: var(--surface); flex-shrink: 0; flex-wrap: wrap;
+  }
+  .logo {
+    font-family: 'Space Mono', monospace; font-size: 11px; font-weight: 700;
+    letter-spacing: 3px; color: var(--amber); text-transform: uppercase; flex-shrink: 0;
+  }
+  .logo em { color: var(--muted); font-style: normal; }
+
+  /* Waveform */
+  .waveform-strip {
+    flex-shrink: 0; padding: 8px 20px;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+  }
+  #waveformCanvas {
+    width: 100%; height: 56px; display: block; border-radius: 4px;
+    background: var(--bg); cursor: pointer;
+  }
+
+  /* Transport */
+  .transport { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .transport-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    border: 1.5px solid var(--border); background: var(--surface2);
+    color: var(--text); display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .transport-btn:hover { border-color: var(--amber); color: var(--amber); }
+  .transport-btn.active { background: var(--amber); border-color: var(--amber); color: #000; }
+  .transport-btn:active { transform: scale(0.92); }
+  .transport-btn svg { width: 13px; height: 13px; }
+
+  .loop-btn.active { border-color: var(--cyan); color: var(--cyan); }
+  .load-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 5px 12px; border-radius: 6px;
+    font-size: 11px; cursor: pointer; transition: all 0.1s;
+  }
+  .load-btn:hover { border-color: var(--amber); }
+  #fileInput { display: none; }
+  .sample-name {
+    font-size: 10px; color: var(--muted); font-family: 'Space Mono', monospace;
+    max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* Main */
+  .main { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding: 12px 20px; gap: 12px; }
+
+  /* Bus grid */
+  .bus-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .bus-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .bus-header {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .bus-name {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    font-weight: 700;
+  }
+  .bus-toggle {
+    width: 32px; height: 18px; border-radius: 9px;
+    background: var(--border); border: none; cursor: pointer;
+    position: relative; transition: background 0.2s;
+  }
+  .bus-toggle.on { background: var(--cyan); }
+  .bus-toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #fff; transition: left 0.2s;
+  }
+  .bus-toggle.on::after { left: 16px; }
+
+  /* Send knob */
+  .send-row { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .send-label { font-size: 8px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .knob-sm {
+    width: 44px; height: 44px; position: relative; cursor: grab;
+  }
+  .knob-sm:active { cursor: grabbing; }
+  .knob-sm svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+  .send-value { font-family: 'Space Mono', monospace; font-size: 9px; color: var(--amber); }
+
+  /* Effect params */
+  .params-row {
+    display: flex; gap: 6px; justify-content: center; flex-wrap: wrap;
+  }
+  .param { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .param-label { font-size: 8px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .param-slider {
+    -webkit-appearance: none; width: 56px; height: 4px;
+    background: var(--border); border-radius: 2px; outline: none;
+  }
+  .param-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--cyan); cursor: pointer;
+  }
+  .param-value { font-family: 'Space Mono', monospace; font-size: 8px; color: var(--cyan); }
+
+  /* Color variants per bus */
+  .bus-card[data-color="cyan"] .bus-name { color: var(--cyan); }
+  .bus-card[data-color="cyan"] .param-slider::-webkit-slider-thumb { background: var(--cyan); }
+  .bus-card[data-color="cyan"] .param-value { color: var(--cyan); }
+  .bus-card[data-color="cyan"] .bus-toggle.on { background: var(--cyan); }
+  .bus-card[data-color="cyan"] .send-value { color: var(--cyan); }
+
+  .bus-card[data-color="amber"] .bus-name { color: var(--amber); }
+  .bus-card[data-color="amber"] .param-slider::-webkit-slider-thumb { background: var(--amber); }
+  .bus-card[data-color="amber"] .param-value { color: var(--amber); }
+  .bus-card[data-color="amber"] .bus-toggle.on { background: var(--amber); }
+  .bus-card[data-color="amber"] .send-value { color: var(--amber); }
+
+  .bus-card[data-color="pink"] .bus-name { color: var(--pink); }
+  .bus-card[data-color="pink"] .param-slider::-webkit-slider-thumb { background: var(--pink); }
+  .bus-card[data-color="pink"] .param-value { color: var(--pink); }
+  .bus-card[data-color="pink"] .bus-toggle.on { background: var(--pink); }
+  .bus-card[data-color="pink"] .send-value { color: var(--pink); }
+
+  .bus-card[data-color="green"] .bus-name { color: var(--green); }
+  .bus-card[data-color="green"] .param-slider::-webkit-slider-thumb { background: var(--green); }
+  .bus-card[data-color="green"] .param-value { color: var(--green); }
+  .bus-card[data-color="green"] .bus-toggle.on { background: var(--green); }
+  .bus-card[data-color="green"] .send-value { color: var(--green); }
+
+  /* Master section */
+  .master-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 12px 14px;
+  }
+  .master-title {
+    font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .master-row { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .master-param { display: flex; align-items: center; gap: 8px; }
+  .master-label { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .master-slider {
+    -webkit-appearance: none; width: 120px; height: 4px;
+    background: var(--border); border-radius: 2px; outline: none;
+  }
+  .master-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--amber); cursor: pointer;
+  }
+  .master-value { font-family: 'Space Mono', monospace; font-size: 10px; color: var(--amber); min-width: 36px; }
+
+  /* Hint */
+  .hint-bar {
+    padding: 6px 20px; border-top: 1px solid var(--border);
+    background: var(--surface); font-size: 10px; color: var(--muted);
+    font-family: 'Space Mono', monospace; letter-spacing: 0.5px; flex-shrink: 0;
+  }
+  .hint-bar kbd {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 3px;
+    padding: 1px 5px; font-size: 9px; color: var(--text);
+  }
+
+  /* Drag overlay */
+  .drag-overlay {
+    position: fixed; inset: 0; background: rgba(232,168,50,0.06);
+    border: 3px dashed var(--amber); display: none;
+    align-items: center; justify-content: center; z-index: 100; pointer-events: none;
+  }
+  .drag-overlay.visible { display: flex; }
+  .drag-overlay-text {
+    font-family: 'Space Mono', monospace; font-size: 14px; color: var(--amber);
+    letter-spacing: 3px; text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Aux<em>Send</em></div>
+  <button class="load-btn" id="loadBtn">Load Audio</button>
+  <input type="file" id="fileInput" accept="audio/*">
+  <span class="sample-name" id="sampleName">no audio loaded</span>
+  <div class="transport">
+    <button class="transport-btn" id="playBtn" title="Play/Pause (Space)">
+      <svg viewBox="0 0 24 24" fill="currentColor" id="playIcon"><polygon points="5,3 19,12 5,21"/></svg>
+    </button>
+    <button class="transport-btn loop-btn" id="loopBtn" title="Loop (L)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="17 1 21 5 17 9"></polyline>
+        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+        <polyline points="7 23 3 19 7 15"></polyline>
+        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<div class="waveform-strip">
+  <canvas id="waveformCanvas"></canvas>
+</div>
+
+<div class="drag-overlay" id="dragOverlay">
+  <div class="drag-overlay-text">Drop Audio</div>
+</div>
+
+<div class="main">
+  <div class="bus-grid" id="busGrid"></div>
+
+  <div class="master-section">
+    <div class="master-title">Master Output</div>
+    <div class="master-row">
+      <div class="master-param">
+        <span class="master-label">Dry</span>
+        <input type="range" class="master-slider" id="drySlider" min="0" max="100" value="100">
+        <span class="master-value" id="dryVal">100%</span>
+      </div>
+      <div class="master-param">
+        <span class="master-label">Wet</span>
+        <input type="range" class="master-slider" id="wetSlider" min="0" max="100" value="100">
+        <span class="master-value" id="wetVal">100%</span>
+      </div>
+      <div class="master-param">
+        <span class="master-label">Volume</span>
+        <input type="range" class="master-slider" id="volSlider" min="0" max="100" value="80">
+        <span class="master-value" id="volVal">80%</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="hint-bar">
+  <kbd>Space</kbd> play/pause &nbsp;·&nbsp; <kbd>L</kbd> loop &nbsp;·&nbsp; drag audio file to load &nbsp;·&nbsp; toggle bus on/off &nbsp;·&nbsp; knobs: drag up/down
+</div>
+
+<script>
+(function() {
+  // ===== Bus definitions =====
+  const BUS_DEFS = [
+    { id: 'reverb', name: 'Reverb', color: 'cyan',
+      params: [
+        { key: 'decay', label: 'Decay', min: 0.1, max: 5, val: 1.5, fmt: v => v.toFixed(1) + 's' },
+        { key: 'predelay', label: 'Pre-Dly', min: 0, max: 100, val: 20, fmt: v => Math.round(v) + 'ms' },
+        { key: 'damp', label: 'Damp', min: 0, max: 100, val: 50, fmt: v => Math.round(v) + '%' },
+      ]
+    },
+    { id: 'delay', name: 'Delay', color: 'amber',
+      params: [
+        { key: 'time', label: 'Time', min: 1, max: 1000, val: 245, fmt: v => Math.round(v) + 'ms' },
+        { key: 'fb', label: 'Feedback', min: 0, max: 95, val: 40, fmt: v => Math.round(v) + '%' },
+        { key: 'tone', label: 'Tone', min: 0, max: 100, val: 70, fmt: v => Math.round(v) + '%' },
+      ]
+    },
+    { id: 'sat', name: 'Saturation', color: 'pink',
+      params: [
+        { key: 'drive', label: 'Drive', min: 0, max: 100, val: 30, fmt: v => Math.round(v) + '%' },
+        { key: 'tone', label: 'Tone', min: 0, max: 100, val: 50, fmt: v => Math.round(v) + '%' },
+        { key: 'mix', label: 'Mix', min: 0, max: 100, val: 100, fmt: v => Math.round(v) + '%' },
+      ]
+    },
+    { id: 'filter', name: 'Filter', color: 'green',
+      params: [
+        { key: 'freq', label: 'Freq', min: 20, max: 20000, val: 2000, fmt: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : Math.round(v)+'Hz' },
+        { key: 'res', label: 'Res', min: 0, max: 100, val: 20, fmt: v => Math.round(v) + '%' },
+        { key: 'type', label: 'Type', min: 0, max: 2, val: 0, fmt: v => ['LP','HP','BP'][Math.round(v)] },
+      ]
+    },
+  ];
+
+  // ===== State =====
+  let audioCtx = null, audioBuffer = null, isPlaying = false, loopEnabled = false;
+  let sourceNode = null, startTime = 0, pauseOffset = 0;
+
+  const busState = {};
+  BUS_DEFS.forEach(b => {
+    busState[b.id] = {
+      enabled: true, send: 0.5,
+      params: {}
+    };
+    b.params.forEach(p => { busState[b.id].params[p.key] = p.val; });
+  });
+
+  let masterDry = 1.0, masterWet = 1.0, masterVol = 0.8;
+
+  // ===== Audio graph =====
+  let dryGain = null, wetGain = null, masterNode = null;
+  let reverbSendGain = {}, delaySendGain = {}, satSendGain = {}, filterSendGain = {};
+  let reverbNode = null, delayNode = null, delayFbGain = null, delayToneNode = null;
+  let satNode = null, filterNode = null;
+
+  function initAudio() {
+    if (audioCtx) return;
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    masterNode = audioCtx.createGain();
+    masterNode.gain.value = masterVol;
+    masterNode.connect(audioCtx.destination);
+
+    dryGain = audioCtx.createGain();
+    dryGain.gain.value = masterDry;
+    dryGain.connect(masterNode);
+
+    wetGain = audioCtx.createGain();
+    wetGain.gain.value = masterWet;
+    wetGain.connect(masterNode);
+
+    buildEffectChain();
+  }
+
+  function buildEffectChain() {
+    if (!audioCtx) return;
+
+    // Reverb via convolver
+    reverbNode = audioCtx.createConvolver();
+    reverbNode.buffer = createReverbImpulse(busState.reverb.params.decay, busState.reverb.params.predelay, busState.reverb.params.damp);
+    reverbSendGain = audioCtx.createGain();
+    reverbSendGain.gain.value = busState.reverb.enabled ? busState.reverb.send : 0;
+    reverbSendGain.connect(reverbNode);
+    reverbNode.connect(wetGain);
+
+    // Delay
+    delayNode = audioCtx.createDelay(2.0);
+    delayNode.delayTime.value = busState.delay.params.time / 1000;
+    delayFbGain = audioCtx.createGain();
+    delayFbGain.gain.value = busState.delay.params.feedback / 100;
+    delayToneNode = audioCtx.createBiquadFilter();
+    delayToneNode.type = 'lowpass';
+    delayToneNode.frequency.value = 2000 + busState.delay.params.tone * 18;
+    delaySendGain = audioCtx.createGain();
+    delaySendGain.gain.value = busState.delay.enabled ? busState.delay.send : 0;
+    delayNode.connect(delayToneNode);
+    delayToneNode.connect(delayFbGain);
+    delayFbGain.connect(delayNode);
+    delayNode.connect(delaySendGain);
+    delaySendGain.connect(wetGain);
+
+    // Saturation
+    satNode = audioCtx.createWaveShaper();
+    satNode.curve = makeSatCurve(busState.sat.params.drive / 100);
+    satNode.oversample = '4x';
+    const satTone = audioCtx.createBiquadFilter();
+    satTone.type = 'lowpass';
+    satTone.frequency.value = 1000 + busState.sat.params.tone * 20;
+    satSendGain = audioCtx.createGain();
+    satSendGain.gain.value = busState.sat.enabled ? busState.sat.send : 0;
+    satNode.connect(satTone);
+    satTone.connect(satSendGain);
+    satSendGain.connect(wetGain);
+
+    // Filter
+    filterNode = audioCtx.createBiquadFilter();
+    filterNode.type = ['lowpass','highpass','bandpass'][Math.round(busState.filter.params.type)];
+    filterNode.frequency.value = busState.filter.params.freq;
+    filterNode.Q.value = 1 + busState.filter.params.res / 10;
+    filterSendGain = audioCtx.createGain();
+    filterSendGain.gain.value = busState.filter.enabled ? busState.filter.send : 0;
+    filterNode.connect(filterSendGain);
+    filterSendGain.connect(wetGain);
+  }
+
+  function createReverbImpulse(decay, preDelayMs, damp) {
+    const sr = audioCtx.sampleRate;
+    const len = sr * Math.min(decay, 5);
+    const buf = audioCtx.createBuffer(2, len, sr);
+    const preLen = Math.floor(sr * preDelayMs / 1000);
+    for (let c = 0; c < 2; c++) {
+      const data = buf.getChannelData(c);
+      for (let i = 0; i < len; i++) {
+        const idx = i - preLen;
+        if (idx < 0) { data[i] = 0; continue; }
+        const t = idx / sr;
+        const dampFactor = Math.exp(-t * (1 + damp / 50) * 3);
+        data[i] = (Math.random() * 2 - 1) * dampFactor;
+      }
+    }
+    return buf;
+  }
+
+  function makeSatCurve(drive) {
+    if (drive < 0.01) return null;
+    const n = 44100, curve = new Float32Array(n);
+    const k = drive * 20;
+    for (let i = 0; i < n; i++) {
+      const x = (i * 2) / n - 1;
+      curve[i] = (Math.PI + k) * x / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+  }
+
+  function connectSource(src) {
+    if (!audioCtx) return;
+    src.connect(dryGain);
+    src.connect(reverbSendGain);
+    src.connect(delayNode);
+    src.connect(satNode);
+    src.connect(filterNode);
+  }
+
+  // ===== File loading =====
+  const fileInput = document.getElementById('fileInput');
+  const loadBtn = document.getElementById('loadBtn');
+  const sampleName = document.getElementById('sampleName');
+
+  loadBtn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+  async function loadFile(file) {
+    initAudio();
+    if (audioCtx.state === 'suspended') await audioCtx.resume();
+    audioBuffer = await audioCtx.decodeAudioData(await file.arrayBuffer());
+    sampleName.textContent = file.name;
+    pauseOffset = 0;
+    if (isPlaying) stopPlayback();
+    drawWaveform();
+  }
+
+  document.addEventListener('dragover', e => { e.preventDefault(); document.getElementById('dragOverlay').classList.add('visible'); });
+  document.addEventListener('dragleave', e => { if (!e.relatedTarget) document.getElementById('dragOverlay').classList.remove('visible'); });
+  document.addEventListener('drop', e => {
+    e.preventDefault();
+    document.getElementById('dragOverlay').classList.remove('visible');
+    if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+  });
+
+  // ===== Playback =====
+  function playAudio() {
+    if (!audioBuffer) return;
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    stopPlayback();
+    buildEffectChain();
+    const src = audioCtx.createBufferSource();
+    src.buffer = audioBuffer;
+    src.loop = loopEnabled;
+    connectSource(src);
+    src.start(0, pauseOffset);
+    src.onended = () => { if (!loopEnabled && isPlaying) { isPlaying = false; pauseOffset = 0; updatePlayIcon(); } };
+    sourceNode = src;
+    startTime = audioCtx.currentTime - pauseOffset;
+    isPlaying = true;
+    updatePlayIcon();
+  }
+
+  function stopPlayback() {
+    if (sourceNode) { try { sourceNode.onended = null; sourceNode.stop(); } catch(e) {} sourceNode.disconnect(); sourceNode = null; }
+  }
+
+  function updatePlayIcon() {
+    document.getElementById('playIcon').innerHTML = isPlaying
+      ? '<rect x="5" y="3" width="5" height="18"/><rect x="14" y="3" width="5" height="18"/>'
+      : '<polygon points="5,3 19,12 5,21"/>';
+  }
+
+  document.getElementById('playBtn').addEventListener('click', () => {
+    if (isPlaying) { pauseOffset = audioCtx.currentTime - startTime; stopPlayback(); isPlaying = false; updatePlayIcon(); }
+    else playAudio();
+  });
+  document.getElementById('loopBtn').addEventListener('click', () => {
+    loopEnabled = !loopEnabled;
+    document.getElementById('loopBtn').classList.toggle('active', loopEnabled);
+    if (sourceNode) sourceNode.loop = loopEnabled;
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); isPlaying ? (pauseOffset = audioCtx.currentTime - startTime, stopPlayback(), isPlaying = false, updatePlayIcon()) : playAudio(); }
+    if (e.code === 'KeyL') document.getElementById('loopBtn').click();
+  });
+
+  // ===== Waveform =====
+  const waveformCanvas = document.getElementById('waveformCanvas');
+  const wfCtx = waveformCanvas.getContext('2d');
+
+  function drawWaveform() {
+    if (!audioBuffer) return;
+    const w = waveformCanvas.offsetWidth;
+    const h = waveformCanvas.offsetHeight;
+    waveformCanvas.width = w;
+    waveformCanvas.height = h;
+    wfCtx.clearRect(0, 0, w, h);
+    const data = audioBuffer.getChannelData(0);
+    const step = Math.ceil(data.length / w);
+    const amp = h / 2;
+    wfCtx.strokeStyle = '#2a9d9a';
+    wfCtx.lineWidth = 1;
+    wfCtx.beginPath();
+    for (let x = 0; x < w; x++) {
+      let min = 1, max = -1;
+      for (let j = 0; j < step; j++) { const d = data[x*step+j]||0; if (d<min) min=d; if (d>max) max=d; }
+      const y = amp + max * amp * 0.9;
+      if (x === 0) wfCtx.moveTo(x, y); else wfCtx.lineTo(x, y);
+    }
+    wfCtx.stroke();
+  }
+  window.addEventListener('resize', () => { if (audioBuffer) drawWaveform(); });
+
+  // ===== Build bus cards =====
+  function buildBusCards() {
+    const grid = document.getElementById('busGrid');
+    grid.innerHTML = '';
+    BUS_DEFS.forEach(def => {
+      const card = document.createElement('div');
+      card.className = 'bus-card';
+      card.dataset.color = def.color;
+      card.dataset.bus = def.id;
+
+      const header = document.createElement('div');
+      header.className = 'bus-header';
+
+      const name = document.createElement('div');
+      name.className = 'bus-name';
+      name.textContent = def.name;
+
+      const toggle = document.createElement('button');
+      toggle.className = 'bus-toggle' + (busState[def.id].enabled ? ' on' : '');
+      toggle.addEventListener('click', () => {
+        busState[def.id].enabled = !busState[def.id].enabled;
+        toggle.classList.toggle('on', busState[def.id].enabled);
+        updateBusSend(def.id);
+      });
+
+      header.appendChild(name);
+      header.appendChild(toggle);
+
+      // Send knob
+      const sendRow = document.createElement('div');
+      sendRow.className = 'send-row';
+      const sendLabel = document.createElement('div');
+      sendLabel.className = 'send-label';
+      sendLabel.textContent = 'Send';
+      const sendKnob = makeKnob(def.id + '_send', busState[def.id].send, 0, 1, v => {
+        busState[def.id].send = v;
+        updateBusSend(def.id);
+      }, v => Math.round(v * 100) + '%', def.color);
+      const sendVal = document.createElement('div');
+      sendVal.className = 'send-value';
+      sendVal.id = def.id + '_send_val';
+      sendVal.textContent = Math.round(busState[def.id].send * 100) + '%';
+      sendRow.appendChild(sendLabel);
+      sendRow.appendChild(sendKnob);
+      sendRow.appendChild(sendVal);
+
+      // Param sliders
+      const paramsRow = document.createElement('div');
+      paramsRow.className = 'params-row';
+      def.params.forEach(p => {
+        const paramDiv = document.createElement('div');
+        paramDiv.className = 'param';
+        const label = document.createElement('div');
+        label.className = 'param-label';
+        label.textContent = p.label;
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.className = 'param-slider';
+        slider.min = p.min; slider.max = p.max;
+        slider.value = busState[def.id].params[p.key];
+        const valEl = document.createElement('div');
+        valEl.className = 'param-value';
+        valEl.textContent = p.fmt(busState[def.id].params[p.key]);
+        slider.addEventListener('input', () => {
+          busState[def.id].params[p.key] = parseFloat(slider.value);
+          valEl.textContent = p.fmt(busState[def.id].params[p.key]);
+          updateBusParams(def.id, p.key, busState[def.id].params[p.key]);
+        });
+        paramDiv.appendChild(label);
+        paramDiv.appendChild(slider);
+        paramDiv.appendChild(valEl);
+        paramsRow.appendChild(paramDiv);
+      });
+
+      card.appendChild(header);
+      card.appendChild(sendRow);
+      card.appendChild(paramsRow);
+      grid.appendChild(card);
+    });
+  }
+
+  function makeKnob(id, val, min, max, onChange, fmt, color) {
+    const wrap = document.createElement('div');
+    wrap.className = 'knob-sm';
+    wrap.dataset.id = id;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 44 44');
+    const c = color === 'cyan' ? '#00d4c8' : color === 'amber' ? '#e8a832' : color === 'pink' ? '#e840a0' : '#50e880';
+    svg.innerHTML = `
+      <circle cx="22" cy="22" r="20" fill="none" stroke="#252528" stroke-width="3"/>
+      <circle cx="22" cy="22" r="20" fill="none" stroke="${c}" stroke-width="3"
+        stroke-dasharray="0 125.7" stroke-linecap="round"
+        transform="rotate(-135 22 22)" id="arc_${id}"/>
+      <circle cx="22" cy="22" r="14" fill="#161628" stroke="#222240" stroke-width="1"/>
+      <line id="needle_${id}" x1="22" y1="22" x2="22" y2="9" stroke="${c}" stroke-width="2" stroke-linecap="round"/>
+    `;
+    wrap.appendChild(svg);
+
+    function render(v) {
+      const pct = (v - min) / (max - min);
+      const arc = pct * 125.7;
+      const arcEl = svg.querySelector(`#arc_${id}`);
+      const needle = svg.querySelector(`#needle_${id}`);
+      if (arcEl) arcEl.setAttribute('stroke-dasharray', arc + ' 125.7');
+      if (needle) {
+        const angle = -135 + pct * 270;
+        const rad = angle * Math.PI / 180;
+        const nx = 22 + 13 * Math.sin(rad);
+        const ny = 22 - 13 * Math.cos(rad);
+        needle.setAttribute('x2', nx.toFixed(1));
+        needle.setAttribute('y2', ny.toFixed(1));
+      }
+    }
+    render(val);
+
+    let dragging = false, startY = 0, startVal = 0;
+    wrap.addEventListener('mousedown', e => {
+      dragging = true; startY = e.clientY; startVal = val;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', e => {
+      if (!dragging) return;
+      const dy = startY - e.clientY;
+      const newVal = Math.max(min, Math.min(max, startVal + (dy / 80) * (max - min)));
+      val = newVal;
+      render(val);
+      onChange(val);
+      const valEl = document.getElementById(id.replace('_send', '') + '_send_val');
+      if (valEl) valEl.textContent = fmt(val);
+    });
+    document.addEventListener('mouseup', () => { dragging = false; });
+
+    return wrap;
+  }
+
+  function updateBusSend(busId) {
+    if (!audioCtx) return;
+    const gain = busId === 'reverb' ? reverbSendGain
+               : busId === 'delay' ? delaySendGain
+               : busId === 'sat' ? satSendGain
+               : filterSendGain;
+    if (gain) gain.gain.setTargetAtTime(busState[busId].enabled ? busState[busId].send : 0, audioCtx.currentTime, 0.01);
+  }
+
+  function updateBusParams(busId, paramKey, paramVal) {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    if (busId === 'reverb' && paramKey === 'decay') {
+      // Rebuild reverb
+      reverbNode.buffer = createReverbImpulse(paramVal, busState.reverb.params.predelay, busState.reverb.params.damp);
+    }
+    if (busId === 'delay') {
+      if (paramKey === 'time') delayNode.delayTime.setTargetAtTime(paramVal / 1000, t, 0.01);
+      if (paramKey === 'fb') delayFbGain.gain.setTargetAtTime(paramVal / 100, t, 0.01);
+      if (paramKey === 'tone') delayToneNode.frequency.setTargetAtTime(2000 + paramVal * 18, t, 0.01);
+    }
+    if (busId === 'sat') {
+      if (paramKey === 'drive') { satNode.curve = makeSatCurve(paramVal / 100); }
+      if (paramKey === 'tone') {} // handled via slider
+    }
+    if (busId === 'filter') {
+      if (paramKey === 'freq') filterNode.frequency.setTargetAtTime(paramVal, t, 0.01);
+      if (paramKey === 'res') filterNode.Q.setTargetAtTime(1 + paramVal / 10, t, 0.01);
+      if (paramKey === 'type') filterNode.type = ['lowpass','highpass','bandpass'][Math.round(paramVal)];
+    }
+  }
+
+  // ===== Master controls =====
+  const drySlider = document.getElementById('drySlider');
+  const wetSlider = document.getElementById('wetSlider');
+  const volSlider = document.getElementById('volSlider');
+  const dryVal = document.getElementById('dryVal');
+  const wetVal = document.getElementById('wetVal');
+  const volVal = document.getElementById('volVal');
+
+  drySlider.addEventListener('input', () => {
+    masterDry = parseInt(drySlider.value) / 100;
+    dryVal.textContent = drySlider.value + '%';
+    if (dryGain) dryGain.gain.setTargetAtTime(masterDry, audioCtx.currentTime, 0.01);
+  });
+  wetSlider.addEventListener('input', () => {
+    masterWet = parseInt(wetSlider.value) / 100;
+    wetVal.textContent = wetSlider.value + '%';
+    if (wetGain) wetGain.gain.setTargetAtTime(masterWet, audioCtx.currentTime, 0.01);
+  });
+  volSlider.addEventListener('input', () => {
+    masterVol = parseInt(volSlider.value) / 100;
+    volVal.textContent = volSlider.value + '%';
+    if (masterNode) masterNode.gain.setTargetAtTime(masterVol, audioCtx.currentTime, 0.01);
+  });
+
+  // ===== Init =====
+  buildBusCards();
+})();
+</script>
+</body>
+</html>
