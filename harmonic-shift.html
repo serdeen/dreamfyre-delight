@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Harmonic Shift</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #090910;
+  --surface: #111120;
+  --surface2: #18182a;
+  --border: #22223a;
+  --copper: #e07b39;
+  --copper-dim: #7a3d1a;
+  --amber: #f5c26b;
+  --text: #ddd8c8;
+  --text-dim: #6a6478;
+  --active-glow: rgba(224,123,57,0.25);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+  user-select: none;
+}
+.wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2.5rem 2rem 4rem;
+}
+header {
+  margin-bottom: 2.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.6rem;
+  letter-spacing: 0.18em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+.tagline {
+  font-size: 0.75rem;
+  font-weight: 300;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  margin-top: 0.35rem;
+}
+.preset-bar {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.preset-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.3rem 0.65rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  transition: all 0.12s;
+}
+.preset-btn:hover {
+  border-color: var(--copper);
+  color: var(--amber);
+}
+.preset-btn.active {
+  background: var(--copper-dim);
+  border-color: var(--copper);
+  color: var(--amber);
+  box-shadow: 0 0 12px var(--active-glow);
+}
+.display-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+.display-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(224,123,57,0.06) 0%, transparent 65%);
+  pointer-events: none;
+}
+.chord-display {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.display-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+.chord-name {
+  font-family: 'Space Mono', monospace;
+  font-size: 3.2rem;
+  color: var(--amber);
+  letter-spacing: 0.06em;
+  transition: all 0.2s;
+  min-height: 4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.chord-name .sep {
+  color: var(--text-dim);
+  font-size: 1.6rem;
+}
+.shift-type {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.piano-wrap {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.piano {
+  display: flex;
+  position: relative;
+  height: 100px;
+}
+.key {
+  width: 44px;
+  height: 100px;
+  background: #ddd8c4;
+  border: 1px solid #aaa;
+  border-radius: 0 0 5px 5px;
+  cursor: pointer;
+  position: relative;
+  transition: background 0.08s, box-shadow 0.08s, transform 0.08s;
+  flex-shrink: 0;
+}
+.key:hover { background: #f0ece0; }
+.key.active {
+  background: var(--amber);
+  box-shadow: 0 0 14px rgba(245,194,107,0.5);
+  transform: scaleY(0.97);
+}
+.key.black {
+  width: 28px;
+  height: 62px;
+  background: #1a1820;
+  border-color: #111;
+  margin-left: -14px;
+  margin-right: -14px;
+  z-index: 2;
+  border-radius: 0 0 4px 4px;
+}
+.key.black:hover { background: #2a2830; }
+.key.black.active {
+  background: var(--copper);
+  box-shadow: 0 0 14px var(--active-glow);
+}
+.key-label {
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: #888;
+  pointer-events: none;
+}
+.key.black .key-label { color: #555; bottom: 4px; font-size: 0.5rem; }
+.key.active .key-label { color: #333; }
+.keys-hint {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+.section-title {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.75rem;
+  margin-top: 2rem;
+}
+.shift-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.shift-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 0.5rem;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.12s;
+  position: relative;
+  overflow: hidden;
+}
+.shift-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--active-glow);
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.shift-btn:hover { border-color: var(--copper-dim); }
+.shift-btn:hover::after { opacity: 0.5; }
+.shift-btn.active {
+  border-color: var(--copper);
+  box-shadow: 0 0 10px var(--active-glow);
+}
+.shift-btn.active::after { opacity: 1; }
+.shift-name {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--text);
+  letter-spacing: 0.04em;
+  margin-bottom: 0.2rem;
+  position: relative;
+  z-index: 1;
+}
+.shift-btn.active .shift-name { color: var(--amber); }
+.shift-interval {
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  position: relative;
+  z-index: 1;
+}
+.control-row {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.ctrl { flex: 1; min-width: 160px; }
+.ctrl-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--copper);
+  box-shadow: 0 0 6px var(--active-glow);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.ctrl-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--amber);
+  margin-top: 0.3rem;
+  text-align: right;
+}
+.audio-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+}
+.drop-zone {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--copper);
+  background: rgba(224,123,57,0.04);
+}
+.drop-zone input[type="file"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+.drop-text {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+}
+.drop-text strong {
+  color: var(--copper);
+  font-weight: 600;
+}
+.file-name {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--amber);
+  margin-top: 0.5rem;
+}
+.playback-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--copper-dim);
+  border: 1px solid var(--copper);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.12s;
+  color: var(--amber);
+  font-size: 1rem;
+}
+.play-btn:hover {
+  background: var(--copper);
+  box-shadow: 0 0 16px var(--active-glow);
+  transform: scale(1.05);
+}
+.play-btn.playing {
+  background: var(--copper);
+  box-shadow: 0 0 20px var(--active-glow);
+}
+.waveform {
+  flex: 1;
+  height: 44px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+.waveform canvas { width: 100%; height: 100%; display: block; }
+.playhead {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 2px;
+  background: var(--amber);
+  pointer-events: none;
+}
+.footer {
+  text-align: center;
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  letter-spacing: 0.06em;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Harmonic Shift</h1>
+      <p class="tagline">transpose chords through musical intervals</p>
+    </div>
+    <div class="preset-bar">
+      <button class="preset-btn active" data-preset="standard">Standard</button>
+      <button class="preset-btn" data-preset="dusky">Dusky</button>
+      <button class="preset-btn" data-preset="modal">Modal</button>
+      <button class="preset-btn" data-preset="jazz">Tritone</button>
+    </div>
+  </header>
+
+  <div class="display-section">
+    <div class="chord-display">
+      <div class="display-label">Input &rarr; Shifted</div>
+      <div class="chord-name" id="chordDisplay">
+        <span id="rootName">C</span>
+        <span id="rootQual" class="sep" style="font-size:1.4rem">min</span>
+        <span class="sep">&rarr;</span>
+        <span id="shiftName">G</span>
+        <span id="shiftQual" class="sep" style="font-size:1.4rem">min</span>
+      </div>
+      <div class="shift-type" id="shiftTypeLabel">P5 Up (+7 semitones)</div>
+    </div>
+    <div class="piano-wrap">
+      <div class="piano" id="piano"></div>
+    </div>
+    <p class="keys-hint">Click a key to select root &bull; Hold Shift for minor &bull; Swipe to sweep &bull; Arrow keys nudge</p>
+  </div>
+
+  <div class="section-title">Shift Type</div>
+  <div class="shift-grid" id="shiftGrid"></div>
+
+  <div class="control-row">
+    <div class="ctrl">
+      <div class="ctrl-label">Dry / Wet</div>
+      <input type="range" id="dryWet" min="0" max="100" value="100">
+      <div class="ctrl-value" id="dryWetVal">100%</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-label">Octave</div>
+      <input type="range" id="octave" min="-2" max="2" value="0">
+      <div class="ctrl-value" id="octaveVal">0</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-label">Volume</div>
+      <input type="range" id="volume" min="0" max="100" value="80">
+      <div class="ctrl-value" id="volumeVal">80%</div>
+    </div>
+  </div>
+
+  <div class="audio-section">
+    <div class="section-title" style="margin-top:0">Audio Source</div>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept="audio/*,video/*">
+      <div class="drop-text"><strong>Drop audio here</strong> or click to browse</div>
+      <div class="file-name" id="fileName"></div>
+    </div>
+    <div class="playback-row" id="playbackRow" style="display:none">
+      <button class="play-btn" id="playBtn">&#9654;</button>
+      <div class="waveform">
+        <canvas id="waveCanvas"></canvas>
+        <div class="playhead" id="playhead" style="left:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Harmonic Shift &mdash; Dreamfyre &mdash; 2026</div>
+</div>
+
+<script>
+(function() {
+  const NOTE_NAMES = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+  const BLACK_KEYS = [1, 3, 6, 8, 10];
+  const SHIFTS = [
+    { name: 'P5 Up',      semitones: 7,  label: '+7 semitones' },
+    { name: 'P4 Up',      semitones: 5,  label: '+5 semitones' },
+    { name: 'P5 Down',    semitones: -7, label: '-7 semitones' },
+    { name: 'P4 Down',    semitones: -5, label: '-5 semitones' },
+    { name: 'b3 maj',     semitones: 3,  label: 'min to maj' },
+    { name: 'maj min',    semitones: -3, label: 'maj to min' },
+    { name: 'b7 maj7',   semitones: 1,  label: 'dom7 to maj7' },
+    { name: 'Tritone',   semitones: 6,  label: 'Tritone sub' },
+    { name: 'Relative',  semitones: 9,  label: 'Relative' },
+    { name: 'Parallel',  semitones: 12, label: 'Parallel' },
+    { name: 'Chrom Up',  semitones: 1,  label: '+1 semitone' },
+    { name: 'Chrom Dn', semitones: -1, label: '-1 semitone' },
+  ];
+  const PRESETS = {
+    standard: [0, 1, 2, 3, 4, 5, 6, 7],
+    dusky:    [0, 1, 2, 3, 6, 9, 10, 11],
+    modal:    [0, 1, 2, 3, 4, 5, 8, 9],
+    jazz:     [0, 7, 6, 3, 5, 4, 1, 11],
+  };
+
+  let rootNote = 0;
+  let isMinor = false;
+  let selectedShift = 0;
+  let audioCtx = null;
+  let activeSource = null;
+  let audioBuffer = null;
+  let isPlaying = false;
+  let startTime = 0;
+  let pausedAt = 0;
+  let animFrame = null;
+
+  function buildPiano() {
+    var piano = document.getElementById('piano');
+    piano.innerHTML = '';
+    for (var i = 0; i < 12; i++) {
+      var isBlack = BLACK_KEYS.indexOf(i) !== -1;
+      var key = document.createElement('div');
+      key.className = 'key' + (isBlack ? ' black' : '');
+      key.dataset.note = i;
+      var lbl = document.createElement('div');
+      lbl.className = 'key-label';
+      lbl.textContent = NOTE_NAMES[i];
+      key.appendChild(lbl);
+      key.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        var n = parseInt(this.dataset.note);
+        selectKey(n, e.shiftKey);
+      });
+      key.addEventListener('mouseenter', function(e) {
+        if (e.buttons === 1) {
+          var n = parseInt(this.dataset.note);
+          selectKey(n, e.shiftKey);
+        }
+      });
+      piano.appendChild(key);
+    }
+  }
+
+  function selectKey(note, minor) {
+    rootNote = note;
+    isMinor = minor;
+    updatePianoHighlight();
+    updateDisplay();
+    if (audioBuffer) playShifted();
+  }
+
+  function updatePianoHighlight() {
+    var keys = document.querySelectorAll('.key');
+    for (var i = 0; i < keys.length; i++) {
+      keys[i].classList.toggle('active', parseInt(keys[i].dataset.note) === rootNote);
+    }
+  }
+
+  function buildShiftGrid(preset) {
+    var grid = document.getElementById('shiftGrid');
+    grid.innerHTML = '';
+    var indices = PRESETS[preset] || [0,1,2,3,4,5,6,7];
+    for (var k = 0; k < indices.length; k++) {
+      var idx = indices[k];
+      var s = SHIFTS[idx];
+      if (!s) continue;
+      var btn = document.createElement('button');
+      btn.className = 'shift-btn' + (idx === selectedShift ? ' active' : '');
+      btn.innerHTML = '<div class="shift-name">' + s.name + '</div><div class="shift-interval">' + s.label + '</div>';
+      btn.addEventListener('click', (function(i, sh) {
+        return function() {
+          selectedShift = i;
+          var btns = document.querySelectorAll('.shift-btn');
+          for (var j = 0; j < btns.length; j++) btns[j].classList.remove('active');
+          this.classList.add('active');
+          updateDisplay();
+          if (audioBuffer) playShifted();
+        };
+      })(idx, s));
+      grid.appendChild(btn);
+    }
+  }
+
+  function updateDisplay() {
+    var shift = SHIFTS[selectedShift];
+    var shiftedRoot = (rootNote + shift.semitones + 12 * 2) % 12;
+    var oShift = parseInt(document.getElementById('octave').value);
+    shiftedRoot = (rootNote + shift.semitones + 12 * (oShift + 2)) % 12;
+    document.getElementById('rootName').textContent = NOTE_NAMES[rootNote];
+    document.getElementById('rootQual').textContent = isMinor ? 'min' : 'maj';
+    document.getElementById('shiftName').textContent = NOTE_NAMES[shiftedRoot];
+    document.getElementById('shiftQual').textContent = isMinor ? 'min' : 'maj';
+    document.getElementById('shiftTypeLabel').textContent = shift.name + ' (' + shift.label + ')';
+  }
+
+  function setupControls() {
+    var presetBtns = document.querySelectorAll('.preset-btn');
+    for (var i = 0; i < presetBtns.length; i++) {
+      presetBtns[i].addEventListener('click', (function(btn) {
+        return function() {
+          for (var j = 0; j < presetBtns.length; j++) presetBtns[j].classList.remove('active');
+          btn.classList.add('active');
+          buildShiftGrid(btn.dataset.preset);
+          selectedShift = 0;
+          updateDisplay();
+        };
+      })(presetBtns[i]));
+    }
+    var dw = document.getElementById('dryWet');
+    dw.addEventListener('input', function() {
+      document.getElementById('dryWetVal').textContent = dw.value + '%';
+    });
+    var oct = document.getElementById('octave');
+    oct.addEventListener('input', function() {
+      var v = parseInt(oct.value);
+      document.getElementById('octaveVal').textContent = (v > 0 ? '+' : '') + v;
+      updateDisplay();
+      if (audioBuffer) playShifted();
+    });
+    var vol = document.getElementById('volume');
+    vol.addEventListener('input', function() {
+      document.getElementById('volumeVal').textContent = vol.value + '%';
+    });
+  }
+
+  function setupDropZone() {
+    var zone = document.getElementById('dropZone');
+    var input = document.getElementById('fileInput');
+    zone.addEventListener('dragover', function(e) { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', function() { zone.classList.remove('dragover'); });
+    zone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      zone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) loadFile(e.dataTransfer.files[0]);
+    });
+    input.addEventListener('change', function() { if (input.files[0]) loadFile(input.files[0]); });
+    document.getElementById('playBtn').addEventListener('click', togglePlay);
+  }
+
+  function loadFile(file) {
+    document.getElementById('fileName').textContent = file.name;
+    document.getElementById('playbackRow').style.display = 'flex';
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      audioCtx.decodeAudioData(e.target.result, function(buf) {
+        audioBuffer = buf;
+        drawWaveform(buf);
+        playShifted();
+      }, function(err) { console.warn('decode error', err); });
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function drawWaveform(buffer) {
+    var canvas = document.getElementById('waveCanvas');
+    var ctx = canvas.getContext('2d');
+    var W = canvas.width = canvas.offsetWidth * 2;
+    var H = canvas.height = canvas.offsetHeight * 2;
+    ctx.clearRect(0, 0, W, H);
+    var data = buffer.getChannelData(0);
+    var step = Math.ceil(data.length / W);
+    ctx.strokeStyle = '#e07b39';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    var centerY = H / 2;
+    for (var x = 0; x < W; x++) {
+      var min = 1, max = -1;
+      for (var j = 0; j < step; j++) {
+        var val = data[x * step + j] || 0;
+        if (val < min) min = val;
+        if (val > max) max = val;
+      }
+      ctx.moveTo(x, centerY - max * centerY * 0.9);
+      ctx.lineTo(x, centerY - min * centerY * 0.9);
+    }
+    ctx.stroke();
+  }
+
+  function getPitchRate() {
+    var shift = SHIFTS[selectedShift];
+    var oShift = parseInt(document.getElementById('octave').value);
+    return Math.pow(2, shift.semitones / 12) * Math.pow(2, oShift);
+  }
+
+  function stopSource() {
+    if (activeSource) {
+      try { activeSource.stop(); } catch(e) {}
+      activeSource = null;
+    }
+    isPlaying = false;
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    var btn = document.getElementById('playBtn');
+    btn.classList.remove('playing');
+    btn.innerHTML = '&#9654;';
+  }
+
+  function playShifted() {
+    if (!audioBuffer) return;
+    stopSource();
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var pitchRate = getPitchRate();
+    var dryWet = parseInt(document.getElementById('dryWet').value) / 100;
+    var vol = parseInt(document.getElementById('volume').value) / 100;
+    var offset = pausedAt % audioBuffer.duration;
+    var source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.playbackRate.value = pitchRate;
+    var dryGain = audioCtx.createGain();
+    dryGain.gain.value = dryWet * vol;
+    var wetGain = audioCtx.createGain();
+    wetGain.gain.value = (1 - dryWet) * vol;
+    source.connect(dryGain);
+    dryGain.connect(audioCtx.destination);
+    source.connect(wetGain);
+    wetGain.connect(audioCtx.destination);
+    source.start(0, offset);
+    activeSource = source;
+    startTime = audioCtx.currentTime - offset;
+    isPlaying = true;
+    pausedAt = 0;
+    var btn = document.getElementById('playBtn');
+    btn.classList.add('playing');
+    btn.innerHTML = '&#9646;&#9646;';
+    animatePlayhead();
+    source.onended = function() {
+      if (isPlaying) { isPlaying = false; pausedAt = 0; updatePlayhead(0); }
+    };
+  }
+
+  function pauseAudio() {
+    if (!audioCtx || !isPlaying) return;
+    pausedAt = audioCtx.currentTime - startTime;
+    pausedAt = pausedAt % (audioBuffer ? audioBuffer.duration : 1);
+    stopSource();
+  }
+
+  function resumeAudio() {
+    if (!audioBuffer) return;
+    if (pausedAt === 0) { playShifted(); return; }
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    var pitchRate = getPitchRate();
+    var dryWet = parseInt(document.getElementById('dryWet').value) / 100;
+    var vol = parseInt(document.getElementById('volume').value) / 100;
+    var source = audioCtx.createBufferSource();
+    source.buffer = audioBuffer;
+    source.playbackRate.value = pitchRate;
+    var dryGain = audioCtx.createGain();
+    dryGain.gain.value = dryWet * vol;
+    var wetGain = audioCtx.createGain();
+    wetGain.gain.value = (1 - dryWet) * vol;
+    source.connect(dryGain);
+    dryGain.connect(audioCtx.destination);
+    source.connect(wetGain);
+    wetGain.connect(audioCtx.destination);
+    source.start(0, pausedAt);
+    activeSource = source;
+    startTime = audioCtx.currentTime - pausedAt;
+    isPlaying = true;
+    var btn = document.getElementById('playBtn');
+    btn.classList.add('playing');
+    btn.innerHTML = '&#9646;&#9646;';
+    animatePlayhead();
+    source.onended = function() {
+      if (isPlaying) { isPlaying = false; pausedAt = 0; updatePlayhead(0); }
+    };
+  }
+
+  function togglePlay() {
+    if (isPlaying) pauseAudio();
+    else resumeAudio();
+  }
+
+  function animatePlayhead() {
+    if (!isPlaying || !audioBuffer) return;
+    updatePlayhead((audioCtx.currentTime - startTime) / audioBuffer.duration);
+    animFrame = requestAnimationFrame(animatePlayhead);
+  }
+
+  function updatePlayhead(progress) {
+    document.getElementById('playhead').style.left = Math.min(progress * 100, 100) + '%';
+  }
+
+  document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowLeft') {
+      rootNote = (rootNote - 1 + 12) % 12;
+      updatePianoHighlight();
+      updateDisplay();
+      if (audioBuffer) playShifted();
+    } else if (e.key === 'ArrowRight') {
+      rootNote = (rootNote + 1) % 12;
+      updatePianoHighlight();
+      updateDisplay();
+      if (audioBuffer) playShifted();
+    } else if (e.key === ' ') {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.key === 'm' || e.key === 'M') {
+      isMinor = !isMinor;
+      updatePianoHighlight();
+      updateDisplay();
+      if (audioBuffer) playShifted();
+    }
+  });
+
+  // Init
+  buildPiano();
+  buildShiftGrid('standard');
+  setupControls();
+  setupDropZone();
+  updateDisplay();
+})();
+</script>
+</body>
+</html>
