@@ -81,7 +81,34 @@
     .kid-zone .card p { color: #ccc; font-size: 0.9rem; }
 
     footer { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid #2a2a4a; color: #555; font-size: 0.8rem; text-align: center; }
-  </style>
+  
+    /* Health check badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      margin-left: 6px;
+      font-size: 0.7rem;
+      padding: 2px 5px;
+      border-radius: 4px;
+      vertical-align: middle;
+    }
+    .badge-ok { background: #1a4d1a; color: #6bcb77; }
+    .badge-fail { background: #4d1a1a; color: #ff6b6b; }
+    .badge-na { background: #2a2a4a; color: #666; }
+    .badge-load-fail { background: #4d1a1a; color: #ff6b6b; }
+    .badge-error { background: #4d3a1a; color: #ffd93d; }
+    
+    /* Card sort indicator */
+    .card[data-mtime] { position: relative; }
+    .card .badge-col {
+      display: flex;
+      gap: 4px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+  
+</style>
 </head>
 <body>
   <h1>🔥 Dreamfyre Delight</h1>
@@ -94,19 +121,19 @@
       <a class="card kid" href="animal-tap.html">
         <h3>🦁 Animal Tap</h3>
         <p>Tap animals — hear the sound & see the picture</p>
-      </a>
+      <div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div></a>
       <a class="card kid" href="toddler-rainbow.html">
         <h3>🌈 Toddler Rainbow</h3>
         <p>Colorful rainbow interactive for little eyes</p>
-      </a>
+      <div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div></a>
       <a class="card kid" href="bpm-tap.html">
         <h3>🥁 Big Tap</h3>
         <p>Tap the screen and watch it bounce!</p>
-      </a>
+      <div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div></a>
       <a class="card kid" href="color-shape-tap.html">
         <h3>🎨 Colors & Shapes</h3>
         <p>Bright colors and fun shapes to explore</p>
-      </a>
+      <div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div></a>
     </div>
   </section>
 
@@ -116,32 +143,32 @@
     <a class="card audio" href="808-loop.html">
       <h3>808 Loop</h3>
       <p>Classic 808 drum machine with pattern sequencer</p>
-      <span class="tag">Drum Machine</span>
+      <span class="tag">Drum Machine</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="ai-drum-gen.html">
       <h3>🧠 AI Drum Gen</h3>
       <p>Generate drum patterns with AI</p>
-      <span class="tag">AI</span>
+      <span class="tag">AI</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="drum-machine.html">
       <h3>🥁 Drum Machine</h3>
       <p>Step sequencer with 808 samples</p>
-      <span class="tag">Step Sequencer</span>
+      <span class="tag">Step Sequencer</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="drum-pattern-studio.html">
       <h3>🎛️ Drum Pattern Studio</h3>
       <p>Build complex drum patterns</p>
-      <span class="tag">Pattern</span>
+      <span class="tag">Pattern</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="drum-lab.html">
       <h3>🧪 Drum Lab</h3>
       <p>Sound design lab for drums</p>
-      <span class="tag">Sound Design</span>
+      <span class="tag">Sound Design</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="hihat-pattern-studio.html">
       <h3>🎩 Hi-Hat Studio</h3>
       <p>Program intricate hi-hat patterns</p>
-      <span class="tag">Hi-Hat</span>
+      <span class="tag">Hi-Hat</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
       <a class="card" href="polyrhythm-grid.html">
       <h3>🥁 Polyrhythm Grid</h3>
@@ -161,47 +188,47 @@
     <a class="card audio" href="8string-toolkit-v2.html">
       <h3>🎸 8-String Toolkit</h3>
       <p>Full 8-string guitar with scales, chords, drop tuning</p>
-      <span class="tag">Guitar</span>
+      <span class="tag">Guitar</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="chord-lab.html">
       <h3>🔬 Chord Lab</h3>
       <p>Explore chord voicings and inversions</p>
-      <span class="tag">Chords</span>
+      <span class="tag">Chords</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="chord-explorer-v2.html">
       <h3>🪗 Chord Explorer</h3>
       <p>Interactive chord shapes across the neck</p>
-      <span class="tag">Chords</span>
+      <span class="tag">Chords</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="chord-morph.html">
       <h3>🌀 Chord Morph</h3>
       <p>Morph between chord types smoothly</p>
-      <span class="tag">Morph</span>
+      <span class="tag">Morph</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="chord-voicer-v2.html">
       <h3>🎤 Chord Voicer</h3>
       <p>Humanize and voice chords realistically</p>
-      <span class="tag">Voicing</span>
+      <span class="tag">Voicing</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="chord-voicer.html">
       <h3>🎤 Chord Voicer</h3>
       <p>Original chord voicing tool</p>
-      <span class="tag">Voicing</span>
+      <span class="tag">Voicing</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="deep-house-chord-palette.html">
       <h3>🏠 Deep House Palette</h3>
       <p>Chord voicings tuned for deep house music</p>
-      <span class="tag">Genre</span>
+      <span class="tag">Genre</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="arpeggio-engine.html">
       <h3>🎼 Arpeggio Engine</h3>
       <p>Scale-based arpeggio sequencer</p>
-      <span class="tag">Arp</span>
+      <span class="tag">Arp</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="key-finder.html">
       <h3>🔍 Key Finder</h3>
       <p>Find the key of any audio input</p>
-      <span class="tag">Analysis</span>
+      <span class="tag">Analysis</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
       <a class="card" href="chord-drop.html">
       <h3>🎹 Chord Drop</h3>
@@ -216,57 +243,57 @@
     <a class="card synth" href="synth.html">
       <h3>🎹 Synth</h3>
       <p>Web Audio synthesizer with oscillators and filters</p>
-      <span class="tag">Synth</span>
+      <span class="tag">Synth</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card synth" href="komplete-kontrol-synth.html">
       <h3>⌨️ Komplete Kontrol</h3>
       <p>Keyboard-enabled synth with Komplete-style layout</p>
-      <span class="tag">MIDI</span>
+      <span class="tag">MIDI</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card synth" href="chaos-pad.html">
       <h3>🌀 Chaos Pad</h3>
       <p>Generative ambient pad with chaos modulation</p>
-      <span class="tag">Ambient</span>
+      <span class="tag">Ambient</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card synth" href="octave-synth.html">
       <h3>🎛️ Octave Synth</h3>
       <p>Multi-octave layered synth engine</p>
-      <span class="tag">Layered</span>
+      <span class="tag">Layered</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card synth" href="texture-studio.html">
       <h3>🧻 Texture Studio</h3>
       <p>Build evolving textural soundscapes</p>
-      <span class="tag">Texture</span>
+      <span class="tag">Texture</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card synth" href="texture-studio-v2.html">
       <h3>🧻 Texture Studio v2</h3>
       <p>Improved texture synthesis engine</p>
-      <span class="tag">Texture v2</span>
+      <span class="tag">Texture v2</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card synth" href="loop-station.html">
       <h3>🔁 Loop Station</h3>
       <p>Real-time audio looper and phrase sampler</p>
-      <span class="tag">Looper</span>
+      <span class="tag">Looper</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card synth" href="melodic-sequencer.html">
       <h3>🎼 Melodic Sequencer</h3>
       <p>Step-based melodic pattern sequencer</p>
-      <span class="tag">Sequencer</span>
+      <span class="tag">Sequencer</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card synth" href="slicer-dice.html">
       <h3>🎲 Slicer Dice</h3>
       <p>Random slice-and-dice audio fragmentation</p>
-      <span class="tag">Glitch</span>
+      <span class="tag">Glitch</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card synth" href="studio-companion.html">
       <h3>🎧 Studio Companion</h3>
       <p>All-in-one studio utility synth</p>
-      <span class="tag">Utility</span>
+      <span class="tag">Utility</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card synth" href="void-engine.html">
       <h3>🌌 Void Engine</h3>
       <p>Generative art visualizer, mic reactive</p>
-      <span class="tag">Visual</span>
+      <span class="tag">Visual</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
   </div>
 
@@ -276,47 +303,47 @@
     <a class="card effect" href="echo-lab.html">
       <h3>📢 Echo Lab</h3>
       <p>D delay and echo effects</p>
-      <span class="tag">Delay</span>
+      <span class="tag">Delay</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card effect" href="filter-lab.html">
       <h3>🎚️ Filter Lab</h3>
       <p>Sweep through filters and cutoffs</p>
-      <span class="tag">Filter</span>
+      <span class="tag">Filter</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card effect" href="filter-sweep-lab.html">
       <h3>🎚️ Filter Sweep Lab</h3>
       <p>Rhythm-synced filter sweeps</p>
-      <span class="tag">Sync</span>
+      <span class="tag">Sync</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card effect" href="pan-sphere.html">
       <h3>🔵 Pan Sphere</h3>
       <p>Spatial panning and stereo positioning</p>
-      <span class="tag">Stereo</span>
+      <span class="tag">Stereo</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card effect" href="pitch-shifter.html">
       <h3>🔈 Pitch Shifter</h3>
       <p>Real-time pitch shifting and harmonization</p>
-      <span class="tag">Pitch</span>
+      <span class="tag">Pitch</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card effect" href="tape-stop.html">
       <h3>📼 Tape Stop</h3>
       <p>Tape stop and varispeed effect</p>
-      <span class="tag">Tape</span>
+      <span class="tag">Tape</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card effect" href="vocal-chopper.html">
       <h3>🎤 Vocal Chopper</h3>
       <p>Chop and rearrange vocal samples</p>
-      <span class="tag">Vocal</span>
+      <span class="tag">Vocal</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card effect" href="vocal-chopper-studio.html">
       <h3>🎤 Vocal Chopper Studio</h3>
       <p>Advanced vocal chopping and processing</p>
-      <span class="tag">Vocal</span>
+      <span class="tag">Vocal</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card effect" href="signal-lab.html">
       <h3>📡 Signal Lab</h3>
       <p>Modulate and transform audio signals</p>
-      <span class="tag">Modulate</span>
+      <span class="tag">Modulate</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
       <a class="card" href="auto-panner.html">
       <h3>🔄 Auto Panner</h3>
@@ -336,27 +363,27 @@
     <a class="card mix" href="mix-reference-analyzer.html">
       <h3>📊 Mix Reference Analyzer</h3>
       <p>Spectrum, LUFS meters, stereo field, band analysis</p>
-      <span class="tag">Analysis</span>
+      <span class="tag">Analysis</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card mix" href="groove-builder.html">
       <h3>🪘 Groove Builder</h3>
       <p>Shape and humanize groove and feel</p>
-      <span class="tag">Groove</span>
+      <span class="tag">Groove</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card mix" href="groove-shuffler.html">
       <h3>🔀 Groove Shuffler</h3>
       <p>Apply different groove templates to patterns</p>
-      <span class="tag">Groove</span>
+      <span class="tag">Groove</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card mix" href="stereo-field.html">
       <h3>🎛️ Stereo Field</h3>
       <p>Stereo width and field visualization</p>
-      <span class="tag">Stereo</span>
+      <span class="tag">Stereo</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card mix" href="bpm-synced-lfo.html">
       <h3>〰️ BPM-Synced LFO</h3>
       <p>Low-frequency oscillator locked to tempo</p>
-      <span class="tag">Modulation</span>
+      <span class="tag">Modulation</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
       <a class="card" href="sidechain-studio.html">
       <h3>💗 Sidechain Studio</h3>
@@ -376,7 +403,7 @@
     <a class="card audio" href="color-lab.html">
       <h3>🎨 Color Lab</h3>
       <p>Color mixing and palette generation</p>
-      <span class="tag">Color</span>
+      <span class="tag">Color</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card audio" href="color-shape-tap.html">
       <h3>🔷 Color Shape Tap</h3>
@@ -391,12 +418,12 @@
     <a class="card learn" href="palabras.html">
       <h3>🗣️ Palabras</h3>
       <p>Spanish/English bilingual word cards with speech synthesis</p>
-      <span class="tag">Bilingual</span>
+      <span class="tag">Bilingual</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card learn" href="midi-piano-test.html">
       <h3>🎹 MIDI Piano Test</h3>
       <p>Test MIDI keyboards and piano inputs</p>
-      <span class="tag">MIDI</span>
+      <span class="tag">MIDI</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
   </div>
 
@@ -406,12 +433,12 @@
     <a class="card util" href="tuner.html">
       <h3>🎸 Tuner</h3>
       <p>Chromatic tuner for guitar and other instruments</p>
-      <span class="tag">Tuner</span>
+      <span class="tag">Tuner</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
       <a class="card" href="8string-toolkit.html">
       <h3>🎸 8-String Toolkit</h3>
       <p>Guitar toolkit for Christian</p>
-      <span class="tag">8-String</span>
+      <span class="tag">8-String</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
     <a class="card" href="studio-click.html">
       <h3>🔊 Studio Click</h3>
@@ -426,7 +453,7 @@
     <a class="card audio" href="pool-9ball.html">
       <h3>🎱 9-Ball Pool</h3>
       <p>Physics-based 9-ball pool game for Brendan</p>
-      <span class="tag">Game</span>
+      <span class="tag">Game</span><div class="badge-col"><span class="badge badge-ok" title="Loaded OK">✓</span><span class="badge badge-ok" title="Audio: ✓">🔊✓</span><span class="badge badge-fail" title="Video: ✗">🎬✗</span><span class="badge badge-ok" title="MIDI: ✓">🎹✓</span></div>
     </a>
   </div>
 

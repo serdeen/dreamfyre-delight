@@ -1,0 +1,23 @@
+{
+  "name": "dreamfyre-delight",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/serdeen/dreamfyre-delight.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/serdeen/dreamfyre-delight/issues"
+  },
+  "homepage": "https://github.com/serdeen/dreamfyre-delight#readme",
+  "dependencies": {
+    "puppeteer": "^25.0.2"
+  }
+}
