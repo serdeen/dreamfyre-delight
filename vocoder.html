@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vocoder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #090910;
+  --surface: #111120;
+  --surface2: #18182a;
+  --border: #252540;
+  --orange: #f97316;
+  --orange-dim: #7c2d12;
+  --orange-glow: rgba(249,115,22,0.2);
+  --amber: #f5c26b;
+  --text: #ddd8c8;
+  --text-dim: #6a6478;
+  --teal: #2dd4bf;
+  --meter-green: #4ade80;
+  --meter-yellow: #fbbf24;
+  --meter-red: #f87171;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  user-select: none;
+}
+.wrap {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+.tagline {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  margin-top: 0.3rem;
+  letter-spacing: 0.06em;
+}
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+/* Carrier selector */
+.carrier-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.carrier-btns {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.carrier-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.04em;
+}
+.carrier-btn:hover { border-color: var(--orange); color: var(--amber); }
+.carrier-btn.active { background: var(--orange-dim); border-color: var(--orange); color: var(--amber); }
+
+/* Input section */
+.input-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.input-row {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.mic-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  border: 1px solid var(--teal);
+  background: rgba(45,212,191,0.05);
+  color: var(--teal);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.05em;
+}
+.mic-btn:hover { background: rgba(45,212,191,0.1); }
+.mic-btn.active { background: rgba(45,212,191,0.2); box-shadow: 0 0 10px rgba(45,212,191,0.2); }
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+  flex: 1;
+  min-width: 200px;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--teal);
+  color: var(--teal);
+  background: rgba(45,212,191,0.04);
+}
+.drop-zone input { display: none; }
+
+/* Waveform canvas */
+.waveform-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+#modCanvas { display: block; width: 100%; height: 100px; background: #0a0a14; border-radius: 6px; cursor: crosshair; }
+
+/* Filter bank */
+.bank-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.band-row {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.3rem;
+  align-items: flex-end;
+}
+.band-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  flex: 1;
+}
+.band-bar {
+  width: 100%;
+  border-radius: 3px;
+  background: #0a0a14;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.08s;
+  position: relative;
+}
+.band-bar:hover { border-color: var(--orange-dim); }
+.band-bar.active { background: rgba(249,115,22,0.15); border-color: var(--orange); }
+.band-fill {
+  width: 100%;
+  border-radius: 2px;
+  background: linear-gradient(to top, var(--orange), var(--amber));
+  position: absolute;
+  bottom: 0;
+  transition: height 0.05s linear;
+}
+.band-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.48rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  text-align: center;
+  white-space: nowrap;
+}
+.band-freq {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.42rem;
+  color: var(--text-dim);
+  opacity: 0.5;
+  text-align: center;
+}
+.band-activity {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.08s;
+  flex-shrink: 0;
+}
+.band-activity.active { background: var(--orange); box-shadow: 0 0 4px var(--orange); }
+
+/* Knob row */
+.knob-row {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-top: 1rem;
+}
+.knob-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 68px;
+}
+.knob-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.knob-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--amber);
+  letter-spacing: 0.04em;
+  min-width: 40px;
+  text-align: center;
+}
+.knob {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  cursor: grab;
+}
+.knob:active { cursor: grabbing; }
+.knob svg { width: 44px; height: 44px; }
+
+/* Presets */
+.preset-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+.preset-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  margin-right: 0.25rem;
+}
+.preset-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.04em;
+}
+.preset-btn:hover { border-color: var(--orange); color: var(--amber); }
+.preset-btn.active { background: var(--orange-dim); border-color: var(--orange); color: var(--amber); }
+
+/* Output meters */
+.meter-bar-wrap {
+  width: 14px;
+  height: 80px;
+  background: #0a0a14;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+}
+.meter-fill { width: 100%; transition: height 0.05s linear; border-radius: 2px 2px 0 0; }
+#outputFill { background: linear-gradient(to top, var(--meter-green) 60%, var(--meter-yellow) 85%, var(--meter-red)); height: 0%; }
+.gain-meter { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+.meter-label { font-family: 'Space Mono', monospace; font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.08em; }
+
+/* Carrier freq row */
+.carrier-freq-row {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  align-items: center;
+}
+.carrier-freq-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.carrier-freq-btn:hover { border-color: var(--orange); color: var(--amber); }
+.carrier-freq-btn.active { border-color: var(--orange); color: var(--amber); background: var(--orange-dim); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Vocoder</h1>
+      <div class="tagline">16-Band Filter Bank · Mic or File · Robot Voice</div>
+    </div>
+  </header>
+
+  <!-- Carrier -->
+  <div class="carrier-section">
+    <div class="section-label">Carrier Waveform</div>
+    <div class="carrier-btns">
+      <button class="carrier-btn active" data-wave="sawtooth">SAW</button>
+      <button class="carrier-btn" data-wave="square">SQR</button>
+      <button class="carrier-btn" data-wave="sine">SINE</button>
+      <button class="carrier-btn" data-wave="triangle">TRI</button>
+    </div>
+    <div class="carrier-freq-row">
+      <span class="section-label" style="margin:0;margin-right:0.5rem">Base Freq</span>
+      <button class="carrier-freq-btn active" data-cfreq="100">100 Hz</button>
+      <button class="carrier-freq-btn" data-cfreq="150">150 Hz</button>
+      <button class="carrier-freq-btn" data-cfreq="200">200 Hz</button>
+      <button class="carrier-freq-btn" data-cfreq="300">300 Hz</button>
+      <button class="carrier-freq-btn" data-cfreq="440">440 Hz</button>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-section">
+    <div class="section-label">Modulator (Voice)</div>
+    <div class="input-row">
+      <button class="mic-btn" id="micBtn">USE MICROPHONE</button>
+      <div class="drop-zone" id="dropZone">
+        <span>Drop audio file here</span>
+        <input type="file" id="fileInput" accept="audio/*,video/*">
+      </div>
+    </div>
+  </div>
+
+  <!-- Waveform -->
+  <div class="waveform-section">
+    <div class="section-label">Modulator Waveform</div>
+    <canvas id="modCanvas"></canvas>
+  </div>
+
+  <!-- Filter Bank -->
+  <div class="bank-section">
+    <div class="section-label">Filter Bank — click or swipe to toggle bands</div>
+    <div id="bandGrid"></div>
+  </div>
+
+  <!-- Knobs -->
+  <div class="knob-row">
+    <div class="knob-group">
+      <span class="knob-label">Attack</span>
+      <div class="knob" id="attackKnob" data-value="0.01" data-min="0.001" data-max="0.1" data-step="0.001">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#f97316" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="90.5" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="attackVal">10ms</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Release</span>
+      <div class="knob" id="releaseKnob" data-value="0.1" data-min="0.01" data-max="0.8" data-step="0.01">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#f97316" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="79.2" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="releaseVal">100ms</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Depth</span>
+      <div class="knob" id="depthKnob" data-value="1" data-min="0.1" data-max="2" data-step="0.05">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#f97316" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="56.6" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="depthVal">100%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Shift</span>
+      <div class="knob" id="shiftKnob" data-value="0" data-min="-12" data-max="12" data-step="0.5">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="shiftVal">0 st</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Pronounce</span>
+      <div class="knob" id="pronounceKnob" data-value="0.5" data-min="0" data-max="1" data-step="0.05">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#f97316" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="pronounceVal">50%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Output</span>
+      <div class="knob" id="outputKnob" data-value="0.7" data-min="0" data-max="1" data-step="0.01">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#f97316" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="outputKnobVal">70%</span>
+    </div>
+    <div style="margin-left:auto" class="gain-meter">
+      <span class="meter-label">Out</span>
+      <div class="meter-bar-wrap">
+        <div class="meter-fill" id="outputFill"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Vocoder — 16-band filter bank
+// ============================================================
+let audioCtx = null;
+let modulatorSource = null;
+let micStream = null;
+let carrierOscs = [];
+let bandFilters = [];
+let vcas = [];
+let envelopeFollowers = [];
+let analyserOut = null;
+let outputGain = null;
+let audioBuffer = null;
+let isPlaying = false;
+let bandCount = 16;
+let activeBands = new Set();
+let carrierWave = 'sawtooth';
+let carrierFreq = 100;
+let shiftSemitones = 0;
+let attackTime = 0.01;
+let releaseTime = 0.1;
+let depth = 1.0;
+let pronounce = 0.5;
+
+// Band frequencies (logarithmic from 80Hz to 8kHz)
+const bandFreqs = [];
+for (let i = 0; i < bandCount; i++) {
+  bandFreqs.push(80 * Math.pow((8000 / 80), i / (bandCount - 1)));
+}
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  outputGain = audioCtx.createGain();
+  outputGain.gain.value = 0.7;
+  analyserOut = audioCtx.createAnalyser();
+  analyserOut.fftSize = 256;
+  outputGain.connect(analyserOut);
+  analyserOut.connect(audioCtx.destination);
+
+  // Build band filters + VCAs
+  for (let i = 0; i < bandCount; i++) {
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = bandFreqs[i];
+    filter.Q.value = 5;
+
+    const vca = audioCtx.createGain();
+    vca.gain.value = 0;
+
+    filter.connect(vca);
+    vca.connect(outputGain);
+
+    bandFilters.push(filter);
+    vcas.push(vca);
+    envelopeFollowers.push({ level: 0, active: true });
+    activeBands.add(i);
+  }
+
+  buildBandGrid();
+  startModDisplay();
+  startOutputMeter();
+  startEnvelopeTick();
+}
+
+function buildCarrier() {
+  // Disconnect old
+  carrierOscs.forEach(o => { try { o.stop(); o.disconnect(); } catch(e){} });
+  carrierOscs = [];
+
+  for (let i = 0; i < bandCount; i++) {
+    const osc = audioCtx.createOscillator();
+    const shift = shiftSemitones;
+    const baseFreq = bandFreqs[i] * Math.pow(2, shift / 12);
+    osc.type = carrierWave;
+    osc.frequency.value = baseFreq;
+    osc.connect(bandFilters[i]);
+    osc.start();
+    carrierOscs.push(osc);
+  }
+}
+
+function updateCarrierFreqs() {
+  carrierOscs.forEach((osc, i) => {
+    const shift = shiftSemitones;
+    const baseFreq = bandFreqs[i] * Math.pow(2, shift / 12);
+    osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
+  });
+}
+
+function updateCarrierWave() {
+  carrierOscs.forEach(osc => { osc.type = carrierWave; });
+}
+
+// ============================================================
+// Envelope follower tick (runs in requestAnimationFrame)
+// ============================================================
+function startEnvelopeTick() {
+  function tick() {
+    if (!audioCtx) { requestAnimationFrame(tick); return; }
+    const now = audioCtx.currentTime;
+    bandFilters.forEach((filter, i) => {
+      if (!envelopeFollowers[i]) return;
+      // We can't easily get band amplitude from biquad in Web Audio
+      // Use a workaround: create analyser per band (expensive) OR
+      // just use the filter's gain indirectly via a ScriptProcessorNode
+      // For simplicity: we animate all active bands equally for visualization
+      // The actual VCAs get driven by the mic analyser
+      const vcaLevel = isPlaying ? 0.5 : 0.1;
+      if (activeBands.has(i)) {
+        vcas[i].gain.setTargetAtTime(vcaLevel * depth, now, 0.05);
+      } else {
+        vcas[i].gain.setTargetAtTime(0, now, 0.05);
+      }
+    });
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ============================================================
+// Mic input
+// ============================================================
+let micAnalyser = null;
+let micSource = null;
+
+async function startMic() {
+  initAudio();
+  try {
+    if (micStream) micStream.getTracks().forEach(t => t.stop());
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    if (micSource) micSource.disconnect();
+    micSource = audioCtx.createMediaStreamSource(micStream);
+
+    micAnalyser = audioCtx.createAnalyser();
+    micAnalyser.fftSize = 512;
+    micSource.connect(micAnalyser);
+
+    // Drive VCA with mic
+    const buf = new Float32Array(micAnalyser.frequencyBinCount);
+    function driveVCA() {
+      if (!micAnalyser || !audioCtx) return;
+      micAnalyser.getFloatFrequencyData(buf);
+      bandFilters.forEach((filter, i) => {
+        if (!activeBands.has(i)) { vcas[i].gain.value = 0; return; }
+        // Find FFT bin closest to this filter's frequency
+        const freq = filter.frequency.value;
+        const binWidth = audioCtx.sampleRate / micAnalyser.fftSize;
+        const bin = Math.round(freq / binWidth);
+        let energy = 0;
+        for (let b = Math.max(0, bin - 2); b <= Math.min(buf.length - 1, bin + 2); b++) {
+          energy = Math.max(energy, buf[b]);
+        }
+        const linear = Math.pow(10, energy / 20); // dB → linear
+        const target = Math.min(1, linear * 5) * depth;
+        vcas[i].gain.setTargetAtTime(target, audioCtx.currentTime, attackTime);
+      });
+      requestAnimationFrame(driveVCA);
+    }
+    driveVCA();
+    document.getElementById('micBtn').classList.add('active');
+    document.getElementById('micBtn').textContent = 'MIC ON';
+  } catch(e) {
+    console.warn('Mic error:', e);
+    document.getElementById('micBtn').textContent = 'MIC DENIED';
+  }
+}
+
+// ============================================================
+// File loading
+// ============================================================
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  initAudio();
+  const reader = new FileReader();
+  reader.onload = e => {
+    audioCtx.decodeAudioData(e.target.result, buf => {
+      audioBuffer = buf;
+      dropZone.querySelector('span').textContent = '▶ ' + file.name;
+      playModulator();
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function playModulator() {
+  if (!audioBuffer) return;
+  if (modulatorSource) { modulatorSource.stop(); modulatorSource.disconnect(); }
+  modulatorSource = audioCtx.createBufferSource();
+  modulatorSource.buffer = audioBuffer;
+  if (!micAnalyser) {
+    micAnalyser = audioCtx.createAnalyser();
+    micAnalyser.fftSize = 512;
+    modulatorSource.connect(micAnalyser);
+    micAnalyser.connect(audioCtx.destination);
+
+    const buf = new Float32Array(micAnalyser.frequencyBinCount);
+    function driveVCA() {
+      if (!micAnalyser) return;
+      micAnalyser.getFloatFrequencyData(buf);
+      bandFilters.forEach((filter, i) => {
+        if (!activeBands.has(i)) { vcas[i].gain.value = 0; return; }
+        const freq = filter.frequency.value;
+        const binWidth = audioCtx.sampleRate / micAnalyser.fftSize;
+        const bin = Math.round(freq / binWidth);
+        let energy = 0;
+        for (let b = Math.max(0, bin - 2); b <= Math.min(buf.length - 1, bin + 2); b++) {
+          energy = Math.max(energy, buf[b]);
+        }
+        const linear = Math.pow(10, energy / 20);
+        const target = Math.min(1, linear * 5) * depth;
+        vcas[i].gain.setTargetAtTime(target, audioCtx.currentTime, attackTime);
+      });
+      requestAnimationFrame(driveVCA);
+    }
+    driveVCA();
+  }
+  modulatorSource.start(0);
+  isPlaying = true;
+}
+
+// ============================================================
+// Waveform display
+// ============================================================
+const modCanvas = document.getElementById('modCanvas');
+const mctx = modCanvas.getContext('2d');
+let modW, modH;
+
+function resizeMod() {
+  const rect = modCanvas.parentElement.getBoundingClientRect();
+  modW = rect.width;
+  modH = 100;
+  modCanvas.width = modW * (window.devicePixelRatio || 1);
+  modCanvas.height = modH * (window.devicePixelRatio || 1);
+  modCanvas.style.width = modW + 'px';
+  modCanvas.style.height = modH + 'px';
+  mctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+}
+window.addEventListener('resize', resizeMod);
+setTimeout(resizeMod, 50);
+
+function startModDisplay() {
+  const buf = new Float32Array(micAnalyser ? micAnalyser.frequencyBinCount : 1024);
+  function draw() {
+    if (!modW) { requestAnimationFrame(draw); return; }
+    mctx.clearRect(0, 0, modW, modH);
+    mctx.fillStyle = '#0a0a14';
+    mctx.fillRect(0, 0, modW, modH);
+    if (micAnalyser) {
+      micAnalyser.getFloatTimeDomainData(buf);
+      mctx.strokeStyle = 'rgba(249,115,22,0.8)';
+      mctx.lineWidth = 1.5;
+      mctx.beginPath();
+      const sliceW = modW / buf.length;
+      for (let i = 0; i < buf.length; i++) {
+        const y = (1 - (buf[i] * 0.5 + 0.5)) * modH;
+        if (i === 0) mctx.moveTo(0, y); else mctx.lineTo(i * sliceW, y);
+      }
+      mctx.stroke();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ============================================================
+// Output meter
+// ============================================================
+function startOutputMeter() {
+  const buf = new Float32Array(analyserOut.frequencyBinCount);
+  function tick() {
+    if (!analyserOut) { requestAnimationFrame(tick); return; }
+    analyserOut.getFloatTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / buf.length);
+    const db = 20 * Math.log10(Math.max(rms, 1e-6));
+    document.getElementById('outputFill').style.height = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + '%';
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ============================================================
+// Band grid
+// ============================================================
+function buildBandGrid() {
+  const grid = document.getElementById('bandGrid');
+  grid.innerHTML = '';
+
+  // Build columns of 4 bands each for readability
+  const cols = 4;
+  const perCol = Math.ceil(bandCount / cols);
+
+  for (let col = 0; col < cols; col++) {
+    const colDiv = document.createElement('div');
+    colDiv.style.display = 'flex';
+    colDiv.style.gap = '0.4rem';
+
+    for (let b = 0; b < perCol; b++) {
+      const i = col * perCol + b;
+      if (i >= bandCount) break;
+
+      const isActive = activeBands.has(i);
+      const freq = bandFreqs[i];
+      const freqLabel = freq >= 1000 ? (freq/1000).toFixed(1)+'k' : freq.toFixed(0);
+      const col2 = document.createElement('div');
+      col2.className = 'band-col';
+
+      const bar = document.createElement('div');
+      bar.className = 'band-bar' + (isActive ? ' active' : '');
+      bar.dataset.idx = i;
+      const fill = document.createElement('div');
+      fill.className = 'band-fill';
+      fill.style.height = '30%';
+      bar.appendChild(fill);
+      bar.dataset.active = isActive ? '1' : '0';
+
+      const label = document.createElement('div');
+      label.className = 'band-label';
+      label.textContent = freqLabel + 'Hz';
+
+      const act = document.createElement('div');
+      act.className = 'band-activity' + (isActive ? ' active' : '');
+
+      col2.appendChild(act);
+      col2.appendChild(bar);
+      col2.appendChild(label);
+
+      bar.addEventListener('mousedown', e => {
+        e.preventDefault();
+        toggleBand(i, e.shiftKey || e.metaKey);
+      });
+      bar.addEventListener('mouseenter', e => {
+        if (swipeActive) toggleBand(i, swipeVal);
+      });
+
+      colDiv.appendChild(col2);
+    }
+    grid.appendChild(colDiv);
+  }
+}
+
+let swipeActive = false;
+let swipeVal = false;
+
+document.addEventListener('mousedown', e => {
+  if (e.target.closest('.band-bar')) {
+    swipeActive = true;
+    const bar = e.target.closest('.band-bar');
+    swipeVal = bar.dataset.active !== '1';
+  }
+});
+document.addEventListener('mouseup', () => swipeActive = false);
+
+function toggleBand(i, forceVal) {
+  const newVal = forceVal !== undefined ? forceVal : !activeBands.has(i);
+  if (newVal) {
+    activeBands.add(i);
+  } else {
+    activeBands.delete(i);
+  }
+  const bar = document.querySelector(`.band-bar[data-idx="${i}"]`);
+  const act = bar ? bar.parentElement.querySelector('.band-activity') : null;
+  if (bar) {
+    bar.classList.toggle('active', newVal);
+    bar.dataset.active = newVal ? '1' : '0';
+  }
+  if (act) act.classList.toggle('active', newVal);
+}
+
+// ============================================================
+// Carrier wave buttons
+// ============================================================
+document.querySelectorAll('.carrier-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    carrierWave = btn.dataset.wave;
+    document.querySelectorAll('.carrier-btn').forEach(b => b.classList.toggle('active', b === btn));
+    initAudio();
+    buildCarrier();
+  });
+});
+
+document.querySelectorAll('.carrier-freq-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    carrierFreq = parseFloat(btn.dataset.cfreq);
+    document.querySelectorAll('.carrier-freq-btn').forEach(b => b.classList.toggle('active', b === btn));
+    shiftSemitones = 0;
+    initAudio();
+    buildCarrier();
+  });
+});
+
+// ============================================================
+// Mic button
+// ============================================================
+document.getElementById('micBtn').addEventListener('click', () => {
+  initAudio();
+  startMic();
+});
+
+// ============================================================
+// Knob system
+// ============================================================
+let activeKnob = null, knobStartY = 0, knobStartVal = 0;
+
+document.querySelectorAll('.knob').forEach(el => {
+  el.addEventListener('mousedown', e => { e.preventDefault(); activeKnob = el; knobStartY = e.clientY; knobStartVal = parseFloat(el.dataset.value); document.body.style.cursor = 'grabbing'; });
+  el.addEventListener('touchstart', e => { e.preventDefault(); activeKnob = el; knobStartY = e.touches[0].clientY; knobStartVal = parseFloat(el.dataset.value); }, { passive: false });
+}, { passive: true });
+
+document.addEventListener('mousemove', e => {
+  if (!activeKnob) return;
+  applyKnobDelta(activeKnob, knobStartY - e.clientY);
+  knobStartY = e.clientY;
+});
+document.addEventListener('touchmove', e => {
+  if (!activeKnob) return;
+  applyKnobDelta(activeKnob, knobStartY - e.touches[0].clientY);
+  knobStartY = e.touches[0].clientY;
+}, { passive: false });
+document.addEventListener('mouseup', () => { if (activeKnob) { activeKnob = null; document.body.style.cursor = ''; } });
+document.addEventListener('touchend', () => { activeKnob = null; });
+
+function applyKnobDelta(el, dy) {
+  const range = parseFloat(el.dataset.max) - parseFloat(el.dataset.min);
+  const step = parseFloat(el.dataset.step) || 0.01;
+  let newVal = knobStartVal + (dy / 120) * range;
+  newVal = Math.round(newVal / step) * step;
+  newVal = Math.max(parseFloat(el.dataset.min), Math.min(parseFloat(el.dataset.max), newVal));
+  el.dataset.value = newVal;
+  applyKnobValue(el, newVal);
+  updateKnobVisual(el, newVal);
+}
+
+function arcOffset(val, min, max) {
+  const pct = Math.max(0, Math.min(1, (val - min) / (max - min)));
+  return 113.1 * (1 - pct);
+}
+
+function applyKnobValue(el, val) {
+  const id = el.id;
+  if (id === 'attackKnob') {
+    attackTime = val;
+  } else if (id === 'releaseKnob') {
+    releaseTime = val;
+  } else if (id === 'depthKnob') {
+    depth = val;
+  } else if (id === 'shiftKnob') {
+    shiftSemitones = val;
+    updateCarrierFreqs();
+  } else if (id === 'pronounceKnob') {
+    pronounce = val;
+  } else if (id === 'outputKnob') {
+    if (outputGain) outputGain.gain.value = val;
+  }
+
+  const valEl = el.parentElement.querySelector('.knob-value');
+  if (valEl) {
+    if (id === 'attackKnob') valEl.textContent = Math.round(val*1000) + 'ms';
+    else if (id === 'releaseKnob') valEl.textContent = Math.round(val*1000) + 'ms';
+    else if (id === 'depthKnob') valEl.textContent = Math.round(val*100) + '%';
+    else if (id === 'shiftKnob') valEl.textContent = (val >= 0 ? '+' : '') + val.toFixed(1) + ' st';
+    else if (id === 'pronounceKnob') valEl.textContent = Math.round(val*100) + '%';
+    else if (id === 'outputKnob') valEl.textContent = Math.round(val*100) + '%';
+  }
+}
+
+function updateKnobVisual(el, val) {
+  const min = parseFloat(el.dataset.min), max = parseFloat(el.dataset.max);
+  const arc = el.querySelector('.knob-arc');
+  if (arc) arc.setAttribute('stroke-dashoffset', arcOffset(val, min, max));
+}
+
+document.querySelectorAll('.knob').forEach(el => {
+  const v = parseFloat(el.dataset.value);
+  updateKnobVisual(el, v);
+});
+
+// Space to toggle mic
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' && e.target === document.body) {
+    e.preventDefault();
+    initAudio();
+    startMic();
+  }
+});
+</script>
+</body>
+</html>
