@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Filter Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #090910;
+  --surface: #111120;
+  --surface2: #18182a;
+  --border: #252540;
+  --purple: #a855f7;
+  --purple-dim: #3b1f6e;
+  --purple-glow: rgba(168,85,247,0.15);
+  --amber: #f5c26b;
+  --text: #ddd8c8;
+  --text-dim: #6a6478;
+  --meter-green: #4ade80;
+  --meter-yellow: #fbbf24;
+  --meter-red: #f87171;
+  --teal: #2dd4bf;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  user-select: none;
+}
+.wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+.tagline {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  margin-top: 0.3rem;
+  letter-spacing: 0.06em;
+}
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.5rem;
+}
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--purple-dim); color: var(--purple); background: rgba(168,85,247,0.04); }
+.drop-zone input { display: none; }
+
+/* Filter curve canvas */
+.curve-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.curve-wrap {
+  position: relative;
+  background: #0a0a14;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+#curveCanvas { display: block; width: 100%; height: 160px; cursor: crosshair; }
+.curve-hover-label {
+  position: absolute;
+  top: 8px; left: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+.curve-labels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px;
+}
+.curve-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  color: var(--text-dim);
+  opacity: 0.6;
+}
+
+/* Filter mode buttons */
+.filter-modes {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+.mode-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.04em;
+}
+.mode-btn:hover { border-color: var(--purple); color: var(--purple); }
+.mode-btn.active { background: var(--purple-dim); border-color: var(--purple); color: var(--amber); }
+
+/* Knob grid */
+.knob-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.knob-grid {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.knob-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 68px;
+}
+.knob-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.knob-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--amber);
+  letter-spacing: 0.04em;
+  min-width: 42px;
+  text-align: center;
+}
+.knob {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  cursor: grab;
+}
+.knob:active { cursor: grabbing; }
+.knob svg { width: 44px; height: 44px; }
+
+/* Envelope section */
+.env-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.env-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.env-canvas-wrap {
+  background: #0a0a14;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 0.75rem;
+}
+#envCanvas { display: block; width: 100%; height: 70px; }
+.env-btns {
+  display: flex;
+  gap: 0.4rem;
+}
+.env-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.04em;
+}
+.env-btn:hover { border-color: var(--teal); color: var(--teal); }
+.env-btn.active { background: rgba(45,212,191,0.1); border-color: var(--teal); color: var(--teal); }
+
+/* LFO section */
+.lfo-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+#lfoCanvas { display: block; width: 100%; height: 60px; background: #0a0a14; border-radius: 6px; }
+.lfo-shapes {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.lfo-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.04em;
+}
+.lfo-btn:hover { border-color: var(--teal); color: var(--teal); }
+.lfo-btn.active { background: rgba(45,212,191,0.1); border-color: var(--teal); color: var(--teal); }
+
+/* Output meter */
+.meter-bar-wrap {
+  width: 14px;
+  height: 80px;
+  background: #0a0a14;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+}
+.meter-fill { width: 100%; transition: height 0.05s linear; border-radius: 2px 2px 0 0; }
+#outFill { background: linear-gradient(to top, var(--meter-green) 60%, var(--meter-yellow) 85%, var(--meter-red)); height: 0%; }
+.gain-meter { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+.meter-label { font-family: 'Space Mono', monospace; font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Filter Studio</h1>
+      <div class="tagline">Multi-Mode Resonant Filter · Envelope · LFO</div>
+    </div>
+  </header>
+
+  <!-- File Input -->
+  <div class="drop-zone" id="dropZone">
+    <span>Drop audio file here or click to browse — plays through the filter</span>
+    <input type="file" id="fileInput" accept="audio/*,video/*">
+  </div>
+
+  <!-- Filter Response Curve -->
+  <div class="curve-section">
+    <div class="section-label">Frequency Response — drag to set cutoff</div>
+    <div class="curve-wrap">
+      <canvas id="curveCanvas"></canvas>
+      <span class="curve-hover-label" id="curveLabel">▼ 1kHz</span>
+    </div>
+    <div class="curve-labels">
+      <span class="curve-label">20Hz</span>
+      <span class="curve-label">100Hz</span>
+      <span class="curve-label">500Hz</span>
+      <span class="curve-label">1kHz</span>
+      <span class="curve-label">5kHz</span>
+      <span class="curve-label">20kHz</span>
+    </div>
+  </div>
+
+  <!-- Filter Modes -->
+  <div class="knob-section">
+    <div class="section-label">Filter</div>
+    <div class="filter-modes">
+      <button class="mode-btn active" data-type="lowpass">LPF</button>
+      <button class="mode-btn" data-type="highpass">HPF</button>
+      <button class="mode-btn" data-type="bandpass">BPF</button>
+      <button class="mode-btn" data-type="notch">NOTCH</button>
+    </div>
+    <div class="knob-grid">
+      <div class="knob-group">
+        <span class="knob-label">Cutoff</span>
+        <div class="knob" id="cutoffKnob" data-value="2000" data-min="20" data-max="20000" data-step="10">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#a855f7" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="67.9" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="cutoffVal">2kHz</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">Resonance</span>
+        <div class="knob" id="qKnob" data-value="1" data-min="0.1" data-max="20" data-step="0.1">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#a855f7" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="96.1" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="qVal">1.0</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">Drive</span>
+        <div class="knob" id="driveKnob" data-value="0" data-min="0" data-max="1" data-step="0.01">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#a855f7" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="113.1" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="driveVal">0%</span>
+      </div>
+      <div class="gain-meter">
+        <span class="meter-label">Out</span>
+        <div class="meter-bar-wrap">
+          <div class="meter-fill" id="outFill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Envelope Follower -->
+  <div class="env-section">
+    <div class="env-header">
+      <span class="section-label" style="margin:0">Envelope Follower — modulates cutoff</span>
+      <div class="env-btns">
+        <button class="env-btn active" data-env="on">ON</button>
+        <button class="env-btn" data-env="off">OFF</button>
+      </div>
+    </div>
+    <div class="env-canvas-wrap">
+      <canvas id="envCanvas"></canvas>
+    </div>
+    <div class="knob-grid">
+      <div class="knob-group">
+        <span class="knob-label">Env Amt</span>
+        <div class="knob" id="envAmtKnob" data-value="0.5" data-min="0" data-max="1" data-step="0.01">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="envAmtVal">50%</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">Attack</span>
+        <div class="knob" id="envAttackKnob" data-value="0.005" data-min="0.001" data-max="0.1" data-step="0.001">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="90.5" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="envAttackVal">5ms</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">Release</span>
+        <div class="knob" id="envReleaseKnob" data-value="0.1" data-min="0.01" data-max="0.8" data-step="0.01">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="79.2" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="envReleaseVal">100ms</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- LFO -->
+  <div class="lfo-section">
+    <div class="section-label">LFO — modulates cutoff</div>
+    <div class="lfo-shapes">
+      <button class="lfo-btn active" data-shape="sine">SINE</button>
+      <button class="lfo-btn" data-shape="triangle">TRI</button>
+      <button class="lfo-btn" data-shape="sawtooth">SAW</button>
+      <button class="lfo-btn" data-shape="square">SQR</button>
+    </div>
+    <div class="knob-grid">
+      <div class="knob-group">
+        <span class="knob-label">Rate</span>
+        <div class="knob" id="lfoRateKnob" data-value="1" data-min="0.1" data-max="8" data-step="0.05">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="101.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="lfoRateVal">1.0 Hz</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">Depth</span>
+        <div class="knob" id="lfoDepthKnob" data-value="0.3" data-min="0" data-max="1" data-step="0.01">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="90.5" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="lfoDepthVal">30%</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">Center</span>
+        <div class="knob" id="lfoCenterKnob" data-value="0.5" data-min="0" data-max="1" data-step="0.01">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="lfoCenterVal">50%</span>
+      </div>
+    </div>
+    <canvas id="lfoCanvas"></canvas>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Filter Studio — Web Audio API
+// ============================================================
+let audioCtx = null;
+let audioBuffer = null;
+let sourceNode = null;
+let isPlaying = false;
+
+let inputGain = null;
+let filterNode = null;
+let envFollower = null;
+let lfoOsc = null;
+let lfoGain = null;
+let mergerNode = null;  // merges env + LFO into filter.frequency
+let outputGain = null;
+let analyserOut = null;
+
+let filterType = 'lowpass';
+let cutoff = 2000;
+let q = 1;
+let drive = 0;
+let envAmt = 0.5;
+let envAttack = 0.005;
+let envRelease = 0.1;
+let envOn = true;
+let lfoRate = 1;
+let lfoDepth = 0.3;
+let lfoCenter = 0.5;
+let lfoShape = 'sine';
+
+let envLevel = 0;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  inputGain = audioCtx.createGain();
+
+  // Waveshaper for drive
+  const waveshaper = audioCtx.createWaveShaper();
+  waveshaper.curve = makeDriveCurve(0);
+  waveshaper.oversample = '4x';
+
+  filterNode = audioCtx.createBiquadFilter();
+  filterNode.type = filterType;
+  filterNode.frequency.value = cutoff;
+  filterNode.Q.value = q;
+
+  // LFO
+  lfoOsc = audioCtx.createOscillator();
+  lfoOsc.type = lfoShape;
+  lfoOsc.frequency.value = lfoRate;
+  lfoGain = audioCtx.createGain();
+  lfoGain.gain.value = lfoDepth * cutoff;
+  lfoOsc.connect(lfoGain);
+  lfoGain.connect(filterNode.frequency);
+  lfoOsc.start();
+
+  outputGain = audioCtx.createGain();
+  analyserOut = audioCtx.createAnalyser();
+  analyserOut.fftSize = 256;
+
+  // Chain
+  inputGain.connect(waveshaper);
+  waveshaper.connect(filterNode);
+  filterNode.connect(outputGain);
+  outputGain.connect(analyserOut);
+  analyserOut.connect(audioCtx.destination);
+
+  startCurve();
+  startLFODraw();
+  startEnvDraw();
+  startMeters();
+}
+
+function makeDriveCurve(amount) {
+  const n = 44100;
+  const curve = new Float32Array(n);
+  const k = amount * 100;
+  for (let i = 0; i < n; i++) {
+    const x = (i * 2) / n - 1;
+    curve[i] = Math.tanh(k * x);
+  }
+  return curve;
+}
+
+function updateFilter() {
+  if (!filterNode) return;
+  filterNode.type = filterType;
+  filterNode.Q.value = q;
+  const lfoMaxDeviation = lfoDepth * cutoff;
+  filterNode.frequency.setValueAtTime(cutoff, audioCtx.currentTime);
+  lfoOsc.frequency.value = lfoRate;
+  lfoGain.gain.value = lfoMaxDeviation;
+  drawCurve();
+}
+
+// ============================================================
+// Envelope follower
+// ============================================================
+let envAnalyser = null;
+let envSource = null;
+
+function attachEnvFollower() {
+  if (!inputGain) return;
+  // Fork input to envelope analyser
+  envAnalyser = audioCtx.createAnalyser();
+  envAnalyser.fftSize = 512;
+  inputGain.connect(envAnalyser);
+
+  const buf = new Float32Array(envAnalyser.frequencyBinCount);
+  function trackEnv() {
+    if (!envAnalyser || !audioCtx || !filterNode) return;
+    envAnalyser.getFloatTimeDomainData(buf);
+    let rms = 0;
+    for (let i = 0; i < buf.length; i++) rms += buf[i] * buf[i];
+    rms = Math.sqrt(rms / buf.length);
+    // Smooth with attack/release
+    const target = Math.min(1, rms * 8);
+    if (target > envLevel) {
+      envLevel = envLevel + (target - envLevel) * (1 - Math.exp(-audioCtx.currentTime * envAttack * 1000));
+    } else {
+      envLevel = envLevel + (target - envLevel) * (1 - Math.exp(-audioCtx.currentTime * envRelease * 10));
+    }
+    if (envOn && filterNode) {
+      const envOffset = envLevel * envAmt * cutoff * 3; // max 3x cutoff modulation
+      filterNode.frequency.setTargetAtTime(
+        Math.min(20000, cutoff + envOffset),
+        audioCtx.currentTime,
+        envAttack
+      );
+    }
+    requestAnimationFrame(trackEnv);
+  }
+  trackEnv();
+}
+
+// ============================================================
+// File loading
+// ============================================================
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  initAudio();
+  const reader = new FileReader();
+  reader.onload = e => {
+    audioCtx.decodeAudioData(e.target.result, buf => {
+      audioBuffer = buf;
+      dropZone.querySelector('span').textContent = '▶ ' + file.name;
+      playBuffer();
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function playBuffer() {
+  if (!audioBuffer) return;
+  if (sourceNode) { sourceNode.stop(); sourceNode.disconnect(); }
+  sourceNode = audioCtx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.loop = true;
+  sourceNode.connect(inputGain);
+  sourceNode.start(0);
+  isPlaying = true;
+  attachEnvFollower();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' && e.target === document.body) { e.preventDefault(); if (audioBuffer) playBuffer(); }
+});
+
+// ============================================================
+// Filter response curve
+// ============================================================
+const curveCanvas = document.getElementById('curveCanvas');
+const cctx = curveCanvas.getContext('2d');
+let curveW, curveH;
+let hoverFreq = null;
+
+function freqToX(f) {
+  const minF = Math.log10(20), maxF = Math.log10(20000);
+  return (Math.log10(Math.max(20, Math.min(20000, f))) - minF) / (maxF - minF) * curveW;
+}
+function xToFreq(x) {
+  const minF = Math.log10(20), maxF = Math.log10(20000);
+  return Math.pow(10, minF + (x / curveW) * (maxF - minF));
+}
+function gainToY(g) {
+  return curveH / 2 - (g / 40) * (curveH / 2);
+}
+
+function filterResponse(freq, type, cutoff, q) {
+  // Approximate magnitude response
+  const w0 = 2 * Math.PI * freq / audioCtx.sampleRate;
+  const w1 = 2 * Math.PI * cutoff / audioCtx.sampleRate;
+  if (type === 'lowpass') {
+    const re = 1 / Math.sqrt(1 + Math.pow(freq / cutoff, 2 * q));
+    return 20 * Math.log10(Math.max(re, 1e-6));
+  } else if (type === 'highpass') {
+    const re = 1 / Math.sqrt(1 + Math.pow(cutoff / freq, 2 * q));
+    return 20 * Math.log10(Math.max(re, 1e-6));
+  } else if (type === 'bandpass') {
+    const ratio = freq / cutoff;
+    const re = 1 / Math.sqrt(1 + Math.pow((ratio * ratio - 1) / (ratio * q), 2));
+    return 20 * Math.log10(Math.max(re, 1e-6));
+  } else { // notch
+    const ratio = freq / cutoff;
+    const re = 1 / Math.sqrt(1 + Math.pow(q / (ratio * ratio - 1), 2));
+    return 20 * Math.log10(Math.max(re, 1e-6));
+  }
+}
+
+function drawCurve() {
+  if (!curveW) return;
+  cctx.clearRect(0, 0, curveW, curveH);
+  cctx.fillStyle = '#0a0a14';
+  cctx.fillRect(0, 0, curveW, curveH);
+
+  // Grid
+  const freqLines = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+  cctx.strokeStyle = 'rgba(37,37,64,0.8)';
+  cctx.lineWidth = 1;
+  freqLines.forEach(f => {
+    const x = freqToX(f);
+    cctx.beginPath(); cctx.moveTo(x, 0); cctx.lineTo(x, curveH); cctx.stroke();
+  });
+  [-24, -18, -12, -6, 0, 6, 12, 18, 24].forEach(g => {
+    const y = gainToY(g);
+    cctx.strokeStyle = g === 0 ? 'rgba(168,85,247,0.4)' : 'rgba(37,37,64,0.8)';
+    cctx.beginPath(); cctx.moveTo(0, y); cctx.lineTo(curveW, y); cctx.stroke();
+  });
+
+  // Filter curve
+  cctx.strokeStyle = '#a855f7';
+  cctx.lineWidth = 2;
+  cctx.beginPath();
+  for (let px = 0; px <= curveW; px++) {
+    const freq = xToFreq(px);
+    const g = filterResponse(freq, filterType, cutoff, q);
+    const y = gainToY(Math.max(-40, Math.min(20, g)));
+    if (px === 0) cctx.moveTo(px, y); else cctx.lineTo(px, y);
+  }
+  cctx.stroke();
+
+  // Cutoff marker
+  const cx = freqToX(cutoff);
+  cctx.strokeStyle = 'rgba(245,194,107,0.5)';
+  cctx.setLineDash([4, 4]);
+  cctx.beginPath();
+  cctx.moveTo(cx, 0); cctx.lineTo(cx, curveH);
+  cctx.stroke();
+  cctx.setLineDash([]);
+
+  // Resonance peak
+  if (q > 1) {
+    const peakGain = 20 * Math.log10(q);
+    const peakY = gainToY(Math.min(20, peakGain));
+    const peakX = freqToX(cutoff);
+    cctx.fillStyle = 'rgba(168,85,247,0.3)';
+    cctx.beginPath();
+    cctx.arc(peakX, peakY, 5, 0, Math.PI * 2);
+    cctx.fill();
+    cctx.strokeStyle = '#f5c26b';
+    cctx.lineWidth = 1.5;
+    cctx.stroke();
+  }
+
+  // Hover
+  if (hoverFreq) {
+    const hx = freqToX(hoverFreq);
+    cctx.strokeStyle = 'rgba(255,255,255,0.1)';
+    cctx.beginPath();
+    cctx.moveTo(hx, 0); cctx.lineTo(hx, curveH);
+    cctx.stroke();
+    const gy = gainToY(filterResponse(hoverFreq, filterType, cutoff, q));
+    cctx.beginPath();
+    cctx.arc(hx, gy, 4, 0, Math.PI * 2);
+    cctx.fillStyle = '#f5c26b';
+    cctx.fill();
+  }
+}
+
+function resizeCurve() {
+  const rect = curveCanvas.parentElement.getBoundingClientRect();
+  curveW = rect.width;
+  curveH = 160;
+  curveCanvas.width = curveW * (window.devicePixelRatio || 1);
+  curveCanvas.height = curveH * (window.devicePixelRatio || 1);
+  curveCanvas.style.width = curveW + 'px';
+  curveCanvas.style.height = curveH + 'px';
+  cctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  drawCurve();
+}
+window.addEventListener('resize', resizeCurve);
+setTimeout(resizeCurve, 50);
+
+// Click/drag on curve
+let curveDragging = false;
+curveCanvas.addEventListener('mousedown', e => {
+  const rect = curveCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  cutoff = Math.max(20, Math.min(20000, xToFreq(x)));
+  curveDragging = true;
+  updateFilter();
+  document.getElementById('cutoffKnob').dataset.value = cutoff;
+  updateKnobVisual(document.getElementById('cutoffKnob'), cutoff);
+  document.getElementById('cutoffVal').textContent = cutoff >= 1000 ? (cutoff/1000).toFixed(1)+'kHz' : cutoff.toFixed(0)+'Hz';
+});
+curveCanvas.addEventListener('mousemove', e => {
+  const rect = curveCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  hoverFreq = xToFreq(x);
+  document.getElementById('curveLabel').textContent = '▼ ' + (hoverFreq >= 1000 ? (hoverFreq/1000).toFixed(1)+'kHz' : hoverFreq.toFixed(0)+'Hz');
+  if (curveDragging) {
+    cutoff = Math.max(20, Math.min(20000, xToFreq(x)));
+    updateFilter();
+    document.getElementById('cutoffKnob').dataset.value = cutoff;
+    updateKnobVisual(document.getElementById('cutoffKnob'), cutoff);
+    document.getElementById('cutoffVal').textContent = cutoff >= 1000 ? (cutoff/1000).toFixed(1)+'kHz' : cutoff.toFixed(0)+'Hz';
+  } else {
+    drawCurve();
+  }
+});
+curveCanvas.addEventListener('mouseup', () => curveDragging = false);
+curveCanvas.addEventListener('mouseleave', () => { curveDragging = false; hoverFreq = null; drawCurve(); });
+
+// ============================================================
+// LFO waveform draw
+// ============================================================
+const lfoCanvas = document.getElementById('lfoCanvas');
+const lctx = lfoCanvas.getContext('2d');
+let lfoW, lfoH;
+let lfoPhase = 0;
+
+function resizeLFO() {
+  const rect = lfoCanvas.parentElement.getBoundingClientRect();
+  lfoW = rect.width;
+  lfoH = 60;
+  lfoCanvas.width = lfoW * (window.devicePixelRatio || 1);
+  lfoCanvas.height = lfoH * (window.devicePixelRatio || 1);
+  lfoCanvas.style.width = lfoW + 'px';
+  lfoCanvas.style.height = lfoH + 'px';
+  lctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+}
+window.addEventListener('resize', resizeLFO);
+setTimeout(resizeLFO, 50);
+
+function startLFODraw() {
+  function draw() {
+    if (!lfoW) { requestAnimationFrame(draw); return; }
+    lctx.clearRect(0, 0, lfoW, lfoH);
+    lctx.fillStyle = '#0a0a14';
+    lctx.fillRect(0, 0, lfoW, lfoH);
+    lctx.strokeStyle = 'rgba(45,212,191,0.8)';
+    lctx.lineWidth = 1.5;
+    lctx.beginPath();
+    for (let x = 0; x <= lfoW; x++) {
+      const t = x / lfoW;
+      lfoPhase += 0.02;
+      let v;
+      if (lfoShape === 'sine') v = Math.sin(t * Math.PI * 4 + lfoPhase);
+      else if (lfoShape === 'triangle') v = Math.abs(((t * 4) % 2) - 1) * 2 - 1;
+      else if (lfoShape === 'sawtooth') v = 1 - (t * 4 % 2);
+      else v = t * 4 % 2 < 1 ? 1 : -1;
+      const y = (1 - (v * 0.4 + 0.5)) * lfoH;
+      if (x === 0) lctx.moveTo(x, y); else lctx.lineTo(x, y);
+    }
+    lctx.stroke();
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ============================================================
+// Envelope canvas
+// ============================================================
+const envCanvas = document.getElementById('envCanvas');
+const ectx = envCanvas.getContext('2d');
+let envW, envH;
+
+function resizeEnv() {
+  const rect = envCanvas.parentElement.getBoundingClientRect();
+  envW = rect.width;
+  envH = 70;
+  envCanvas.width = envW * (window.devicePixelRatio || 1);
+  envCanvas.height = envH * (window.devicePixelRatio || 1);
+  envCanvas.style.width = envW + 'px';
+  envCanvas.style.height = envH + 'px';
+  ectx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+}
+window.addEventListener('resize', resizeEnv);
+setTimeout(resizeEnv, 50);
+
+function startEnvDraw() {
+  function draw() {
+    if (!envW) { requestAnimationFrame(draw); return; }
+    ectx.clearRect(0, 0, envW, envH);
+    ectx.fillStyle = '#0a0a14';
+    ectx.fillRect(0, 0, envW, envH);
+    if (envOn) {
+      // Draw animated envelope shape
+      const t = Date.now() / 1000;
+      ectx.strokeStyle = 'rgba(45,212,191,0.8)';
+      ectx.lineWidth = 1.5;
+      ectx.beginPath();
+      for (let x = 0; x <= envW; x++) {
+        const phase = (x / envW + t * lfoRate * 0.1) % 1;
+        const env = Math.exp(-phase * 4) * (1 - Math.exp(-phase * 20));
+        const y = (1 - env * 0.8) * envH;
+        if (x === 0) ectx.moveTo(x, y); else ectx.lineTo(x, y);
+      }
+      ectx.stroke();
+      // Fill
+      ectx.lineTo(envW, envH);
+      ectx.lineTo(0, envH);
+      ectx.closePath();
+      ectx.fillStyle = 'rgba(45,212,191,0.08)';
+      ectx.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ============================================================
+// Output meter
+// ============================================================
+function startMeters() {
+  const buf = new Float32Array(analyserOut.frequencyBinCount);
+  function tick() {
+    if (!analyserOut) { requestAnimationFrame(tick); return; }
+    analyserOut.getFloatTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / buf.length);
+    const db = 20 * Math.log10(Math.max(rms, 1e-6));
+    document.getElementById('outFill').style.height = Math.max(0, Math.min(100, (db + 60) / 60 * 100)) + '%';
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ============================================================
+// Mode buttons
+// ============================================================
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    filterType = btn.dataset.type;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+    initAudio();
+    updateFilter();
+  });
+});
+
+document.querySelectorAll('.env-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    envOn = btn.dataset.env === 'on';
+    document.querySelectorAll('.env-btn').forEach(b => b.classList.toggle('active', b.dataset.env === (envOn ? 'on' : 'off')));
+  });
+});
+
+document.querySelectorAll('.lfo-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    lfoShape = btn.dataset.shape;
+    document.querySelectorAll('.lfo-btn').forEach(b => b.classList.toggle('active', b === btn));
+    if (lfoOsc) lfoOsc.type = lfoShape;
+  });
+});
+
+// ============================================================
+// Knob system
+// ============================================================
+let activeKnob = null, knobStartY = 0, knobStartVal = 0;
+
+document.querySelectorAll('.knob').forEach(el => {
+  el.addEventListener('mousedown', e => { e.preventDefault(); activeKnob = el; knobStartY = e.clientY; knobStartVal = parseFloat(el.dataset.value); document.body.style.cursor = 'grabbing'; });
+  el.addEventListener('touchstart', e => { e.preventDefault(); activeKnob = el; knobStartY = e.touches[0].clientY; knobStartVal = parseFloat(el.dataset.value); }, { passive: false });
+}, { passive: true });
+
+document.addEventListener('mousemove', e => {
+  if (!activeKnob) return;
+  const range = parseFloat(activeKnob.dataset.max) - parseFloat(activeKnob.dataset.min);
+  const step = parseFloat(activeKnob.dataset.step) || 0.01;
+  let newVal = knobStartVal + ((knobStartY - e.clientY) / 120) * range;
+  newVal = Math.round(newVal / step) * step;
+  newVal = Math.max(parseFloat(activeKnob.dataset.min), Math.min(parseFloat(activeKnob.dataset.max), newVal));
+  activeKnob.dataset.value = newVal;
+  applyKnobValue(activeKnob, newVal);
+  updateKnobVisual(activeKnob, newVal);
+  knobStartY = e.clientY;
+  knobStartVal = newVal;
+});
+document.addEventListener('touchmove', e => {
+  if (!activeKnob) return;
+  const range = parseFloat(activeKnob.dataset.max) - parseFloat(activeKnob.dataset.min);
+  const step = parseFloat(activeKnob.dataset.step) || 0.01;
+  let newVal = knobStartVal + ((knobStartY - e.touches[0].clientY) / 120) * range;
+  newVal = Math.round(newVal / step) * step;
+  newVal = Math.max(parseFloat(activeKnob.dataset.min), Math.min(parseFloat(activeKnob.dataset.max), newVal));
+  activeKnob.dataset.value = newVal;
+  applyKnobValue(activeKnob, newVal);
+  updateKnobVisual(activeKnob, newVal);
+  knobStartY = e.touches[0].clientY;
+  knobStartVal = newVal;
+}, { passive: false });
+document.addEventListener('mouseup', () => { if (activeKnob) { activeKnob = null; document.body.style.cursor = ''; } });
+document.addEventListener('touchend', () => { activeKnob = null; });
+
+function arcOffset(val, min, max) {
+  const pct = Math.max(0, Math.min(1, (val - min) / (max - min)));
+  return 113.1 * (1 - pct);
+}
+
+function applyKnobValue(el, val) {
+  const id = el.id;
+  if (id === 'cutoffKnob') {
+    cutoff = val;
+    initAudio();
+    updateFilter();
+  } else if (id === 'qKnob') {
+    q = val;
+    initAudio();
+    updateFilter();
+  } else if (id === 'driveKnob') {
+    drive = val;
+    if (audioCtx) {
+      const waveshaper = audioCtx.createWaveShaper();
+      waveshaper.curve = makeDriveCurve(val);
+      waveshaper.oversample = '4x';
+      // Reconnect: input → waveshaper → filter
+      inputGain.disconnect();
+      inputGain.connect(waveshaper);
+      waveshaper.connect(filterNode);
+    }
+  } else if (id === 'envAmtKnob') {
+    envAmt = val;
+  } else if (id === 'envAttackKnob') {
+    envAttack = val;
+  } else if (id === 'envReleaseKnob') {
+    envRelease = val;
+  } else if (id === 'lfoRateKnob') {
+    lfoRate = val;
+    if (lfoOsc) lfoOsc.frequency.value = val;
+  } else if (id === 'lfoDepthKnob') {
+    lfoDepth = val;
+    if (lfoGain) lfoGain.gain.value = val * cutoff;
+  } else if (id === 'lfoCenterKnob') {
+    lfoCenter = val;
+  }
+
+  const valEl = el.parentElement.querySelector('.knob-value');
+  if (valEl) {
+    if (id === 'cutoffKnob') valEl.textContent = val >= 1000 ? (val/1000).toFixed(1)+'kHz' : val.toFixed(0)+'Hz';
+    else if (id === 'qKnob') valEl.textContent = val.toFixed(1);
+    else if (id === 'driveKnob') valEl.textContent = Math.round(val*100)+'%';
+    else if (id === 'envAmtKnob') valEl.textContent = Math.round(val*100)+'%';
+    else if (id === 'envAttackKnob') valEl.textContent = Math.round(val*1000)+'ms';
+    else if (id === 'envReleaseKnob') valEl.textContent = Math.round(val*1000)+'ms';
+    else if (id === 'lfoRateKnob') valEl.textContent = val.toFixed(1)+' Hz';
+    else if (id === 'lfoDepthKnob') valEl.textContent = Math.round(val*100)+'%';
+    else if (id === 'lfoCenterKnob') valEl.textContent = Math.round(val*100)+'%';
+  }
+}
+
+function updateKnobVisual(el, val) {
+  const min = parseFloat(el.dataset.min), max = parseFloat(el.dataset.max);
+  const arc = el.querySelector('.knob-arc');
+  if (arc) arc.setAttribute('stroke-dashoffset', arcOffset(val, min, max));
+}
+
+document.querySelectorAll('.knob').forEach(el => {
+  updateKnobVisual(el, parseFloat(el.dataset.value));
+});
+
+// ============================================================
+// Keyboard shortcuts
+// ============================================================
+document.addEventListener('keydown', e => {
+  if (e.key === 'f') { filterType = filterType === 'lowpass' ? 'highpass' : 'lowpass'; document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.type === filterType)); initAudio(); updateFilter(); }
+  if (e.key === 'l') { envOn = !envOn; document.querySelectorAll('.env-btn').forEach(b => b.classList.toggle('active', b.dataset.env === (envOn ? 'on' : 'off'))); }
+});
+</script>
+</body>
+</html>
