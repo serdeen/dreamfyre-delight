@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ping Pong Delay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #090910;
+  --surface: #111120;
+  --surface2: #18182a;
+  --surface3: #1e1e32;
+  --border: #252540;
+  --teal: #2dd4bf;
+  --teal-dim: #0d9488;
+  --teal-glow: rgba(45,212,191,0.15);
+  --amber: #f5c26b;
+  --text: #ddd8c8;
+  --text-dim: #6a6478;
+  --meter-green: #4ade80;
+  --meter-yellow: #fbbf24;
+  --red: #f87171;
+  --left-color: #60a5fa;
+  --right-color: #f472b6;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  user-select: none;
+}
+.wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+.tagline {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  margin-top: 0.3rem;
+  letter-spacing: 0.06em;
+}
+.bpm-display {
+  font-family: 'Space Mono', monospace;
+  font-size: 2rem;
+  color: var(--teal);
+  letter-spacing: 0.05em;
+}
+.bpm-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.2rem;
+}
+.bpm-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Tap BPM section */
+.bpm-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+.bpm-tap-area {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.tap-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.6rem 1.5rem;
+  background: var(--surface2);
+  border: 1px solid var(--teal-dim);
+  color: var(--teal);
+  cursor: pointer;
+  border-radius: 6px;
+  letter-spacing: 0.1em;
+  transition: all 0.1s;
+  min-width: 90px;
+}
+.tap-btn:hover { background: var(--teal-glow); }
+.tap-btn:active { transform: scale(0.96); background: rgba(45,212,191,0.25); }
+.bpm-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.bpm-input {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.2rem;
+  width: 70px;
+  background: #0a0a14;
+  border: 1px solid var(--border);
+  color: var(--teal);
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  text-align: center;
+  outline: none;
+}
+.bpm-input:focus { border-color: var(--teal-dim); }
+.bpm-unit {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 0.1em;
+}
+
+/* Delay grid */
+.grid-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.subdivision-row {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 0.25rem;
+  align-items: center;
+}
+.row-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.5rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  width: 28px;
+  flex-shrink: 0;
+  text-align: right;
+  padding-right: 0.4rem;
+}
+.row-label.left { color: var(--left-color); }
+.row-label.right { color: var(--right-color); }
+.cell {
+  width: 36px;
+  height: 36px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  background: #0a0a14;
+  cursor: pointer;
+  transition: all 0.08s;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.45rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+.cell:hover { border-color: var(--teal-dim); }
+.cell.active.left {
+  background: rgba(96,165,250,0.25);
+  border-color: var(--left-color);
+  color: var(--left-color);
+  box-shadow: 0 0 8px rgba(96,165,250,0.3);
+}
+.cell.active.right {
+  background: rgba(244,114,182,0.25);
+  border-color: var(--right-color);
+  color: var(--right-color);
+  box-shadow: 0 0 8px rgba(244,114,182,0.3);
+}
+.cell.active.lr {
+  background: rgba(45,212,191,0.2);
+  border-color: var(--teal);
+  color: var(--teal);
+  box-shadow: 0 0 8px rgba(45,212,191,0.3);
+}
+.cell-label {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 0.4rem;
+  opacity: 0.5;
+}
+.header-cells {
+  display: flex;
+  gap: 0.3rem;
+  margin-left: 36px;
+  margin-bottom: 0.25rem;
+}
+.hdr-cell {
+  width: 36px;
+  text-align: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.48rem;
+  color: var(--text-dim);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+/* Knob row */
+.knob-row {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-top: 1rem;
+}
+.knob-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 70px;
+}
+.knob-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.knob-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--teal);
+  letter-spacing: 0.04em;
+  min-width: 42px;
+  text-align: center;
+}
+.knob {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  cursor: grab;
+}
+.knob:active { cursor: grabbing; }
+.knob svg { width: 44px; height: 44px; }
+
+/* Drop zone */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.05em;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--teal-dim);
+  color: var(--teal);
+  background: rgba(45,212,191,0.04);
+}
+.drop-zone input { display: none; }
+
+/* Feedback visualizer */
+.viz-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+#pongCanvas { display: block; width: 100%; height: 80px; border-radius: 6px; background: #0a0a14; }
+
+/* Meters */
+.meters-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+}
+.meter-bar-wrap {
+  width: 14px;
+  height: 80px;
+  background: #0a0a14;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+}
+.meter-fill { width: 100%; transition: height 0.05s linear; border-radius: 2px 2px 0 0; }
+#leftMeterFill { background: linear-gradient(to top, var(--meter-green), var(--meter-yellow) 60%, var(--red)); height: 0%; }
+#rightMeterFill { background: linear-gradient(to top, var(--meter-green), var(--meter-yellow) 60%, var(--red)); height: 0%; }
+.gain-meter { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+.meter-label { font-family: 'Space Mono', monospace; font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.08em; }
+
+/* Mode buttons */
+.mode-btns {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+.mode-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.04em;
+}
+.mode-btn:hover { border-color: var(--teal-dim); color: var(--teal); }
+.mode-btn.active { background: rgba(45,212,191,0.1); border-color: var(--teal); color: var(--teal); }
+
+/* Preset row */
+.preset-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Ping Pong Delay</h1>
+      <div class="tagline">Stereo Echo · Tempo Sync · Swipe Grid</div>
+    </div>
+  </header>
+
+  <!-- BPM -->
+  <div class="bpm-section">
+    <div class="section-label">Tempo</div>
+    <div class="bpm-row">
+      <div>
+        <div class="bpm-label">BPM</div>
+        <div class="bpm-display" id="bpmDisplay">122.0</div>
+      </div>
+      <div class="bpm-input-wrap">
+        <input type="number" class="bpm-input" id="bpmInput" value="122" min="60" max="200" step="0.1">
+        <span class="bpm-unit">BPM</span>
+      </div>
+      <button class="tap-btn" id="tapBtn">TAP · —</button>
+    </div>
+  </div>
+
+  <!-- Drop Zone -->
+  <div class="drop-zone" id="dropZone">
+    <span>Drop audio file here or click to browse — plays through the delay</span>
+    <input type="file" id="fileInput" accept="audio/*,video/*">
+  </div>
+
+  <!-- Delay Grid -->
+  <div class="grid-section">
+    <div class="section-label">Delay Grid — click or swipe to toggle taps</div>
+    <div class="header-cells" id="headerCells"></div>
+    <div id="delayGrid"></div>
+  </div>
+
+  <!-- Visualizer -->
+  <div class="viz-section">
+    <div class="section-label">Signal Path</div>
+    <canvas id="pongCanvas"></canvas>
+  </div>
+
+  <!-- Knobs + Meters -->
+  <div class="knob-row">
+    <div class="knob-group">
+      <span class="knob-label">Feedback</span>
+      <div class="knob" id="feedbackKnob" data-value="0.4" data-min="0" data-max="0.95" data-step="0.01">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="90.5" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="feedbackVal">40%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Wet</span>
+      <div class="knob" id="wetKnob" data-value="0.5" data-min="0" data-max="1" data-step="0.01">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="wetVal">50%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">LPF Hz</span>
+      <div class="knob" id="lpfKnob" data-value="8000" data-min="200" data-max="20000" data-step="100">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#60a5fa" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="67.9" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="lpfVal">8kHz</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">HPF Hz</span>
+      <div class="knob" id="hpfKnob" data-value="100" data-min="20" data-max="5000" data-step="50">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#f472b6" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="90.5" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f472b6" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="hpfVal">100Hz</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Pan Spread</span>
+      <div class="knob" id="spreadKnob" data-value="1" data-min="0" data-max="1" data-step="0.05">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="56.6" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="spreadVal">100%</span>
+    </div>
+    <div class="knob-group">
+      <span class="knob-label">Output</span>
+      <div class="knob" id="outputKnob" data-value="0" data-min="-24" data-max="24" data-step="0.5">
+        <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+      </div>
+      <span class="knob-value" id="outputVal">0 dB</span>
+    </div>
+    <div class="meters-row" style="margin-left:auto">
+      <div class="gain-meter">
+        <span class="meter-label">L</span>
+        <div class="meter-bar-wrap">
+          <div class="meter-fill" id="leftMeterFill"></div>
+        </div>
+      </div>
+      <div class="gain-meter">
+        <span class="meter-label">R</span>
+        <div class="meter-bar-wrap">
+          <div class="meter-fill" id="rightMeterFill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mode -->
+  <div class="grid-section">
+    <div class="section-label">Mode</div>
+    <div class="mode-btns">
+      <button class="mode-btn active" data-mode="pingpong">Ping Pong</button>
+      <button class="mode-btn" data-mode="stereo">Stereo</button>
+      <button class="mode-btn" data-mode="mono">Mono</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Ping Pong Delay — Web Audio API
+// ============================================================
+let audioCtx = null;
+let audioBuffer = null;
+let sourceNode = null;
+let isPlaying = false;
+
+// Delay nodes for each tap
+const MAX_TAPS = 8;
+const delayNodes = [];
+const feedbackGains = [];
+const tapFilters = [];
+
+// Signal chain
+let inputGain, dryGain, wetGain, outputGain;
+let analyserL, analyserR;
+let splitter, mergerL, mergerR;
+let spread = 1;
+let feedbackVal = 0.4;
+let wetVal = 0.5;
+let mode = 'pingpong';
+let bpm = 122;
+let activeTaps = new Set(); // track active tap indices for swipe
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  inputGain = audioCtx.createGain();
+  dryGain = audioCtx.createGain();
+  wetGain = audioCtx.createGain();
+  outputGain = audioCtx.createGain();
+  splitter = audioCtx.createChannelSplitter(2);
+  mergerL = audioCtx.createGain();
+  mergerR = audioCtx.createGain();
+  analyserL = audioCtx.createAnalyser();
+  analyserR = audioCtx.createAnalyser();
+  analyserL.fftSize = 256;
+  analyserR.fftSize = 256;
+
+  dryGain.gain.value = 1;
+  wetGain.gain.value = wetVal;
+  dryGain.connect(outputGain);
+  wetGain.connect(outputGain);
+  outputGain.connect(analyserL);
+  analyserL.connect(analyserR);
+  analyserR.connect(audioCtx.destination);
+
+  // Create delay tap chain
+  for (let i = 0; i < MAX_TAPS; i++) {
+    const delay = audioCtx.createDelay(5.0);
+    const fb = audioCtx.createGain();
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 8000;
+
+    delay.connect(filter);
+    filter.connect(fb);
+    fb.connect(delay); // feedback loop
+
+    delayNodes.push(delay);
+    feedbackGains.push(fb);
+    tapFilters.push(filter);
+  }
+
+  inputGain.connect(dryGain);
+  inputGain.connect(delayNodes[0]);
+  delayNodes[MAX_TAPS - 1].connect(wetGain);
+  wetGain.connect(splitter);
+  splitter.connect(mergerL, 0, 0);
+  splitter.connect(mergerR, 1, 0);
+  mergerL.connect(outputGain);
+  mergerR.connect(outputGain);
+
+  startMeters();
+  buildGrid();
+  updateDelays();
+}
+
+function updateDelays() {
+  if (!audioCtx) return;
+  const beatSec = 60.0 / bpm;
+
+  // Subdivisions per tap
+  // Row 0 (L): 1/4, 1/8, dotted 1/8, 1/16
+  // Row 1 (R): 1/4t, 1/8t, dotted 1/8t, 1/16t  (triplets offset by half)
+  // Actually let's just have rows be L and R channels
+  // Cols: 1/4, 3/4, 1/8, 3/8, 5/8, 7/8, 1/16, 3/16
+
+  const cols = [0, 0.75, 0.25, 0.75, 0.625, 0.875, 0.125, 0.375];
+  // Row 0: Left channel delays
+  // Row 1: Right channel delays
+  for (let i = 0; i < MAX_TAPS; i++) {
+    const beatOffset = cols[i];
+    const delayTime = beatOffset * beatSec;
+    delayNodes[i].delayTime.setValueAtTime(Math.max(0.001, delayTime), audioCtx.currentTime);
+    feedbackGains[i].gain.value = activeTaps.has(i) ? feedbackVal : 0;
+    tapFilters[i].frequency.value = parseFloat(document.getElementById('lpfKnob')?.dataset.value || 8000);
+  }
+}
+
+function startMeters() {
+  const bufL = new Float32Array(analyserL.frequencyBinCount);
+  const bufR = new Float32Array(analyserR.frequencyBinCount);
+  function tick() {
+    analyserL.getFloatTimeDomainData(bufL);
+    analyserR.getFloatTimeDomainData(bufR);
+    let sumL = 0, sumR = 0;
+    for (let i = 0; i < bufL.length; i++) { sumL += bufL[i]*bufL[i]; sumR += bufR[i]*bufR[i]; }
+    const dbL = 20 * Math.log10(Math.max(Math.sqrt(sumL/bufL.length), 1e-6));
+    const dbR = 20 * Math.log10(Math.max(Math.sqrt(sumR/bufR.length), 1e-6));
+    document.getElementById('leftMeterFill').style.height = Math.max(0, Math.min(100, (dbL+60)/60*100))+'%';
+    document.getElementById('rightMeterFill').style.height = Math.max(0, Math.min(100, (dbR+60)/60*100))+'%';
+    drawViz();
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+// ============================================================
+// Signal visualization
+// ============================================================
+const pongCanvas = document.getElementById('pongCanvas');
+const pctx = pongCanvas.getContext('2d');
+let vizW, vizH;
+let vizPhase = 0;
+
+function resizeViz() {
+  const rect = pongCanvas.parentElement.getBoundingClientRect();
+  vizW = rect.width;
+  vizH = 80;
+  pongCanvas.width = vizW * (window.devicePixelRatio || 1);
+  pongCanvas.height = vizH * (window.devicePixelRatio || 1);
+  pongCanvas.style.width = vizW + 'px';
+  pongCanvas.style.height = vizH + 'px';
+  pctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+}
+
+function drawViz() {
+  if (!vizW) return;
+  pctx.clearRect(0, 0, vizW, vizH);
+  pctx.fillStyle = '#0a0a14';
+  pctx.fillRect(0, 0, vizW, vizH);
+
+  // Draw ping pong path
+  const cx = vizW / 2;
+  const cy = vizH / 2;
+  vizPhase += 0.03;
+
+  // Left channel wave
+  pctx.strokeStyle = 'rgba(96,165,250,0.7)';
+  pctx.lineWidth = 1.5;
+  pctx.beginPath();
+  for (let x = 0; x < vizW; x++) {
+    const t = x / vizW;
+    const y = cy - 20 + Math.sin(t * Math.PI * 4 + vizPhase) * 12 * (1 - t * 0.3);
+    if (x === 0) pctx.moveTo(x, y); else pctx.lineTo(x, y);
+  }
+  pctx.stroke();
+
+  // Right channel wave (offset)
+  pctx.strokeStyle = 'rgba(244,114,182,0.7)';
+  pctx.beginPath();
+  for (let x = 0; x < vizW; x++) {
+    const t = x / vizW;
+    const y = cy + 20 + Math.sin(t * Math.PI * 4 + vizPhase + 1.2) * 12 * (1 - t * 0.3);
+    if (x === 0) pctx.moveTo(x, y); else pctx.lineTo(x, y);
+  }
+  pctx.stroke();
+
+  // Center L/R dots
+  const dotL = { x: 20, y: cy - 20 + Math.sin(vizPhase) * 5 };
+  const dotR = { x: 20, y: cy + 20 + Math.sin(vizPhase + 1.2) * 5 };
+  pctx.beginPath();
+  pctx.arc(dotL.x, dotL.y, 4, 0, Math.PI*2);
+  pctx.fillStyle = '#60a5fa';
+  pctx.fill();
+  pctx.beginPath();
+  pctx.arc(dotR.x, dotR.y, 4, 0, Math.PI*2);
+  pctx.fillStyle = '#f472b6';
+  pctx.fill();
+
+  // Ping pong bounce arrows
+  if (activeTaps.size > 0) {
+    const bounces = Math.min(activeTaps.size, 4);
+    for (let b = 0; b < bounces; b++) {
+      const bx = (b + 1) * (vizW / (bounces + 1));
+      const dir = b % 2 === 0 ? -1 : 1;
+      pctx.strokeStyle = b % 2 === 0 ? 'rgba(96,165,250,0.4)' : 'rgba(244,114,182,0.4)';
+      pctx.lineWidth = 1;
+      pctx.beginPath();
+      pctx.moveTo(bx, cy + dir * 8);
+      pctx.lineTo(bx, cy - dir * 8);
+      pctx.moveTo(bx - 4, cy - dir * 4);
+      pctx.lineTo(bx, cy - dir * 8);
+      pctx.lineTo(bx + 4, cy - dir * 4);
+      pctx.stroke();
+    }
+  }
+
+  // Labels
+  pctx.fillStyle = 'rgba(106,100,120,0.6)';
+  pctx.font = '8px Space Mono, monospace';
+  pctx.fillText('L', 8, 12);
+  pctx.fillText('R', 8, vizH - 4);
+}
+window.addEventListener('resize', () => { resizeViz(); });
+setTimeout(resizeViz, 50);
+
+// ============================================================
+// Delay Grid
+// ============================================================
+// Grid: 2 rows (L, R), 8 columns
+const ROWS = 2;
+const COLS = 8;
+const rowLabels = ['L', 'R'];
+const colDivs = ['¼', '·¼', '⅛', '·⅛', '⅜', '·⅜', '¹⁄₁₆', '·¹⁄₁₆'];
+const colMultipliers = [1, 0.75, 0.5, 0.375, 0.625, 0.875, 0.25, 0.125];
+
+let gridState = [
+  [true, false, false, false, false, false, false, false], // L row
+  [true, false, false, false, false, false, false, false], // R row
+];
+
+function buildGrid() {
+  const hdr = document.getElementById('headerCells');
+  hdr.innerHTML = '';
+  colDivs.forEach(d => {
+    const hc = document.createElement('div');
+    hc.className = 'hdr-cell';
+    hc.textContent = d;
+    hdr.appendChild(hc);
+  });
+
+  const grid = document.getElementById('delayGrid');
+  grid.innerHTML = '';
+
+  for (let r = 0; r < ROWS; r++) {
+    const row = document.createElement('div');
+    row.className = 'subdivision-row';
+    const lbl = document.createElement('div');
+    lbl.className = `row-label ${r === 0 ? 'left' : 'right'}`;
+    lbl.textContent = rowLabels[r];
+    row.appendChild(lbl);
+
+    for (let c = 0; c < COLS; c++) {
+      const idx = r * COLS + c;
+      const cell = document.createElement('div');
+      cell.className = 'cell' + (gridState[r][c] ? ` active ${r===0?'left':'right'}` : '');
+      cell.dataset.row = r;
+      cell.dataset.col = c;
+      cell.dataset.idx = idx;
+      cell.innerHTML = `<span class="cell-label">${colDivs[c]}</span>`;
+
+      // Single click
+      cell.addEventListener('mousedown', e => {
+        e.preventDefault();
+        toggleCell(r, c, e.shiftKey || e.metaKey);
+      });
+
+      // Swipe support
+      cell.addEventListener('mouseenter', e => {
+        if (swipeActive) {
+          e.preventDefault();
+          toggleCell(r, c, true);
+        }
+      });
+
+      row.appendChild(cell);
+    }
+    grid.appendChild(row);
+  }
+
+  // Sync activeTaps set
+  syncActiveTaps();
+}
+
+let swipeActive = false;
+let swipeRow = -1;
+let swipeVal = false;
+
+document.addEventListener('mousedown', e => {
+  if (e.target.classList.contains('cell')) {
+    swipeActive = true;
+    swipeRow = parseInt(e.target.dataset.row);
+    swipeVal = !gridState[parseInt(e.target.dataset.row)][parseInt(e.target.dataset.col)];
+  }
+});
+document.addEventListener('mouseup', () => { swipeActive = false; swipeRow = -1; });
+
+// Touch swipe
+document.addEventListener('touchstart', e => {
+  const cell = e.target.closest('.cell');
+  if (cell) {
+    swipeActive = true;
+    swipeRow = parseInt(cell.dataset.row);
+    swipeVal = !gridState[parseInt(cell.dataset.row)][parseInt(cell.dataset.col)];
+  }
+}, { passive: false });
+document.addEventListener('touchend', () => { swipeActive = false; swipeRow = -1; });
+
+function toggleCell(r, c, forceVal) {
+  const newVal = forceVal !== undefined ? forceVal : !gridState[r][c];
+  gridState[r][c] = newVal;
+  const idx = r * COLS + c;
+  const cell = document.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+  if (cell) {
+    cell.classList.toggle('active', newVal);
+    cell.classList.remove('left', 'right', 'lr');
+    if (newVal) {
+      cell.classList.add(r === 0 ? 'left' : 'right');
+    }
+  }
+  syncActiveTaps();
+  updateDelays();
+}
+
+function syncActiveTaps() {
+  activeTaps.clear();
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (gridState[r][c]) {
+        const idx = r * COLS + c;
+        activeTaps.add(idx);
+      }
+    }
+  }
+}
+
+// ============================================================
+// File Loading
+// ============================================================
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  initAudio();
+  const reader = new FileReader();
+  reader.onload = e => {
+    audioCtx.decodeAudioData(e.target.result, buf => {
+      audioBuffer = buf;
+      dropZone.querySelector('span').textContent = '▶ ' + file.name;
+      playBuffer();
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function playBuffer() {
+  if (!audioBuffer) return;
+  if (sourceNode) { sourceNode.stop(); sourceNode.disconnect(); }
+  sourceNode = audioCtx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.loop = true;
+  sourceNode.connect(inputGain);
+  sourceNode.start(0);
+  isPlaying = true;
+}
+document.addEventListener('keydown', e => {
+  if (e.key === ' ' && e.target === document.body) { e.preventDefault(); if (audioBuffer) playBuffer(); }
+});
+
+// ============================================================
+// BPM / Tap
+// ============================================================
+const tapTimes = [];
+const tapBtn = document.getElementById('tapBtn');
+const bpmDisplay = document.getElementById('bpmDisplay');
+const bpmInput = document.getElementById('bpmInput');
+
+bpmInput.addEventListener('change', () => {
+  bpm = parseFloat(bpmInput.value) || 122;
+  bpmDisplay.textContent = bpm.toFixed(1);
+  updateDelays();
+});
+
+tapBtn.addEventListener('click', () => {
+  const now = Date.now();
+  tapTimes.push(now);
+  if (tapTimes.length > 8) tapTimes.shift();
+  if (tapTimes.length >= 2) {
+    const intervals = [];
+    for (let i = 1; i < tapTimes.length; i++) {
+      intervals.push(tapTimes[i] - tapTimes[i-1]);
+    }
+    const avg = intervals.reduce((a,b) => a+b) / intervals.length;
+    bpm = 60000 / avg;
+    bpmDisplay.textContent = bpm.toFixed(1);
+    bpmInput.value = bpm.toFixed(1);
+    updateDelays();
+  }
+  tapBtn.textContent = 'TAP · ' + tapTimes.length;
+});
+
+// ============================================================
+// Mode buttons
+// ============================================================
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    mode = btn.dataset.mode;
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+    if (mode === 'mono') {
+      mergerR.gain.value = 0;
+      mergerL.gain.value = 1;
+    } else {
+      mergerR.gain.value = spread;
+      mergerL.gain.value = 1;
+    }
+  });
+});
+
+// ============================================================
+// Knob system
+// ============================================================
+let activeKnob = null, knobStartY = 0, knobStartVal = 0;
+
+document.querySelectorAll('.knob').forEach(el => {
+  el.addEventListener('mousedown', e => { e.preventDefault(); activeKnob = el; knobStartY = e.clientY; knobStartVal = parseFloat(el.dataset.value); document.body.style.cursor = 'grabbing'; });
+  el.addEventListener('touchstart', e => { e.preventDefault(); activeKnob = el; knobStartY = e.touches[0].clientY; knobStartVal = parseFloat(el.dataset.value); }, { passive: false });
+}, { passive: true });
+
+document.addEventListener('mousemove', e => {
+  if (!activeKnob) return;
+  applyKnobDelta(activeKnob, knobStartY - e.clientY);
+});
+document.addEventListener('touchmove', e => {
+  if (!activeKnob) return;
+  applyKnobDelta(activeKnob, knobStartY - e.touches[0].clientY);
+}, { passive: false });
+document.addEventListener('mouseup', () => { if (activeKnob) { activeKnob = null; document.body.style.cursor = ''; } });
+document.addEventListener('touchend', () => { activeKnob = null; });
+
+function applyKnobDelta(el, dy) {
+  const range = parseFloat(el.dataset.max) - parseFloat(el.dataset.min);
+  const step = parseFloat(el.dataset.step) || 0.01;
+  const delta = (dy / 120) * range;
+  let newVal = knobStartVal + delta;
+  newVal = Math.round(newVal / step) * step;
+  newVal = Math.max(parseFloat(el.dataset.min), Math.min(parseFloat(el.dataset.max), newVal));
+  el.dataset.value = newVal;
+  applyKnobValue(el, newVal);
+  updateKnobVisual(el, newVal);
+}
+
+function arcOffset(val, min, max) {
+  const pct = Math.max(0, Math.min(1, (val - min) / (max - min)));
+  return 113.1 * (1 - pct);
+}
+
+function applyKnobValue(el, val) {
+  const id = el.id;
+  if (id === 'feedbackKnob') {
+    feedbackVal = val;
+    feedbackGains.forEach((fb, i) => { fb.gain.value = activeTaps.has(i) ? feedbackVal : 0; });
+  } else if (id === 'wetKnob') {
+    wetVal = val;
+    wetGain.gain.value = val;
+  } else if (id === 'outputKnob') {
+    outputGain.gain.value = Math.pow(10, val / 20);
+  } else if (id === 'lpfKnob') {
+    tapFilters.forEach(f => f.frequency.value = val);
+  } else if (id === 'hpfKnob') {
+    // HPF on each delay
+  } else if (id === 'spreadKnob') {
+    spread = val;
+    if (mode !== 'mono') { mergerR.gain.value = spread; }
+  }
+  // Update display
+  const valEl = el.parentElement.querySelector('.knob-value');
+  if (valEl) {
+    if (id === 'feedbackKnob') valEl.textContent = Math.round(val*100)+'%';
+    else if (id === 'wetKnob') valEl.textContent = Math.round(val*100)+'%';
+    else if (id === 'lpfKnob') valEl.textContent = val >= 1000 ? (val/1000).toFixed(0)+'kHz' : val.toFixed(0)+'Hz';
+    else if (id === 'hpfKnob') valEl.textContent = val >= 1000 ? (val/1000).toFixed(1)+'kHz' : val.toFixed(0)+'Hz';
+    else if (id === 'spreadKnob') valEl.textContent = Math.round(val*100)+'%';
+    else if (id === 'outputKnob') valEl.textContent = val.toFixed(1)+' dB';
+  }
+}
+
+function updateKnobVisual(el, val) {
+  const min = parseFloat(el.dataset.min), max = parseFloat(el.dataset.max);
+  const arc = el.querySelector('.knob-arc');
+  if (arc) arc.setAttribute('stroke-dashoffset', arcOffset(val, min, max));
+}
+
+// Init knob positions
+document.querySelectorAll('.knob').forEach(el => {
+  const v = parseFloat(el.dataset.value);
+  updateKnobVisual(el, v);
+});
+</script>
+</body>
+</html>
