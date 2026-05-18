@@ -3,387 +3,1041 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tape Stop</title>
+<title>Tape Stop & Glitch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&display=swap');
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-:root{--bg:#0a0810;--surface:#16121f;--surface2:#201b30;--accent:#ff6b35;--accent2:#1aee8f;--accent3:#a78bff;--border:rgba(255,107,53,0.18);--text:#fff0e8;--muted:rgba(255,240,232,0.32);}
-body{background:var(--bg);min-height:100vh;font-family:'JetBrains Mono',monospace;color:var(--text);user-select:none;overflow-x:hidden;}
+:root {
+  --bg: #090910;
+  --surface: #111120;
+  --surface2: #18182a;
+  --border: #252540;
+  --red: #ef4444;
+  --red-dim: #5c1515;
+  --red-glow: rgba(239,68,68,0.15);
+  --amber: #f5c26b;
+  --text: #ddd8c8;
+  --text-dim: #6a6478;
+  --teal: #2dd4bf;
+  --yellow: #fbbf24;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  user-select: none;
+}
+.wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+.tagline {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-weight: 300;
+  margin-top: 0.3rem;
+  letter-spacing: 0.06em;
+}
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.5rem;
+}
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--red-dim); color: var(--red); background: rgba(239,68,68,0.04); }
+.drop-zone input { display: none; }
 
-header{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);}
-.title{font-size:0.65rem;letter-spacing:5px;text-transform:uppercase;color:var(--accent);font-weight:600;}
-.subtitle{font-size:0.55rem;letter-spacing:3px;color:var(--muted);}
-.bpm-row{display:flex;align-items:center;gap:8px;}
-.ctrl-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);text-transform:uppercase;}
-.bpm-box{display:flex;align-items:center;background:var(--bg);border:1px solid var(--border);border-radius:6px;overflow:hidden;}
-.bpm-in{background:transparent;border:none;color:var(--accent);font-family:inherit;font-size:0.85rem;width:52px;text-align:center;padding:6px 4px;outline:none;}
-.num-btn{background:transparent;border:none;color:var(--muted);font-family:inherit;font-size:0.8rem;padding:6px 10px;cursor:pointer;transition:all 0.15s;}
-.num-btn:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+/* Waveform display */
+.waveform-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+#waveCanvas { display: block; width: 100%; height: 160px; background: #0a0a14; border-radius: 6px; cursor: crosshair; }
+.playhead-info {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+}
+.time-label { font-family: 'Space Mono', monospace; font-size: 0.55rem; color: var(--text-dim); }
+
+/* Effect buttons */
+.effects-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.effect-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.06em;
+  margin: 0.25rem;
+  min-width: 120px;
+}
+.effect-btn:hover { border-color: var(--red); color: var(--red); }
+.effect-btn.active { background: var(--red-dim); border-color: var(--red); color: var(--amber); box-shadow: 0 0 12px rgba(239,68,68,0.2); }
+
+/* Tape stop section */
+.tape-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.tape-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.8rem;
+  padding: 0.8rem 2rem;
+  border-radius: 6px;
+  border: 2px solid var(--red);
+  background: var(--red-dim);
+  color: var(--amber);
+  cursor: pointer;
+  transition: all 0.1s;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  min-width: 200px;
+}
+.tape-btn:hover { background: rgba(239,68,68,0.3); box-shadow: 0 0 20px rgba(239,68,68,0.3); }
+.tape-btn:active { transform: scale(0.97); }
+.tape-btn.stopped { background: var(--red-dim); animation: tape-glow 1s ease-in-out infinite alternate; }
+@keyframes tape-glow {
+  from { box-shadow: 0 0 5px rgba(239,68,68,0.2); }
+  to { box-shadow: 0 0 25px rgba(239,68,68,0.5); }
+}
+
+/* Knob row */
+.knob-row {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-top: 1rem;
+}
+.knob-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 68px;
+}
+.knob-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.knob-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--amber);
+  letter-spacing: 0.04em;
+  min-width: 42px;
+  text-align: center;
+}
+.knob {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  cursor: grab;
+}
+.knob:active { cursor: grabbing; }
+.knob svg { width: 44px; height: 44px; }
+
+/* Glitch slice grid */
+.slice-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.slice-grid {
+  display: flex;
+  gap: 2px;
+  margin-top: 0.5rem;
+  cursor: crosshair;
+}
+.slice-cell {
+  flex: 1;
+  height: 50px;
+  border-radius: 3px;
+  background: #0a0a14;
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: all 0.06s;
+  position: relative;
+  overflow: hidden;
+}
+.slice-cell:hover { border-color: var(--teal); }
+.slice-cell.active { background: rgba(239,68,68,0.2); border-color: var(--red); }
+.slice-cell .slice-label {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.4rem;
+  color: var(--text-dim);
+  opacity: 0.5;
+}
+.slice-canvas { width: 100%; height: 100%; display: block; }
 
 /* Speed display */
-.speed-section{padding:20px 24px;background:var(--surface);border-bottom:1px solid var(--border);text-align:center;}
-.speed-display{font-size:clamp(3rem, 18vw, 7rem);font-weight:600;color:var(--accent);line-height:1;letter-spacing:-3px;text-shadow:0 0 40px rgba(255,107,53,0.4);transition:color 0.1s,text-shadow 0.1s;}
-.speed-display.slow{color:var(--accent3);text-shadow:0 0 40px rgba(167,139,255,0.4);}
-.speed-unit{font-size:0.7rem;letter-spacing:4px;color:rgba(255,107,53,0.5);margin-top:4px;}
+.speed-display {
+  font-family: 'Space Mono', monospace;
+  font-size: 2.5rem;
+  color: var(--red);
+  letter-spacing: 0.05em;
+  margin: 1rem 0;
+  text-align: center;
+  transition: color 0.3s;
+}
+.speed-display.stopped { color: var(--amber); }
 
-/* Controls */
-.controls{padding:18px 24px;display:grid;grid-template-columns:1fr 1fr;gap:14px;background:var(--surface);}
-.ctrl-card{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px;}
-.ctrl-card-title{font-size:0.55rem;letter-spacing:3px;color:var(--muted);text-transform:uppercase;margin-bottom:2px;}
-.knob-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.knob-label{font-size:0.55rem;letter-spacing:2px;color:var(--muted);}
-.knob-val{font-size:0.7rem;color:var(--text);}
-input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;background:var(--border);border-radius:2px;outline:none;cursor:pointer;}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;}
+/* Scratch area */
+.scratch-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.scratch-track {
+  background: #0a0a14;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  height: 60px;
+  position: relative;
+  cursor: col-resize;
+  overflow: hidden;
+  margin-top: 0.5rem;
+}
+.scratch-head {
+  position: absolute;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
+  transition: left 0.05s linear;
+}
+.scratch-playhead {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--yellow);
+  box-shadow: 0 0 6px var(--yellow);
+}
+.scratch-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  margin-top: 0.3rem;
+  text-align: center;
+  letter-spacing: 0.06em;
+}
 
-/* Mode buttons */
-.mode-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.mode-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-family:inherit;font-size:0.65rem;letter-spacing:1px;padding:9px 6px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
-.mode-btn.selected{border-color:var(--accent);color:var(--accent);background:rgba(255,107,53,0.1);}
-.mode-btn:hover{border-color:rgba(255,107,53,0.4);}
-
-/* Input row */
-.input-row{display:flex;align-items:center;gap:12px;padding:14px 24px;background:var(--surface);border-top:1px solid var(--border);}
-.load-btn{background:transparent;border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:0.65rem;letter-spacing:2px;padding:8px 16px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
-.load-btn:hover{border-color:var(--accent);}
-input[type=file]{display:none;}
-.filename{font-size:0.6rem;color:var(--muted);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;}
-.play-btn{background:var(--accent);border:none;color:#0a0810;font-family:inherit;font-size:0.6rem;font-weight:600;letter-spacing:2px;text-transform:uppercase;padding:8px 18px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
-.play-btn:hover{transform:scale(1.04);}
-.play-btn.playing{background:var(--accent2);}
-
-/* Big effect buttons */
-.effect-section{padding:24px;display:flex;gap:16px;justify-content:center;background:var(--surface);border-top:1px solid var(--border);}
-.effect-btn{background:transparent;border:2px solid var(--accent);color:var(--accent);font-family:inherit;font-size:0.7rem;font-weight:600;letter-spacing:3px;text-transform:uppercase;padding:20px 40px;border-radius:10px;cursor:pointer;transition:all 0.15s;min-width:180px;}
-.effect-btn:hover{background:rgba(255,107,53,0.12);transform:scale(1.03);}
-.effect-btn.reverse{border-color:var(--accent3);color:var(--accent3);}
-.effect-btn.reverse:hover{background:rgba(167,139,255,0.12);}
-
-/* Transport */
-.transport{display:flex;align-items:center;justify-content:center;gap:14px;padding:18px;background:var(--surface);border-top:1px solid var(--border);}
-.transport-btn{width:48px;height:48px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
-.transport-btn svg{width:18px;height:18px;fill:currentColor;}
-.transport-btn:hover{border-color:var(--accent);transform:scale(1.05);}
-
-footer{padding:12px 24px;text-align:center;}
-.footer-text{font-size:0.5rem;letter-spacing:2px;color:var(--muted);}
-
-@keyframes tapePulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
-.recording .speed-display{animation:tapePulse 0.5s ease-in-out infinite;}
+/* Slice control */
+.slice-ctrl {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.slice-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.04em;
+}
+.slice-btn:hover { border-color: var(--teal); color: var(--teal); }
+.slice-btn.active { background: rgba(45,212,191,0.1); border-color: var(--teal); color: var(--teal); }
 </style>
 </head>
 <body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Tape Stop</h1>
+      <div class="tagline">Varispeed · Scratch · Glitch Engine</div>
+    </div>
+  </header>
 
-<header>
-  <div>
-    <div class="title">Tape Stop</div>
-    <div class="subtitle">Scratch &bull; Slowdown Effects</div>
+  <!-- File Input -->
+  <div class="drop-zone" id="dropZone">
+    <span>Drop audio file here — plays through tape stop / glitch engine</span>
+    <input type="file" id="fileInput" accept="audio/*,video/*">
   </div>
-  <div class="bpm-row">
-    <span class="ctrl-label">BPM</span>
-    <div class="bpm-box">
-      <button class="num-btn" id="bpmDown">−</button>
-      <input type="number" class="bpm-in" id="bpmIn" value="124" min="60" max="200">
-      <button class="num-btn" id="bpmUp">+</button>
-    </div>
-  </div>
-</header>
 
-<div class="speed-section">
-  <div class="speed-display" id="speedDisplay">1.00x</div>
-  <div class="speed-unit">PLAYBACK RATE</div>
-</div>
-
-<div class="controls">
-  <div class="ctrl-card">
-    <div class="ctrl-card-title">Stop Duration</div>
-    <div class="knob-row">
-      <span class="knob-label">Time (ms)</span>
-      <span class="knob-val" id="timeVal">600</span>
-    </div>
-    <input type="range" id="timeSlider" min="100" max="2000" value="600">
-    <div class="knob-row">
-      <span class="knob-label">BPM Sync</span>
-      <span class="knob-val" id="syncVal">Off</span>
-    </div>
-    <div class="mode-row">
-      <button class="mode-btn selected" data-sync="off">Free</button>
-      <button class="mode-btn" data-sync="beat">1 Beat</button>
-      <button class="mode-btn" data-sync="bar">1 Bar</button>
+  <!-- Waveform -->
+  <div class="waveform-section">
+    <div class="section-label">Waveform</div>
+    <canvas id="waveCanvas"></canvas>
+    <div class="playhead-info">
+      <span class="time-label" id="timeCurrent">0:00.0</span>
+      <span class="time-label" id="timeTotal">0:00.0</span>
     </div>
   </div>
 
-  <div class="ctrl-card">
-    <div class="ctrl-card-title">Effect Curve</div>
+  <!-- Speed Display -->
+  <div style="text-align:center">
+    <div class="speed-display" id="speedDisplay">1.00×</div>
+  </div>
+
+  <!-- Tape Stop -->
+  <div class="tape-section">
+    <div class="section-label">Tape Stop</div>
+    <div style="text-align:center">
+      <button class="tape-btn" id="tapeBtn">TAPE STOP</button>
+    </div>
     <div class="knob-row">
-      <span class="knob-label">Curve Shape</span>
-      <span class="knob-val" id="curveVal">Exp</span>
+      <div class="knob-group">
+        <span class="knob-label">Stop Speed</span>
+        <div class="knob" id="stopSpeedKnob" data-value="0.05" data-min="0.005" data-max="0.3" data-step="0.005">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="101.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="stopSpeedVal">0.05</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">Start Speed</span>
+        <div class="knob" id="startSpeedKnob" data-value="0.08" data-min="0.01" data-max="0.5" data-step="0.005">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="96.1" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="startSpeedVal">0.08</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">Hold Time</span>
+        <div class="knob" id="holdKnob" data-value="0.8" data-min="0.1" data-max="3" data-step="0.1">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="holdVal">0.8s</span>
+      </div>
     </div>
-    <div class="mode-row">
-      <button class="mode-btn selected" data-c="exp">Exp</button>
-      <button class="mode-btn" data-c="lin">Linear</button>
-      <button class="mode-btn" data-c="log">Log</button>
+  </div>
+
+  <!-- Glitch Engine -->
+  <div class="slice-section">
+    <div class="section-label">Glitch Engine — click or swipe to select slices</div>
+    <div class="slice-ctrl">
+      <button class="slice-btn active" data-glitch="off" id="glitchToggle">GLITCH OFF</button>
+      <button class="slice-btn" id="selectAllBtn">SELECT ALL</button>
+      <button class="slice-btn" id="clearAllBtn">CLEAR ALL</button>
+      <span style="font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--text-dim);margin-left:auto" id="sliceCount">0/16 slices</span>
     </div>
+    <div class="slice-grid" id="sliceGrid"></div>
     <div class="knob-row">
-      <span class="knob-label">Min Rate</span>
-      <span class="knob-val" id="minRateVal">0.05x</span>
+      <div class="knob-group">
+        <span class="knob-label">Stutter Rate</span>
+        <div class="knob" id="stutterKnob" data-value="8" data-min="2" data-max="32" data-step="1">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="67.9" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="stutterVal">8/hit</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">Probability</span>
+        <div class="knob" id="probKnob" data-value="0.5" data-min="0.1" data-max="1" data-step="0.05">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#ef4444" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="probVal">50%</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">Slice Sz</span>
+        <div class="knob" id="sliceSizeKnob" data-value="16" data-min="4" data-max="64" data-step="1">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#2dd4bf" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="62.2" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="sliceSizeVal">16</span>
+      </div>
     </div>
-    <input type="range" id="minRateSlider" min="0" max="30" value="5">
+  </div>
+
+  <!-- Scratch -->
+  <div class="scratch-section">
+    <div class="section-label">Scratch</div>
+    <div class="scratch-track" id="scratchTrack">
+      <div class="scratch-head" id="scratchHead"></div>
+      <div class="scratch-playhead" id="scratchPlayhead"></div>
+    </div>
+    <div class="scratch-label">drag to scratch — shows buffer position</div>
+    <div class="knob-row" style="margin-top:0.75rem">
+      <div class="knob-group">
+        <span class="knob-label">Scrub Speed</span>
+        <div class="knob" id="scrubKnob" data-value="1" data-min="-4" data-max="4" data-step="0.1">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="56.6" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="scrubVal">1.0×</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Playback controls -->
+  <div class="effects-section">
+    <div class="section-label">Playback</div>
+    <button class="effect-btn" id="playBtn">▶ PLAY</button>
+    <button class="effect-btn" id="stopBtn">■ STOP</button>
+    <button class="effect-btn" id="rewindBtn">⏮ REWIND</button>
   </div>
 </div>
-
-<div class="input-row">
-  <button class="load-btn" id="loadBtn">Load Audio</button>
-  <input type="file" id="audioInput" accept="audio/*" style="display:none">
-  <div class="filename" id="fileName">No audio loaded</div>
-  <button class="play-btn" id="playBtn">Play</button>
-</div>
-
-<div class="effect-section">
-  <button class="effect-btn" id="stopBtn">Tape Stop</button>
-  <button class="effect-btn reverse" id="revBtn">Reverse Scratch</button>
-</div>
-
-<div class="transport">
-  <button class="transport-btn" id="stopAllBtn" title="Stop">
-    <svg viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
-  </button>
-</div>
-
-<footer><div class="footer-text">Tape Stop &bull; Scratch &bull; Slowdown FX</div></footer>
 
 <script>
-const $ = id => document.getElementById(id);
-let ctx, audioBuffer, sourceNode, gainNode;
-let BPM = 124;
-let DURATION = 600; // ms
-let CURVE = 'exp';
-let MIN_RATE = 0.05;
+// ============================================================
+// Tape Stop & Glitch — Web Audio API
+// ============================================================
+let audioCtx = null;
+let audioBuffer = null;
+let sourceNode = null;
 let isPlaying = false;
-let isEffectActive = false;
-let effectResolve = null;
-let currentSpeed = 1.0;
-let animFrame;
-let SYNC = 'off';
+let currentTime = 0;
+let playbackRate = 1.0;
 
+let tapeStopping = false;
+let tapeStarting = false;
+let stopSpeed = 0.05;
+let startSpeed = 0.08;
+let holdTime = 0.8;
+
+let glitchOn = false;
+let glitchActive = false;
+let activeSlices = new Set();
+let sliceCount = 16;
+let stutterRate = 8;
+let glitchProb = 0.5;
+let glitchInterval = null;
+let glitchIndex = 0;
+
+let scrubSpeed = 1;
+let scrubbing = false;
+let scrubStartX = 0;
+let scrubStartPos = 0;
+
+let animId = null;
+let lastTimestamp = 0;
+
+// Waveform display
+let waveCanvas, wctx;
+let waveW, waveH;
+let displayedBuffer = null;
+
+// ============================================================
 function initAudio() {
-  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
-  if (ctx.state === 'suspended') ctx.resume();
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  startAnim();
 }
 
-function loadAudio(file) {
+function startAnim() {
+  function loop(ts) {
+    if (!audioCtx) { animId = requestAnimationFrame(loop); return; }
+    const dt = (ts - lastTimestamp) / 1000;
+    lastTimestamp = ts;
+
+    if (isPlaying && !scrubbing && !tapeStopping && !tapeStarting) {
+      currentTime += (dt * playbackRate);
+      if (currentTime >= audioBuffer.duration) {
+        currentTime = 0;
+      }
+      updateTimeDisplay();
+      updatePlayhead();
+    }
+    drawWaveform();
+    animId = requestAnimationFrame(loop);
+  }
+  animId = requestAnimationFrame(loop);
+}
+
+// ============================================================
+// Waveform drawing
+// ============================================================
+function initWaveform() {
+  waveCanvas = document.getElementById('waveCanvas');
+  wctx = waveCanvas.getContext('2d');
+  resizeWave();
+  window.addEventListener('resize', resizeWave);
+  setTimeout(resizeWave, 50);
+}
+
+function resizeWave() {
+  const rect = waveCanvas.parentElement.getBoundingClientRect();
+  waveW = rect.width;
+  waveH = 160;
+  waveCanvas.width = waveW * (window.devicePixelRatio || 1);
+  waveCanvas.height = waveH * (window.devicePixelRatio || 1);
+  waveCanvas.style.width = waveW + 'px';
+  waveCanvas.style.height = waveH + 'px';
+  wctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  drawWaveform();
+}
+
+function drawWaveform() {
+  if (!wctx || !waveW) return;
+  wctx.clearRect(0, 0, waveW, waveH);
+  wctx.fillStyle = '#0a0a14';
+  wctx.fillRect(0, 0, waveW, waveH);
+  if (!audioBuffer) return;
+
+  const data = audioBuffer.getChannelData(0);
+  const step = Math.ceil(data.length / waveW);
+  const cth = waveH / 2;
+
+  wctx.strokeStyle = 'rgba(239,68,68,0.6)';
+  wctx.lineWidth = 1;
+  wctx.beginPath();
+  for (let x = 0; x < waveW; x++) {
+    const idx = Math.floor(x * step);
+    let min = 1, max = -1;
+    for (let j = 0; j < step; j++) {
+      const v = data[idx + j] || 0;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    const yMin = cth + min * cth * 0.9;
+    const yMax = cth + max * cth * 0.9;
+    wctx.moveTo(x, yMin);
+    wctx.lineTo(x, yMax);
+  }
+  wctx.stroke();
+
+  // Playhead
+  if (audioBuffer) {
+    const px = (currentTime / audioBuffer.duration) * waveW;
+    wctx.strokeStyle = '#f5c26b';
+    wctx.lineWidth = 1.5;
+    wctx.beginPath();
+    wctx.moveTo(px, 0);
+    wctx.lineTo(px, waveH);
+    wctx.stroke();
+
+    // Playhead dot
+    wctx.beginPath();
+    wctx.arc(px, 8, 4, 0, Math.PI * 2);
+    wctx.fillStyle = '#f5c26b';
+    wctx.fill();
+  }
+
+  // Glitch slice highlights
+  if (audioBuffer && activeSlices.size > 0) {
+    const sliceSize = Math.floor(audioBuffer.duration / sliceCount);
+    activeSlices.forEach(s => {
+      const startX = (s * sliceSize / audioBuffer.duration) * waveW;
+      const endX = ((s + 1) * sliceSize / audioBuffer.duration) * waveW;
+      wctx.fillStyle = 'rgba(239,68,68,0.12)';
+      wctx.fillRect(startX, 0, endX - startX, waveH);
+    });
+  }
+}
+
+function updatePlayhead() {
+  if (!audioBuffer) return;
+  const pct = currentTime / audioBuffer.duration;
+  const px = pct * waveW;
+  // playhead shown on waveform
+}
+
+// ============================================================
+// File loading
+// ============================================================
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
   initAudio();
-  $('fileName').textContent = file.name;
   const reader = new FileReader();
   reader.onload = e => {
-    ctx.decodeAudioData(e.target.result, buf => {
+    audioCtx.decodeAudioData(e.target.result, buf => {
       audioBuffer = buf;
-      $('playBtn').textContent = 'Play';
-      isPlaying = false;
+      displayedBuffer = buf;
+      dropZone.querySelector('span').textContent = '▶ ' + file.name;
+      buildSliceGrid();
+      drawWaveform();
+      updateTimeDisplay();
+      playBuffer();
     });
   };
   reader.readAsArrayBuffer(file);
 }
 
-function playAtRate(rate, fromPos) {
-  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
-  if (!gainNode) gainNode = ctx.createGain();
-  sourceNode = ctx.createBufferSource();
-  sourceNode.buffer = audioBuffer;
-  sourceNode.playbackRate.value = rate;
-  sourceNode.connect(gainNode);
-  gainNode.connect(ctx.destination);
-  const maxDur = audioBuffer.duration - fromPos;
-  sourceNode.start(0, fromPos, maxDur > 0 ? maxDur : undefined);
-  return sourceNode;
-}
-
-function startPlayback() {
+function playBuffer() {
   if (!audioBuffer) return;
-  initAudio();
-  if (!gainNode) gainNode = ctx.createGain();
-  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
-  sourceNode = ctx.createBufferSource();
+  stopSource();
+  sourceNode = audioCtx.createBufferSource();
   sourceNode.buffer = audioBuffer;
-  sourceNode.playbackRate.value = 1;
-  sourceNode.connect(gainNode);
-  gainNode.connect(ctx.destination);
-  sourceNode.start(0);
+  sourceNode.playbackRate.value = playbackRate;
+  sourceNode.connect(audioCtx.destination);
+  sourceNode.start(0, currentTime);
   isPlaying = true;
-  currentSpeed = 1;
-  updateSpeedDisplay(1);
   sourceNode.onended = () => {
-    isPlaying = false;
-    isEffectActive = false;
-    $('playBtn').classList.remove('playing');
-    $('playBtn').textContent = 'Play';
-    cancelAnimationFrame(animFrame);
+    if (isPlaying) {
+      currentTime = 0;
+      isPlaying = false;
+      updateTimeDisplay();
+    }
   };
-  $('playBtn').classList.add('playing');
-  $('playBtn').textContent = 'Stop';
+  document.getElementById('playBtn').textContent = '⏸ PAUSE';
+  document.getElementById('playBtn').classList.add('active');
 }
 
-function stopPlayback() {
-  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+function stopSource() {
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} sourceNode.disconnect(); sourceNode = null; }
   isPlaying = false;
-  isEffectActive = false;
-  currentSpeed = 1;
-  updateSpeedDisplay(1);
-  $('playBtn').classList.remove('playing');
-  $('playBtn').textContent = 'Play';
-  cancelAnimationFrame(animFrame);
+  document.getElementById('playBtn').textContent = '▶ PLAY';
+  document.getElementById('playBtn').classList.remove('active');
 }
 
-function updateSpeedDisplay(speed) {
-  const display = $('speedDisplay');
-  display.textContent = speed.toFixed(2) + 'x';
-  display.classList.toggle('slow', speed < 0.5);
+function updateTimeDisplay() {
+  if (!audioBuffer) return;
+  const dur = audioBuffer.duration;
+  document.getElementById('timeCurrent').textContent = formatTime(currentTime);
+  document.getElementById('timeTotal').textContent = formatTime(dur);
+  document.getElementById('speedDisplay').textContent = playbackRate.toFixed(2) + '×';
+  document.getElementById('speedDisplay').classList.toggle('stopped', playbackRate < 0.01);
 }
 
-function getEffectiveDuration() {
-  if (SYNC === 'beat') return 60000 / BPM;
-  if (SYNC === 'bar') return 60000 / BPM * 4;
-  return DURATION;
+function formatTime(s) {
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return m + ':' + sec.toFixed(1).padStart(4, '0');
 }
 
-function applyCurve(t) {
-  // t: 0..1 where 0=start, 1=end
-  switch (CURVE) {
-    case 'exp': return Math.pow(t, 2);
-    case 'lin': return t;
-    case 'log': return 1 - Math.pow(1 - t, 2);
-    default: return t;
-  }
-}
-
+// ============================================================
+// Tape Stop / Start
+// ============================================================
 function doTapeStop() {
-  if (!isPlaying || isEffectActive) return;
-  isEffectActive = true;
-  const dur = getEffectiveDuration();
-  const startTime = performance.now();
-  const startRate = sourceNode ? sourceNode.playbackRate.value : 1;
+  if (!audioCtx || !audioBuffer) return;
+  tapeStopping = true;
+  tapeStarting = false;
+  document.getElementById('tapeBtn').textContent = 'STOPPING…';
+  document.getElementById('tapeBtn').classList.add('stopped');
 
-  function animate() {
-    if (!isEffectActive) return;
-    const elapsed = performance.now() - startTime;
-    let t = Math.min(1, elapsed / dur);
-    let curved = applyCurve(t);
-    let rate = startRate * (1 - curved * (1 - MIN_RATE));
-    rate = Math.max(MIN_RATE, rate);
-    currentSpeed = rate;
-    if (sourceNode && isPlaying) {
-      sourceNode.playbackRate.setTargetAtTime(rate, ctx.currentTime, 0.01);
+  const startRate = playbackRate;
+  const steps = 30;
+  let step = 0;
+  const interval = setInterval(() => {
+    step++;
+    playbackRate = Math.max(0, startRate * (1 - step / steps));
+    document.getElementById('speedDisplay').textContent = playbackRate.toFixed(3) + '×';
+    if (sourceNode) sourceNode.playbackRate.value = playbackRate;
+    if (step >= steps) {
+      clearInterval(interval);
+      playbackRate = 0;
+      tapeStopping = false;
+      tapeStarting = false;
+      document.getElementById('speedDisplay').textContent = '0.000×';
+      document.getElementById('speedDisplay').classList.add('stopped');
+      document.getElementById('tapeBtn').textContent = 'TAPE START';
+      document.getElementById('tapeBtn').classList.remove('stopped');
+      // Hold then start
+      setTimeout(doTapeStart, holdTime * 1000);
     }
-    updateSpeedDisplay(rate);
-    if (t < 1) {
-      animFrame = requestAnimationFrame(animate);
-    } else {
-      isEffectActive = false;
-      updateSpeedDisplay(MIN_RATE);
-    }
-  }
-  animate();
+  }, 30);
 }
 
-function doReverseScratch() {
-  if (!isPlaying || isEffectActive) return;
-  isEffectActive = true;
-  const dur = getEffectiveDuration();
-  const startTime = performance.now();
-  const startRate = sourceNode ? sourceNode.playbackRate.value : 1;
-
-  function animate() {
-    if (!isEffectActive) return;
-    const elapsed = performance.now() - startTime;
-    let t = Math.min(1, elapsed / dur);
-    let curved = applyCurve(1 - t); // reverse
-    let rate = startRate * (MIN_RATE + curved * (1 - MIN_RATE));
-    currentSpeed = rate;
-    if (sourceNode && isPlaying) {
-      sourceNode.playbackRate.setTargetAtTime(rate, ctx.currentTime, 0.01);
+function doTapeStart() {
+  tapeStarting = true;
+  tapeStopping = false;
+  document.getElementById('tapeBtn').textContent = 'STARTING…';
+  const steps = 40;
+  let step = 0;
+  const interval = setInterval(() => {
+    step++;
+    playbackRate = Math.min(1, (step / steps) * 0.8);
+    document.getElementById('speedDisplay').textContent = playbackRate.toFixed(3) + '×';
+    document.getElementById('speedDisplay').classList.remove('stopped');
+    if (sourceNode) sourceNode.playbackRate.value = playbackRate;
+    if (step >= steps) {
+      clearInterval(interval);
+      playbackRate = 1.0;
+      tapeStarting = false;
+      document.getElementById('speedDisplay').textContent = '1.000×';
+      document.getElementById('tapeBtn').textContent = 'TAPE STOP';
+      document.getElementById('tapeBtn').classList.remove('stopped');
     }
-    updateSpeedDisplay(rate);
-    if (t < 1) {
-      animFrame = requestAnimationFrame(animate);
-    } else {
-      isEffectActive = false;
-      updateSpeedDisplay(1);
-      if (sourceNode && isPlaying) {
-        sourceNode.playbackRate.setTargetAtTime(1, ctx.currentTime, 0.01);
+  }, 30);
+}
+
+document.getElementById('tapeBtn').addEventListener('click', () => {
+  if (audioBuffer) doTapeStop();
+});
+
+// ============================================================
+// Glitch engine
+// ============================================================
+function buildSliceGrid() {
+  if (!audioBuffer) return;
+  const grid = document.getElementById('sliceGrid');
+  grid.innerHTML = '';
+  activeSlices.clear();
+  const sliceDuration = audioBuffer.duration / sliceCount;
+
+  for (let i = 0; i < sliceCount; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'slice-cell';
+    cell.dataset.idx = i;
+    cell.innerHTML = `<span class="slice-label">${i+1}</span>`;
+
+    // Draw mini waveform
+    const miniCanvas = document.createElement('canvas');
+    miniCanvas.className = 'slice-canvas';
+    cell.insertBefore(miniCanvas, cell.firstChild);
+    const mctx = miniCanvas.getContext('2d');
+    const mw = cell.offsetWidth || 40;
+    const mh = 50;
+    miniCanvas.width = mw;
+    miniCanvas.height = mh;
+
+    const startSample = Math.floor(i * audioBuffer.sampleRate * sliceDuration);
+    const endSample = Math.floor((i + 1) * audioBuffer.sampleRate * sliceDuration);
+    const data = audioBuffer.getChannelData(0);
+    const step = Math.ceil((endSample - startSample) / mw);
+    mctx.fillStyle = '#0a0a14';
+    mctx.fillRect(0, 0, mw, mh);
+    mctx.strokeStyle = 'rgba(239,68,68,0.7)';
+    mctx.lineWidth = 0.5;
+    for (let x = 0; x < mw; x++) {
+      const idx = startSample + x * step;
+      let mn = 1, mx = -1;
+      for (let j = 0; j < step; j++) {
+        const v = data[idx + j] || 0;
+        if (v < mn) mn = v;
+        if (v > mx) mx = v;
       }
+      const y1 = mh/2 + mn * mh * 0.4;
+      const y2 = mh/2 + mx * mh * 0.4;
+      mctx.beginPath();
+      mctx.moveTo(x, y1);
+      mctx.lineTo(x, y2);
+      mctx.stroke();
     }
+
+    cell.addEventListener('mousedown', e => {
+      e.preventDefault();
+      toggleSlice(i, e.shiftKey || e.metaKey);
+      startSwipe(i);
+    });
+    cell.addEventListener('mouseenter', e => {
+      if (swipeActive) toggleSlice(i, swipeVal);
+    });
+
+    grid.appendChild(cell);
   }
-  animate();
+  updateSliceCount();
 }
 
-// BPM controls
-$('bpmIn').addEventListener('change', e => {
-  BPM = Math.max(60, Math.min(200, parseInt(e.target.value) || 124));
-  e.target.value = BPM;
-});
-$('bpmDown').addEventListener('click', () => { BPM = Math.max(60, BPM - 1); $('bpmIn').value = BPM; });
-$('bpmUp').addEventListener('click', () => { BPM = Math.min(200, BPM + 1); $('bpmIn').value = BPM; });
+let swipeActive = false;
+let swipeVal = false;
+let swipeStartIdx = -1;
 
-// Duration slider
-$('timeSlider').addEventListener('input', e => {
-  DURATION = parseInt(e.target.value);
-  $('timeVal').textContent = DURATION;
-});
+function startSwipe(idx) {
+  swipeActive = true;
+  swipeStartIdx = idx;
+  const cell = document.querySelector(`.slice-cell[data-idx="${idx}"]`);
+  swipeVal = !cell.classList.contains('active');
+}
 
-// Sync buttons
-document.querySelectorAll('.mode-btn[data-sync]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.mode-btn[data-sync]').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    SYNC = btn.dataset.sync;
-    $('syncVal').textContent = btn.textContent;
-    $('timeSlider').disabled = SYNC !== 'off';
-  });
-});
+document.addEventListener('mouseup', () => { swipeActive = false; swipeStartIdx = -1; });
 
-// Curve buttons
-document.querySelectorAll('.mode-btn[data-c]').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.mode-btn[data-c]').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    CURVE = btn.dataset.c;
-    $('curveVal').textContent = btn.textContent.charAt(0).toUpperCase() + btn.textContent.slice(1);
-  });
-});
+function toggleSlice(idx, forceVal) {
+  const newVal = forceVal !== undefined ? forceVal : !activeSlices.has(idx);
+  if (newVal) {
+    activeSlices.add(idx);
+  } else {
+    activeSlices.delete(idx);
+  }
+  const cell = document.querySelector(`.slice-cell[data-idx="${idx}"]`);
+  if (cell) cell.classList.toggle('active', newVal);
+  updateSliceCount();
+}
 
-// Min rate
-$('minRateSlider').addEventListener('input', e => {
-  MIN_RATE = parseInt(e.target.value) / 100;
-  $('minRateVal').textContent = MIN_RATE.toFixed(2) + 'x';
-});
+function updateSliceCount() {
+  document.getElementById('sliceCount').textContent = `${activeSlices.size}/${sliceCount} slices`;
+}
 
-// Load
-$('loadBtn').addEventListener('click', () => $('audioInput').click());
-$('audioInput').addEventListener('change', e => {
-  if (e.target.files[0]) loadAudio(e.target.files[0]);
+document.getElementById('selectAllBtn').addEventListener('click', () => {
+  for (let i = 0; i < sliceCount; i++) activeSlices.add(i);
+  document.querySelectorAll('.slice-cell').forEach(c => c.classList.add('active'));
+  updateSliceCount();
+});
+document.getElementById('clearAllBtn').addEventListener('click', () => {
+  activeSlices.clear();
+  document.querySelectorAll('.slice-cell').forEach(c => c.classList.remove('active'));
+  updateSliceCount();
 });
 
-// Play
-$('playBtn').addEventListener('click', () => {
-  if (isPlaying) stopPlayback(); else startPlayback();
+let glitchToggleOn = false;
+document.getElementById('glitchToggle').addEventListener('click', () => {
+  glitchToggleOn = !glitchToggleOn;
+  document.getElementById('glitchToggle').textContent = glitchToggleOn ? 'GLITCH ON' : 'GLITCH OFF';
+  document.getElementById('glitchToggle').classList.toggle('active', glitchToggleOn);
+  if (glitchToggleOn) {
+    startGlitch();
+  } else {
+    stopGlitch();
+  }
 });
 
-// Effect buttons
-$('stopBtn').addEventListener('click', doTapeStop);
-$('revBtn').addEventListener('click', doReverseScratch);
-$('stopAllBtn').addEventListener('click', stopPlayback);
+function startGlitch() {
+  if (!audioBuffer) return;
+  glitchInterval = setInterval(() => {
+    if (!isPlaying || activeSlices.size === 0) return;
+    if (Math.random() > glitchProb) return;
 
-// Keyboard
-document.addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
-  if (e.code === 'Space') { e.preventDefault(); if (isPlaying) stopPlayback(); else startPlayback(); }
-  if (e.code === 'KeyS') doTapeStop();
-  if (e.code === 'KeyR') doReverseScratch();
-  if (e.code === 'Escape') stopPlayback();
+    const sliceDuration = audioBuffer.duration / sliceCount;
+    const activeList = Array.from(activeSlices);
+    const randSlice = activeList[Math.floor(Math.random() * activeList.length)];
+    const startTime = randSlice * sliceDuration;
+
+    // Stutter: rapid short playback bursts
+    let stutterCount = 0;
+    const stutterInterval = setInterval(() => {
+      if (stutterCount >= stutterRate || !glitchToggleOn) {
+        clearInterval(stutterInterval);
+        return;
+      }
+      if (sourceNode) sourceNode.playbackRate.value = 0.5 + Math.random() * 1.5;
+      setTimeout(() => {
+        if (sourceNode) sourceNode.playbackRate.value = playbackRate;
+      }, (sliceDuration / stutterRate) * 500);
+      stutterCount++;
+    }, (sliceDuration / stutterRate) * 1000);
+  }, 200);
+}
+
+function stopGlitch() {
+  clearInterval(glitchInterval);
+  if (sourceNode) sourceNode.playbackRate.value = playbackRate;
+}
+
+// ============================================================
+// Scratch
+// ============================================================
+const scratchTrack = document.getElementById('scratchTrack');
+const scratchHead = document.getElementById('scratchHead');
+const scratchPlayhead = document.getElementById('scratchPlayhead');
+
+scratchTrack.addEventListener('mousedown', e => {
+  e.preventDefault();
+  scrubbing = true;
+  scrubStartX = e.clientX;
+  scrubStartPos = currentTime;
+  scratchTrack.style.cursor = 'grabbing';
+});
+scratchTrack.addEventListener('touchstart', e => {
+  e.preventDefault();
+  scrubbing = true;
+  scrubStartX = e.touches[0].clientX;
+  scrubStartPos = currentTime;
+}, { passive: false });
+
+document.addEventListener('mousemove', e => {
+  if (!scrubbing || !audioBuffer) return;
+  const dx = e.clientX - scrubStartX;
+  const trackW = scratchTrack.offsetWidth;
+  const dt = (dx / trackW) * audioBuffer.duration * 2; // 2x range
+  currentTime = Math.max(0, Math.min(audioBuffer.duration, scrubStartPos + dt));
+  playbackRate = scrubSpeed;
+  if (sourceNode) sourceNode.playbackRate.value = scrubSpeed;
+  updateTimeDisplay();
+
+  const pct = currentTime / audioBuffer.duration;
+  scratchHead.style.left = (pct * 100) + '%';
+  document.getElementById('speedDisplay').textContent = scrubSpeed.toFixed(2) + '×';
+});
+document.addEventListener('touchmove', e => {
+  if (!scrubbing || !audioBuffer) return;
+  const dx = e.touches[0].clientX - scrubStartX;
+  const trackW = scratchTrack.offsetWidth;
+  const dt = (dx / trackW) * audioBuffer.duration * 2;
+  currentTime = Math.max(0, Math.min(audioBuffer.duration, scrubStartPos + dt));
+  playbackRate = scrubSpeed;
+  if (sourceNode) sourceNode.playbackRate.value = scrubSpeed;
+  updateTimeDisplay();
+  const pct = currentTime / audioBuffer.duration;
+  scratchHead.style.left = (pct * 100) + '%';
+}, { passive: false });
+document.addEventListener('mouseup', () => {
+  if (scrubbing) {
+    scrubbing = false;
+    scratchTrack.style.cursor = 'col-resize';
+    if (!tapeStopping && !tapeStarting) {
+      playbackRate = 1;
+      if (sourceNode) sourceNode.playbackRate.value = 1;
+    }
+    document.getElementById('speedDisplay').textContent = playbackRate.toFixed(2) + '×';
+  }
+});
+document.addEventListener('touchend', () => { scrubbing = false; });
+
+// Waveform click to seek
+waveCanvas.addEventListener('mousedown', e => {
+  if (!audioBuffer) return;
+  const rect = waveCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  currentTime = (x / waveW) * audioBuffer.duration;
+  if (sourceNode) {
+    sourceNode.stop();
+    sourceNode = null;
+  }
+  playBuffer();
+});
+
+// Playback controls
+document.getElementById('playBtn').addEventListener('click', () => {
+  initAudio();
+  if (isPlaying) {
+    stopSource();
+  } else {
+    playBuffer();
+  }
+});
+document.getElementById('stopBtn').addEventListener('click', () => {
+  stopSource();
+  currentTime = 0;
+  playbackRate = 1;
+  updateTimeDisplay();
+});
+document.getElementById('rewindBtn').addEventListener('click', () => {
+  currentTime = 0;
+  if (isPlaying && sourceNode) {
+    sourceNode.stop();
+    playBuffer();
+  }
+  updateTimeDisplay();
+});
+
+// ============================================================
+// Knob system
+// ============================================================
+let activeKnob = null, knobStartY = 0, knobStartVal = 0;
+
+document.querySelectorAll('.knob').forEach(el => {
+  el.addEventListener('mousedown', e => { e.preventDefault(); activeKnob = el; knobStartY = e.clientY; knobStartVal = parseFloat(el.dataset.value); document.body.style.cursor = 'grabbing'; });
+  el.addEventListener('touchstart', e => { e.preventDefault(); activeKnob = el; knobStartY = e.touches[0].clientY; knobStartVal = parseFloat(el.dataset.value); }, { passive: false });
+}, { passive: true });
+
+document.addEventListener('mousemove', e => {
+  if (!activeKnob) return;
+  const range = parseFloat(activeKnob.dataset.max) - parseFloat(activeKnob.dataset.min);
+  const step = parseFloat(activeKnob.dataset.step) || 0.01;
+  let newVal = knobStartVal + ((knobStartY - e.clientY) / 120) * range;
+  newVal = Math.round(newVal / step) * step;
+  newVal = Math.max(parseFloat(activeKnob.dataset.min), Math.min(parseFloat(activeKnob.dataset.max), newVal));
+  activeKnob.dataset.value = newVal;
+  applyKnobValue(activeKnob, newVal);
+  updateKnobVisual(activeKnob, newVal);
+});
+document.addEventListener('touchmove', e => {
+  if (!activeKnob) return;
+  const range = parseFloat(activeKnob.dataset.max) - parseFloat(activeKnob.dataset.min);
+  const step = parseFloat(activeKnob.dataset.step) || 0.01;
+  let newVal = knobStartVal + ((knobStartY - e.touches[0].clientY) / 120) * range;
+  newVal = Math.round(newVal / step) * step;
+  newVal = Math.max(parseFloat(activeKnob.dataset.min), Math.min(parseFloat(activeKnob.dataset.max), newVal));
+  activeKnob.dataset.value = newVal;
+  applyKnobValue(activeKnob, newVal);
+  updateKnobVisual(activeKnob, newVal);
+}, { passive: false });
+document.addEventListener('mouseup', () => { if (activeKnob) { activeKnob = null; document.body.style.cursor = ''; } });
+document.addEventListener('touchend', () => { activeKnob = null; });
+
+function arcOffset(val, min, max) {
+  const pct = Math.max(0, Math.min(1, (val - min) / (max - min)));
+  return 113.1 * (1 - pct);
+}
+
+function applyKnobValue(el, val) {
+  const id = el.id;
+  if (id === 'stopSpeedKnob') { stopSpeed = val; }
+  else if (id === 'startSpeedKnob') { startSpeed = val; }
+  else if (id === 'holdKnob') { holdTime = val; }
+  else if (id === 'stutterKnob') { stutterRate = Math.round(val); }
+  else if (id === 'probKnob') { glitchProb = val; }
+  else if (id === 'sliceSizeKnob') {
+    sliceCount = Math.round(val);
+    buildSliceGrid();
+  }
+  else if (id === 'scrubKnob') { scrubSpeed = val; }
+
+  const valEl = el.parentElement.querySelector('.knob-value');
+  if (valEl) {
+    if (id === 'stopSpeedKnob') valEl.textContent = val.toFixed(3);
+    else if (id === 'startSpeedKnob') valEl.textContent = val.toFixed(3);
+    else if (id === 'holdKnob') valEl.textContent = val.toFixed(1)+'s';
+    else if (id === 'stutterKnob') valEl.textContent = Math.round(val)+'/hit';
+    else if (id === 'probKnob') valEl.textContent = Math.round(val*100)+'%';
+    else if (id === 'sliceSizeKnob') valEl.textContent = Math.round(val);
+    else if (id === 'scrubKnob') valEl.textContent = val.toFixed(1)+'×';
+  }
+}
+
+function updateKnobVisual(el, val) {
+  const min = parseFloat(el.dataset.min), max = parseFloat(el.dataset.max);
+  const arc = el.querySelector('.knob-arc');
+  if (arc) arc.setAttribute('stroke-dashoffset', arcOffset(val, min, max));
+}
+
+document.querySelectorAll('.knob').forEach(el => {
+  updateKnobVisual(el, parseFloat(el.dataset.value));
 });
 
 // Init
-document.addEventListener('click', () => initAudio(), { once: true });
+initAudio();
+initWaveform();
 </script>
 </body>
 </html>
