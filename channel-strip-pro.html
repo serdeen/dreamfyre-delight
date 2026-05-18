@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Channel Strip Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #090910;
+  --surface: #111120;
+  --surface2: #18182a;
+  --surface3: #1e1e32;
+  --border: #252540;
+  --copper: #e07b39;
+  --copper-dim: #7a3d1a;
+  --copper-glow: rgba(224,123,57,0.2);
+  --amber: #f5c26b;
+  --text: #ddd8c8;
+  --text-dim: #6a6478;
+  --meter-green: #4ade80;
+  --meter-yellow: #fbbf24;
+  --meter-red: #f87171;
+  --eq-low: #60a5fa;
+  --eq-mid: #a78bfa;
+  --eq-high: #f472b6;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  min-height: 100vh;
+  user-select: none;
+}
+.wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+  color: var(--amber);
+  text-transform: uppercase;
+}
+.tagline {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.06em;
+  font-weight: 300;
+  margin-top: 0.3rem;
+}
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+.bypass-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  transition: all 0.15s;
+}
+.bypass-btn:hover { border-color: var(--copper); color: var(--amber); }
+.bypass-btn.active { background: var(--copper-dim); border-color: var(--copper); color: var(--amber); }
+
+/* EQ Canvas */
+.eq-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.eq-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.15em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.eq-canvas-wrap {
+  position: relative;
+  background: #0a0a14;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+#eqCanvas { display: block; width: 100%; height: 140px; cursor: crosshair; }
+#eqHoverLabel {
+  position: absolute;
+  top: 8px; left: 10px;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  pointer-events: none;
+}
+
+/* Band selectors */
+.band-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.band-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.05em;
+}
+.band-btn[data-band="low"] { border-color: var(--eq-low); color: var(--eq-low); }
+.band-btn[data-band="mid"] { border-color: var(--eq-mid); color: var(--eq-mid); }
+.band-btn[data-band="high"] { border-color: var(--eq-high); color: var(--eq-high); }
+.band-btn.active[data-band="low"] { background: rgba(96,165,250,0.15); }
+.band-btn.active[data-band="mid"] { background: rgba(167,139,250,0.15); }
+.band-btn.active[data-band="high"] { background: rgba(244,114,182,0.15); }
+.band-btn:hover { filter: brightness(1.3); }
+
+/* Knob rows */
+.knob-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.knob-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 70px;
+}
+.knob-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.knob-value {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--amber);
+  letter-spacing: 0.04em;
+  min-width: 38px;
+  text-align: center;
+}
+.knob {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  cursor: grab;
+}
+.knob:active { cursor: grabbing; }
+.knob svg { width: 44px; height: 44px; }
+
+/* Dynamics section */
+.dynamics-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.comp-meter-wrap {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+.gain-meter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+.meter-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+}
+.meter-bar-wrap {
+  width: 14px;
+  height: 100px;
+  background: #0a0a14;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column-reverse;
+}
+.meter-fill {
+  width: 100%;
+  transition: height 0.05s linear;
+  border-radius: 2px 2px 0 0;
+}
+#grMeterFill { background: linear-gradient(to top, var(--meter-green), var(--meter-yellow) 60%, var(--meter-red)); height: 0%; }
+#inputMeterFill { background: linear-gradient(to top, var(--meter-green) 60%, var(--meter-yellow) 85%, var(--meter-red)); height: 0%; }
+#outputMeterFill { background: linear-gradient(to top, var(--meter-green) 60%, var(--meter-yellow) 85%, var(--meter-red)); height: 0%; }
+
+/* Saturation modes */
+.sat-modes {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+.sat-mode-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  letter-spacing: 0.04em;
+}
+.sat-mode-btn:hover { border-color: var(--copper); color: var(--amber); }
+.sat-mode-btn.active { background: var(--copper-dim); border-color: var(--copper); color: var(--amber); }
+
+/* Output section */
+.output-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.output-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 1.5rem;
+}
+
+/* Input/HPF */
+.input-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+/* Preset bar */
+.preset-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+.preset-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  margin-right: 0.25rem;
+}
+
+/* Drop indicator */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.05em;
+}
+.drop-zone:hover, .drop-zone.dragover {
+  border-color: var(--copper);
+  color: var(--amber);
+  background: rgba(224,123,57,0.05);
+}
+.drop-zone input { display: none; }
+
+/* Meters row */
+.meters-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-end;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Channel Strip</h1>
+      <div class="tagline">3-Band EQ · Compressor · Saturation · Levels</div>
+    </div>
+    <div class="header-right">
+      <button class="bypass-btn active" id="bypassBtn">BYPASS</button>
+    </div>
+  </header>
+
+  <!-- File Input -->
+  <div class="drop-zone" id="dropZone">
+    <span>Drop audio file here or click to browse — plays through the channel strip</span>
+    <input type="file" id="fileInput" accept="audio/*,video/*">
+  </div>
+
+  <!-- Input + HPF -->
+  <div class="input-section">
+    <div class="eq-header">
+      <span class="section-label">Input · High-Pass Filter</span>
+    </div>
+    <div class="knob-row">
+      <div class="knob-group">
+        <span class="knob-label">Input</span>
+        <div class="knob" id="inputKnob" data-value="0" data-min="-24" data-max="24" data-step="0.5">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#e07b39" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="inputVal">0 dB</span>
+      </div>
+      <div class="knob-group">
+        <span class="knob-label">HPF Hz</span>
+        <div class="knob" id="hpfKnob" data-value="20" data-min="20" data-max="500" data-step="1">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#60a5fa" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="96.1" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#60a5fa" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="hpfVal">20 Hz</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- EQ Section -->
+  <div class="eq-section">
+    <div class="eq-header">
+      <span class="section-label">3-Band Semi-Parametric EQ</span>
+      <span class="section-label" id="eqBandLabel">LOW</span>
+    </div>
+    <div class="band-row">
+      <button class="band-btn active" data-band="low">LOW</button>
+      <button class="band-btn" data-band="mid">MID</button>
+      <button class="band-btn" data-band="high">HIGH</button>
+    </div>
+    <div class="eq-canvas-wrap">
+      <canvas id="eqCanvas"></canvas>
+      <span id="eqHoverLabel">▼ 1kHz · 0 dB</span>
+    </div>
+    <div class="knob-row" id="eqKnobRow">
+      <!-- EQ knobs injected by JS based on selected band -->
+    </div>
+  </div>
+
+  <!-- Dynamics -->
+  <div class="dynamics-section">
+    <div class="eq-header">
+      <span class="section-label">Dynamics</span>
+    </div>
+    <div class="comp-meter-wrap">
+      <div class="gain-meter">
+        <span class="meter-label">GR</span>
+        <div class="meter-bar-wrap">
+          <div class="meter-fill" id="grMeterFill"></div>
+        </div>
+      </div>
+      <div class="knob-row" style="flex:1">
+        <div class="knob-group">
+          <span class="knob-label">Threshold</span>
+          <div class="knob" id="threshKnob" data-value="-20" data-min="-60" data-max="0" data-step="0.5">
+            <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+          </div>
+          <span class="knob-value" id="threshVal">-20 dB</span>
+        </div>
+        <div class="knob-group">
+          <span class="knob-label">Ratio</span>
+          <div class="knob" id="ratioKnob" data-value="4" data-min="1" data-max="20" data-step="0.5">
+            <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="90.5" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+          </div>
+          <span class="knob-value" id="ratioVal">4:1</span>
+        </div>
+        <div class="knob-group">
+          <span class="knob-label">Attack</span>
+          <div class="knob" id="attackKnob" data-value="10" data-min="0.1" data-max="100" data-step="0.5">
+            <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="67.9" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+          </div>
+          <span class="knob-value" id="attackVal">10ms</span>
+        </div>
+        <div class="knob-group">
+          <span class="knob-label">Release</span>
+          <div class="knob" id="releaseKnob" data-value="150" data-min="10" data-max="1000" data-step="5">
+            <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="62.2" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+          </div>
+          <span class="knob-value" id="releaseVal">150ms</span>
+        </div>
+        <div class="knob-group">
+          <span class="knob-label">Makeup</span>
+          <div class="knob" id="makeupKnob" data-value="0" data-min="0" data-max="24" data-step="0.5">
+            <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#fbbf24" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+          </div>
+          <span class="knob-value" id="makeupVal">0 dB</span>
+        </div>
+      </div>
+      <div class="gain-meter">
+        <span class="meter-label">Out</span>
+        <div class="meter-bar-wrap">
+          <div class="meter-fill" id="outputMeterFill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saturation -->
+  <div class="dynamics-section">
+    <div class="eq-header">
+      <span class="section-label">Saturation</span>
+    </div>
+    <div class="sat-modes">
+      <button class="sat-mode-btn active" data-mode="warm">WARM</button>
+      <button class="sat-mode-btn" data-mode="tape">TAPE</button>
+      <button class="sat-mode-btn" data-mode="clip">HARD CLIP</button>
+    </div>
+    <div class="knob-row">
+      <div class="knob-group">
+        <span class="knob-label">Drive</span>
+        <div class="knob" id="driveKnob" data-value="0.2" data-min="0" data-max="1" data-step="0.01">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#e07b39" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="101.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="driveVal">20%</span>
+      </div>
+      <div class="gain-meter">
+        <span class="meter-label">In</span>
+        <div class="meter-bar-wrap">
+          <div class="meter-fill" id="inputMeterFill"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div class="output-section">
+    <div class="eq-header">
+      <span class="section-label">Output</span>
+    </div>
+    <div class="output-row">
+      <div class="knob-group">
+        <span class="knob-label">Level</span>
+        <div class="knob" id="outputKnob" data-value="0" data-min="-24" data-max="24" data-step="0.5">
+          <svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/><circle cx="22" cy="22" r="18" fill="none" stroke="#e07b39" stroke-width="3" stroke-dasharray="113.1" stroke-dashoffset="84.8" stroke-linecap="round" transform="rotate(135 22 22)" class="knob-arc"/><line x1="22" y1="22" x2="22" y2="8" stroke="#f5c26b" stroke-width="2" stroke-linecap="round" class="knob-pointer"/></svg>
+        </div>
+        <span class="knob-value" id="outputVal">0 dB</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Channel Strip Pro — Web Audio API
+// ============================================================
+let audioCtx = null;
+let sourceNode = null;
+let inputGain = null, hpf = null;
+let lowEQ = null, midEQ = null, highEQ = null;
+let compressor = null, makeupGain = null;
+let saturationNode = null;
+let outputGain = null, analyserOut = null;
+let audioBuffer = null;
+let isPlaying = false;
+let startTime = 0;
+
+// EQ State
+const eqState = {
+  low:  { freq: 80,  gain: 0, q: 1.0 },
+  mid:  { freq: 1000, gain: 0, q: 1.0 },
+  high: { freq: 8000, gain: 0, q: 1.0 }
+};
+let selectedBand = 'low';
+
+// Comp State
+const compState = { threshold: -20, ratio: 4, attack: 10, release: 150, makeup: 0 };
+let satMode = 'warm', satDrive = 0.2;
+
+// Output/Input
+let inputLevel = 0, outputLevel = 0, grLevel = 0;
+
+// Meter animation
+let meter raf ID = null;
+
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+  // Input gain
+  inputGain = audioCtx.createGain();
+  // HPF
+  hpf = audioCtx.createBiquadFilter();
+  hpf.type = 'highpass';
+  hpf.frequency.value = 20;
+
+  // 3-band EQ via biquad filters
+  lowEQ = audioCtx.createBiquadFilter();
+  lowEQ.type = 'peaking';
+  lowEQ.frequency.value = eqState.low.freq;
+  lowEQ.gain.value = eqState.low.gain;
+  lowEQ.Q.value = eqState.low.q;
+
+  midEQ = audioCtx.createBiquadFilter();
+  midEQ.type = 'peaking';
+  midEQ.frequency.value = eqState.mid.freq;
+  midEQ.gain.value = eqState.mid.gain;
+  midEQ.Q.value = eqState.mid.q;
+
+  highEQ = audioCtx.createBiquadFilter();
+  highEQ.type = 'peaking';
+  highEQ.frequency.value = eqState.high.freq;
+  highEQ.gain.value = eqState.high.gain;
+  highEQ.Q.value = eqState.high.q;
+
+  // Compressor
+  compressor = audioCtx.createDynamicsCompressor();
+  compressor.threshold.value = compState.threshold;
+  compressor.ratio.value = compState.ratio;
+  compressor.attack.value = compState.attack / 1000;
+  compressor.release.value = compState.release / 1000;
+
+  // Makeup gain
+  makeupGain = audioCtx.createGain();
+
+  // Saturation (wave shaper)
+  saturationNode = audioCtx.createWaveShaper();
+  updateSatCurve();
+
+  // Output
+  outputGain = audioCtx.createGain();
+  analyserOut = audioCtx.createAnalyser();
+  analyserOut.fftSize = 256;
+
+  // Signal chain
+  inputGain.connect(hpf);
+  hpf.connect(lowEQ);
+  lowEQ.connect(midEQ);
+  midEQ.connect(highEQ);
+  highEQ.connect(compressor);
+  compressor.connect(makeupGain);
+  makeupGain.connect(saturationNode);
+  saturationNode.connect(outputGain);
+  outputGain.connect(analyserOut);
+  analyserOut.connect(audioCtx.destination);
+
+  startMeters();
+}
+
+function updateSatCurve() {
+  const curve = new Float32Array(44100);
+  const k = satDrive * 100;
+  const n = 44100;
+  const deg = Math.PI / 180;
+  for (let i = 0; i < n; i++) {
+    const x = (i * 2) / n - 1;
+    if (satMode === 'warm') {
+      // Soft saturation — tanh
+      curve[i] = Math.tanh(k * x) / Math.tanh(k);
+    } else if (satMode === 'tape') {
+      // Soft clip with even harmonics
+      const s = Math.sin(2 * Math.PI * 0.5 * x);
+      curve[i] = (Math.tanh(k * x) + k * 0.15 * s) / (1 + k * 0.15);
+    } else {
+      // Hard clip
+      curve[i] = Math.max(-1, Math.min(1, x * (1 + k * 0.5)));
+    }
+  }
+  saturationNode.curve = curve;
+}
+
+function startMeters() {
+  const analyserIn = audioCtx.createAnalyser();
+  const analyserComp = audioCtx.createAnalyser();
+  const splitter = audioCtx.createChannelSplitter(2);
+  // We meter at compressor input via a fork
+  // Use a dummy approach: we poll the analyserOut for output
+  // Compressor GR is read from compressor interface
+  const buf = new Float32Array(analyserOut.frequencyBinCount);
+
+  function tick() {
+    analyserOut.getFloatTimeDomainData(buf);
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+    const rms = Math.sqrt(sum / buf.length);
+    const db = 20 * Math.log10(Math.max(rms, 1e-6));
+    const pct = Math.max(0, Math.min(100, (db + 60) / 60 * 100));
+    document.getElementById('outputMeterFill').style.height = pct + '%';
+
+    // Input meter (at inputGain output — fake via source level if playing)
+    if (audioBuffer && isPlaying) {
+      // estimate input level
+    }
+
+    meterRafId = requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+function updateCompressor() {
+  if (!compressor) return;
+  compressor.threshold.value = compState.threshold;
+  compressor.ratio.value = compState.ratio;
+  compressor.attack.value = compState.attack / 1000;
+  compressor.release.value = compState.release / 1000;
+  makeupGain.gain.value = Math.pow(10, compState.makeup / 20);
+}
+
+// ============================================================
+// File Loading
+// ============================================================
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const f = e.dataTransfer.files[0];
+  if (f) loadFile(f);
+});
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  initAudio();
+  const reader = new FileReader();
+  reader.onload = e => {
+    audioCtx.decodeAudioData(e.target.result, buf => {
+      audioBuffer = buf;
+      dropZone.querySelector('span').textContent = '▶ ' + file.name + ' — click or drop to reload';
+      playBuffer();
+    }, err => console.warn('Decode error:', err));
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function playBuffer() {
+  if (!audioBuffer) return;
+  if (sourceNode) { sourceNode.stop(); sourceNode.disconnect(); }
+  sourceNode = audioCtx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.loop = true;
+  sourceNode.connect(inputGain);
+  sourceNode.start(0);
+  isPlaying = true;
+  startTime = audioCtx.currentTime;
+}
+
+// ============================================================
+// EQ Canvas
+// ============================================================
+const eqCanvas = document.getElementById('eqCanvas');
+const ctx2d = eqCanvas.getContext('2d');
+let canvasW, canvasH;
+let hoverFreq = null, hoverGain = null;
+
+function resizeCanvas() {
+  const rect = eqCanvas.parentElement.getBoundingClientRect();
+  canvasW = rect.width;
+  canvasH = 140;
+  eqCanvas.width = canvasW * (window.devicePixelRatio || 1);
+  eqCanvas.height = canvasH * (window.devicePixelRatio || 1);
+  eqCanvas.style.width = canvasW + 'px';
+  eqCanvas.style.height = canvasH + 'px';
+  ctx2d.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  drawEQ();
+}
+
+function freqToX(freq) {
+  const minF = Math.log10(20), maxF = Math.log10(20000);
+  return (Math.log10(freq) - minF) / (maxF - minF) * canvasW;
+}
+function gainToY(gain) {
+  return canvasH / 2 - (gain / 24) * (canvasH / 2);
+}
+function xToFreq(x) {
+  const minF = Math.log10(20), maxF = Math.log10(20000);
+  return Math.pow(10, minF + (x / canvasW) * (maxF - minF));
+}
+function yToGain(y) {
+  return -((y - canvasH / 2) / (canvasH / 2) * 24);
+}
+
+function drawEQ() {
+  if (!canvasW) return;
+  ctx2d.clearRect(0, 0, canvasW, canvasH);
+
+  // Background
+  ctx2d.fillStyle = '#0a0a14';
+  ctx2d.fillRect(0, 0, canvasW, canvasH);
+
+  // Grid lines (freq)
+  const freqLines = [50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000];
+  ctx2d.strokeStyle = 'rgba(37,37,64,0.8)';
+  ctx2d.lineWidth = 1;
+  freqLines.forEach(f => {
+    const x = freqToX(f);
+    ctx2d.beginPath();
+    ctx2d.moveTo(x, 0);
+    ctx2d.lineTo(x, canvasH);
+    ctx2d.stroke();
+  });
+  // Grid lines (gain)
+  const gainLines = [-24, -18, -12, -6, 0, 6, 12, 18, 24];
+  gainLines.forEach(g => {
+    const y = gainToY(g);
+    ctx2d.strokeStyle = g === 0 ? 'rgba(224,123,57,0.4)' : 'rgba(37,37,64,0.8)';
+    ctx2d.beginPath();
+    ctx2d.moveTo(0, y);
+    ctx2d.lineTo(canvasW, y);
+    ctx2d.stroke();
+  });
+
+  // Draw combined EQ response
+  ctx2d.strokeStyle = 'rgba(224,123,57,0.6)';
+  ctx2d.lineWidth = 2;
+  ctx2d.beginPath();
+  for (let px = 0; px <= canvasW; px++) {
+    const freq = xToFreq(px);
+    let totalGain = 0;
+    // Sum all three bands (approximate peaking filter response)
+    [ { state: eqState.low, color: '60a5fa' },
+      { state: eqState.mid, color: 'a78bfa' },
+      { state: eqState.high, color: 'f472b6' } ].forEach(b => {
+      const df = Math.log10(Math.max(freq, 1)) - Math.log10(Math.max(b.state.freq, 1));
+      const bw = Math.log10(b.state.freq * b.state.q) - Math.log10(b.state.freq / b.state.q);
+      const response = Math.exp(-(df * df) / (2 * (bw * bw / 4)));
+      totalGain += b.state.gain * response;
+    });
+    const y = gainToY(Math.max(-24, Math.min(24, totalGain)));
+    if (px === 0) ctx2d.moveTo(px, y);
+    else ctx2d.lineTo(px, y);
+  }
+  ctx2d.stroke();
+
+  // Draw individual band curves (dimmed)
+  [
+    { state: eqState.low, color: 'rgba(96,165,250,0.35)', label: 'L' },
+    { state: eqState.mid, color: 'rgba(167,139,250,0.35)', label: 'M' },
+    { state: eqState.high, color: 'rgba(244,114,182,0.35)', label: 'H' }
+  ].forEach(b => {
+    ctx2d.strokeStyle = b.color;
+    ctx2d.lineWidth = 1.5;
+    ctx2d.beginPath();
+    for (let px = 0; px <= canvasW; px++) {
+      const freq = xToFreq(px);
+      const df = Math.log10(Math.max(freq, 1)) - Math.log10(Math.max(b.state.freq, 1));
+      const bw = Math.log10(b.state.freq * b.state.q) - Math.log10(b.state.freq / b.state.q);
+      const response = Math.exp(-(df * df) / (2 * (bw * bw / 4)));
+      const gain = b.state.gain * response;
+      const y = gainToY(Math.max(-24, Math.min(24, gain)));
+      if (px === 0) ctx2d.moveTo(px, y);
+      else ctx2d.lineTo(px, y);
+    }
+    ctx2d.stroke();
+  });
+
+  // Band dots
+  const bands = [
+    { state: eqState.low, color: '#60a5fa' },
+    { state: eqState.mid, color: '#a78bfa' },
+    { state: eqState.high, color: '#f472b6' }
+  ];
+  bands.forEach(b => {
+    const x = freqToX(b.state.freq);
+    const y = gainToY(b.state.gain);
+    // Dot
+    ctx2d.beginPath();
+    ctx2d.arc(x, y, 4, 0, Math.PI * 2);
+    ctx2d.fillStyle = b.color;
+    ctx2d.fill();
+    ctx2d.strokeStyle = '#fff';
+    ctx2d.lineWidth = 1;
+    ctx2d.stroke();
+    // Vertical line
+    ctx2d.beginPath();
+    ctx2d.strokeStyle = b.color + '55';
+    ctx2d.setLineDash([3, 3]);
+    ctx2d.moveTo(x, canvasH / 2);
+    ctx2d.lineTo(x, y);
+    ctx2d.stroke();
+    ctx2d.setLineDash([]);
+  });
+
+  // Hover
+  if (hoverFreq) {
+    const hx = freqToX(hoverFreq);
+    ctx2d.beginPath();
+    ctx2d.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx2d.lineWidth = 1;
+    ctx2d.moveTo(hx, 0);
+    ctx2d.lineTo(hx, canvasH);
+    ctx2d.stroke();
+  }
+
+  // Labels
+  ctx2d.fillStyle = 'rgba(106,100,120,0.8)';
+  ctx2d.font = '9px Space Mono, monospace';
+  ['100', '1k', '10k'].forEach((l, i) => {
+    const x = freqToX([100, 1000, 10000][i]);
+    ctx2d.fillText(l, x - 8, canvasH - 4);
+  });
+  ctx2d.fillText('0', 3, canvasH / 2 - 3);
+}
+
+// Click/drag on EQ canvas
+let eqDragging = false, eqBandDragging = null;
+eqCanvas.addEventListener('mousedown', e => {
+  const rect = eqCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  // Find closest band
+  let closest = null, minDist = 30;
+  [{ state: eqState.low, key: 'low' }, { state: eqState.mid, key: 'mid' }, { state: eqState.high, key: 'high' }].forEach(b => {
+    const bx = freqToX(b.state.freq);
+    const by = gainToY(b.state.gain);
+    const d = Math.sqrt((x-bx)**2 + (y-by)**2);
+    if (d < minDist) { minDist = d; closest = b; }
+  });
+  if (closest) {
+    eqBandDragging = closest.key;
+    selectedBand = closest.key;
+    updateBandButtons();
+    renderEQKnobs();
+    eqDragging = true;
+  } else {
+    // Move selected band
+    eqBandDragging = selectedBand;
+    eqDragging = true;
+    applyEQDrag(x, y);
+  }
+  drawEQ();
+});
+eqCanvas.addEventListener('mousemove', e => {
+  const rect = eqCanvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  hoverFreq = xToFreq(x);
+  hoverGain = yToGain(y);
+  document.getElementById('eqHoverLabel').textContent =
+    `▼ ${hoverFreq >= 1000 ? (hoverFreq/1000).toFixed(1)+'kHz' : hoverFreq.toFixed(0)+'Hz'} · ${hoverGain >= 0 ? '+' : ''}${hoverGain.toFixed(1)} dB`;
+  if (eqDragging && eqBandDragging) {
+    applyEQDrag(x, y);
+  }
+  drawEQ();
+});
+eqCanvas.addEventListener('mouseup', () => { eqDragging = false; eqBandDragging = null; });
+eqCanvas.addEventListener('mouseleave', () => { eqDragging = false; eqBandDragging = null; hoverFreq = null; drawEQ(); });
+
+function applyEQDrag(x, y) {
+  const freq = Math.max(20, Math.min(20000, xToFreq(x)));
+  const gain = Math.max(-24, Math.min(24, yToGain(y)));
+  eqState[eqBandDragging].freq = freq;
+  eqState[eqBandDragging].gain = gain;
+  // Update biquad filter
+  const eqMap = { low: lowEQ, mid: midEQ, high: highEQ };
+  if (eqMap[eqBandDragging]) {
+    eqMap[eqBandDragging].frequency.value = freq;
+    eqMap[eqBandDragging].gain.value = gain;
+  }
+  updateEQKnob(eqBandDragging);
+  document.getElementById('eqBandLabel').textContent = { low: 'LOW', mid: 'MID', high: 'HIGH' }[eqBandDragging];
+  document.getElementById('eqHoverLabel').textContent =
+    `▼ ${freq >= 1000 ? (freq/1000).toFixed(1)+'kHz' : freq.toFixed(0)+'Hz'} · ${gain >= 0 ? '+' : ''}${gain.toFixed(1)} dB`;
+}
+
+// ============================================================
+// Band selector buttons
+// ============================================================
+document.querySelectorAll('.band-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedBand = btn.dataset.band;
+    updateBandButtons();
+    renderEQKnobs();
+  });
+});
+function updateBandButtons() {
+  document.querySelectorAll('.band-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.band === selectedBand);
+  });
+}
+
+// ============================================================
+// EQ Knobs
+// ============================================================
+const EQ_KNOB_DEFS = [
+  { key: 'freq', label: 'Hz', min: 20, max: 20000, step: 1, format: v => v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(0), parse: v => parseFloat(v) },
+  { key: 'gain', label: 'dB', min: -24, max: 24, step: 0.5, format: v => (v>=0?'+':'')+v.toFixed(1), parse: v => parseFloat(v) },
+  { key: 'q', label: 'Q', min: 0.1, max: 10, step: 0.1, format: v => v.toFixed(1), parse: v => parseFloat(v) }
+];
+
+function renderEQKnobs() {
+  const row = document.getElementById('eqKnobRow');
+  row.innerHTML = '';
+  const bandColor = { low: '#60a5fa', mid: '#a78bfa', high: '#f472b6' }[selectedBand];
+  const state = eqState[selectedBand];
+  EQ_KNOB_DEFS.forEach(def => {
+    const val = state[def.key];
+    const knobId = `${selectedBand}_${def.key}Knob`;
+    const grp = document.createElement('div');
+    grp.className = 'knob-group';
+    grp.innerHTML = `
+      <span class="knob-label">${def.label}</span>
+      <div class="knob" id="${knobId}" data-param="${selectedBand}_${def.key}" data-value="${val}" data-min="${def.min}" data-max="${def.max}" data-step="${def.step}">
+        <svg viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r="18" fill="none" stroke="#252540" stroke-width="3"/>
+          <circle cx="22" cy="22" r="18" fill="none" stroke="${bandColor}" stroke-width="3"
+            stroke-dasharray="113.1"
+            stroke-dashoffset="${arcOffset(val, def.min, def.max)}"
+            stroke-linecap="round" transform="rotate(135 22 22)"
+            class="knob-arc"/>
+          <line x1="22" y1="22" x2="22" y2="8" stroke="${bandColor}" stroke-width="2" stroke-linecap="round" class="knob-pointer"/>
+        </svg>
+      </div>
+      <span class="knob-value" id="${knobId.replace('Knob','Val')}">${def.format(val)}</span>
+    `;
+    row.appendChild(grp);
+  });
+  initKnobs();
+}
+
+function updateEQKnob(band) {
+  const state = eqState[band];
+  const bandColor = { low: '#60a5fa', mid: '#a78bfa', high: '#f472b6' }[band];
+  EQ_KNOB_DEFS.forEach(def => {
+    const knobId = `${band}_${def.key}Knob`;
+    const knobEl = document.getElementById(knobId);
+    if (!knobEl) return;
+    const val = state[def.key];
+    knobEl.dataset.value = val;
+    const arc = knobEl.querySelector('.knob-arc');
+    if (arc) arc.setAttribute('stroke-dashoffset', arcOffset(val, def.min, def.max));
+    const ptr = knobEl.querySelector('.knob-pointer');
+    if (ptr) ptr.setAttribute('stroke', bandColor);
+    const valEl = document.getElementById(knobId.replace('Knob','Val'));
+    if (valEl) valEl.textContent = def.format(val);
+  });
+}
+
+function arcOffset(val, min, max) {
+  const pct = (val - min) / (max - min);
+  return 113.1 * (1 - Math.max(0, Math.min(1, pct)));
+}
+
+// ============================================================
+// Knob interaction system
+// ============================================================
+let activeKnob = null;
+let knobStartY = 0, knobStartVal = 0;
+
+function initKnobs() {
+  document.querySelectorAll('.knob').forEach(el => {
+    el.addEventListener('mousedown', e => {
+      e.preventDefault();
+      activeKnob = el;
+      knobStartY = e.clientY;
+      knobStartVal = parseFloat(el.dataset.value);
+      document.body.style.cursor = 'grabbing';
+    });
+    el.addEventListener('touchstart', e => {
+      e.preventDefault();
+      activeKnob = el;
+      knobStartY = e.touches[0].clientY;
+      knobStartVal = parseFloat(el.dataset.value);
+    }, { passive: false });
+  });
+}
+
+document.addEventListener('mousemove', e => {
+  if (!activeKnob) return;
+  const dy = knobStartY - e.clientY;
+  const range = parseFloat(activeKnob.dataset.max) - parseFloat(activeKnob.dataset.min);
+  const step = parseFloat(activeKnob.dataset.step) || 0.1;
+  const delta = (dy / 120) * range;
+  let newVal = knobStartVal + delta;
+  newVal = Math.round(newVal / step) * step;
+  newVal = Math.max(parseFloat(activeKnob.dataset.min), Math.min(parseFloat(activeKnob.dataset.max), newVal));
+  activeKnob.dataset.value = newVal;
+  applyKnobValue(activeKnob);
+  updateKnobVisual(activeKnob, newVal);
+});
+
+document.addEventListener('touchmove', e => {
+  if (!activeKnob) return;
+  const dy = knobStartY - e.touches[0].clientY;
+  const range = parseFloat(activeKnob.dataset.max) - parseFloat(activeKnob.dataset.min);
+  const step = parseFloat(activeKnob.dataset.step) || 0.1;
+  const delta = (dy / 120) * range;
+  let newVal = knobStartVal + delta;
+  newVal = Math.round(newVal / step) * step;
+  newVal = Math.max(parseFloat(activeKnob.dataset.min), Math.min(parseFloat(activeKnob.dataset.max), newVal));
+  activeKnob.dataset.value = newVal;
+  applyKnobValue(activeKnob);
+  updateKnobVisual(activeKnob, newVal);
+}, { passive: false });
+
+document.addEventListener('mouseup', () => {
+  if (activeKnob) { activeKnob = null; document.body.style.cursor = ''; }
+});
+document.addEventListener('touchend', () => { activeKnob = null; });
+
+function applyKnobValue(knobEl) {
+  const val = parseFloat(knobEl.dataset.value);
+  const param = knobEl.dataset.param;
+  if (!param) return;
+
+  if (param === 'inputKnob') { inputGain.gain.value = Math.pow(10, val / 20); }
+  else if (param === 'hpfKnob') { if (hpf) hpf.frequency.value = val; }
+  else if (param === 'threshKnob') { compState.threshold = val; updateCompressor(); }
+  else if (param === 'ratioKnob') { compState.ratio = val; updateCompressor(); }
+  else if (param === 'attackKnob') { compState.attack = val; updateCompressor(); }
+  else if (param === 'releaseKnob') { compState.release = val; updateCompressor(); }
+  else if (param === 'makeupKnob') { compState.makeup = val; updateCompressor(); }
+  else if (param === 'driveKnob') { satDrive = val; updateSatCurve(); }
+  else if (param === 'outputKnob') { if (outputGain) outputGain.gain.value = Math.pow(10, val / 20); }
+  else if (param.startsWith('low_')) {
+    const key = param.split('_')[1];
+    eqState.low[key] = val;
+    if (lowEQ) { if (key === 'freq') lowEQ.frequency.value = val; else if (key === 'gain') lowEQ.gain.value = val; else if (key === 'q') lowEQ.Q.value = val; }
+    drawEQ();
+  }
+  else if (param.startsWith('mid_')) {
+    const key = param.split('_')[1];
+    eqState.mid[key] = val;
+    if (midEQ) { if (key === 'freq') midEQ.frequency.value = val; else if (key === 'gain') midEQ.gain.value = val; else if (key === 'q') midEQ.Q.value = val; }
+    drawEQ();
+  }
+  else if (param.startsWith('high_')) {
+    const key = param.split('_')[1];
+    eqState.high[key] = val;
+    if (highEQ) { if (key === 'freq') highEQ.frequency.value = val; else if (key === 'gain') highEQ.gain.value = val; else if (key === 'q') highEQ.Q.value = val; }
+    drawEQ();
+  }
+
+  // Update value display
+  const valEl = knobEl.parentElement.querySelector('.knob-value');
+  if (valEl) {
+    const fmt = knobEl.dataset;
+    if (fmt === 'inputKnob') valEl.textContent = val.toFixed(1) + ' dB';
+    else if (param === 'hpfKnob') valEl.textContent = val >= 1000 ? (val/1000).toFixed(1)+'kHz' : val.toFixed(0)+' Hz';
+    else if (param === 'threshKnob') valEl.textContent = val.toFixed(1) + ' dB';
+    else if (param === 'ratioKnob') valEl.textContent = val.toFixed(1) + ':1';
+    else if (param === 'attackKnob') valEl.textContent = val.toFixed(1) + 'ms';
+    else if (param === 'releaseKnob') valEl.textContent = val.toFixed(0) + 'ms';
+    else if (param === 'makeupKnob') valEl.textContent = val.toFixed(1) + ' dB';
+    else if (param === 'driveKnob') valEl.textContent = Math.round(val * 100) + '%';
+    else if (param === 'outputKnob') valEl.textContent = val.toFixed(1) + ' dB';
+  }
+}
+
+function updateKnobVisual(knobEl, val) {
+  const min = parseFloat(knobEl.dataset.min);
+  const max = parseFloat(knobEl.dataset.max);
+  const arc = knobEl.querySelector('.knob-arc');
+  if (arc) arc.setAttribute('stroke-dashoffset', arcOffset(val, min, max));
+}
+
+// ============================================================
+// Saturation mode buttons
+// ============================================================
+document.querySelectorAll('.sat-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    satMode = btn.dataset.mode;
+    document.querySelectorAll('.sat-mode-btn').forEach(b => b.classList.toggle('active', b === btn));
+    updateSatCurve();
+  });
+});
+
+// ============================================================
+// Bypass
+// ============================================================
+let bypassed = false;
+document.getElementById('bypassBtn').addEventListener('click', () => {
+  bypassed = !bypassed;
+  document.getElementById('bypassBtn').classList.toggle('active', !bypassed);
+  document.getElementById('bypassBtn').textContent = bypassed ? 'ACTIVE' : 'BYPASS';
+  if (outputGain) {
+    if (bypassed) {
+      // Route around all processing
+      if (sourceNode) {
+        sourceNode.disconnect();
+        sourceNode.connect(audioCtx.destination);
+      }
+    } else {
+      if (sourceNode) {
+        sourceNode.disconnect();
+        sourceNode.connect(inputGain);
+      }
+    }
+  }
+});
+
+// ============================================================
+// Init
+// ============================================================
+window.addEventListener('resize', () => { resizeCanvas(); });
+setTimeout(() => { resizeCanvas(); renderEQKnobs(); }, 100);
+
+// Keyboard shortcuts for band selection
+document.addEventListener('keydown', e => {
+  if (e.key === '1') { selectedBand = 'low'; updateBandButtons(); renderEQKnobs(); }
+  if (e.key === '2') { selectedBand = 'mid'; updateBandButtons(); renderEQKnobs(); }
+  if (e.key === '3') { selectedBand = 'high'; updateBandButtons(); renderEQKnobs(); }
+  if (e.key === ' ') { e.preventDefault(); if (audioBuffer) playBuffer(); }
+});
+</script>
+</body>
+</html>
