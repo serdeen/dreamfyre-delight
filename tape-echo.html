@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tape Echo Delay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #09090e;
+  --surface: #0e0e16;
+  --surface2: #16161f;
+  --border: #1d1d2c;
+  --orange: #f97316;
+  --orange-dim: #2a1404;
+  --orange-glow: rgba(249,115,22,0.2);
+  --amber: #fbbf24;
+  --teal: #14b8a6;
+  --teal-dim: #052624;
+  --text: #e8e0f0;
+  --text-dim: #4a4660;
+  --dim: #2a2840;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  min-height: 100vh;
+  user-select: none;
+}
+.wrap {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1.75rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+h1 {
+  font-family: 'Space Mono', monospace;
+  font-size: 1.4rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--orange);
+}
+.tagline {
+  font-size: 0.65rem;
+  color: var(--text-dim);
+  font-family: 'Space Mono', monospace;
+  letter-spacing: 0.06em;
+  margin-top: 0.25rem;
+}
+
+/* Drop */
+.drop-zone {
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 1.2rem;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.65rem;
+  font-family: 'Space Mono', monospace;
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.05em;
+  margin-bottom: 1.25rem;
+}
+.drop-zone:hover, .drop-zone.dragover { border-color: var(--orange); color: var(--orange); background: var(--orange-glow); }
+.drop-zone input { display: none; }
+
+/* Echo visualizer */
+.echo-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0.7rem;
+}
+.echo-canvas-wrap {
+  position: relative;
+  background: #07070d;
+  border-radius: 8px;
+  overflow: hidden;
+}
+#echoCanvas { display: block; width: 100%; height: 180px; }
+.echo-info {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0.25rem 0;
+}
+.echo-label { font-family: 'Space Mono', monospace; font-size: 0.52rem; color: var(--text-dim); }
+.echo-value { font-family: 'Space Mono', monospace; font-size: 0.52rem; color: var(--amber); }
+
+/* Delay controls */
+.ctrl-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.ctrl-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+}
+.ctrl-group { display: flex; flex-direction: column; gap: 0.4rem; }
+.ctrl-label { font-family: 'Space Mono', monospace; font-size: 0.55rem; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+.ctrl-value { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--amber); }
+.ctrl-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--dim);
+  outline: none;
+  cursor: pointer;
+}
+.ctrl-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--orange);
+  box-shadow: 0 0 6px var(--orange-glow);
+  cursor: grab;
+  transition: box-shadow 0.1s;
+}
+.ctrl-slider::-webkit-slider-thumb:active { cursor: grabbing; box-shadow: 0 0 14px var(--orange); }
+.ctrl-slider.teal::-webkit-slider-thumb { background: var(--teal); box-shadow: 0 0 6px rgba(20,184,166,0.3); }
+
+/* Transport */
+.transport {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.t-btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.45rem 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.1s;
+  letter-spacing: 0.05em;
+}
+.t-btn:hover { border-color: var(--orange); color: var(--orange); }
+.t-btn.active { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); box-shadow: 0 0 10px var(--orange-glow); }
+.t-btn.teal-active { background: var(--teal-dim); border-color: var(--teal); color: var(--teal); box-shadow: 0 0 10px rgba(20,184,166,0.2); }
+
+/* Status */
+.status {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 0.5rem;
+  letter-spacing: 0.06em;
+}
+
+/* Filter viz */
+.filter-viz {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.freq-canvas { display: block; width: 100%; height: 100px; background: #07070d; border-radius: 6px; }
+
+/* Mod section */
+.mod-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Tape Echo</h1>
+      <div class="tagline">Sync · Filter · Modulate · Smear</div>
+    </div>
+    <div class="drop-zone" id="dropZone">
+      <span>Drop audio file — runs through delay engine</span>
+      <input type="file" id="fileInput" accept="audio/*,video/*">
+    </div>
+  </header>
+
+  <!-- Echo visualizer -->
+  <div class="echo-section">
+    <div class="section-label">Echo Visualizer</div>
+    <div class="echo-canvas-wrap">
+      <canvas id="echoCanvas"></canvas>
+    </div>
+    <div class="echo-info">
+      <span class="echo-label" id="echoCount">0 echoes</span>
+      <span class="echo-value" id="echoMs">—</span>
+    </div>
+  </div>
+
+  <!-- Main controls -->
+  <div class="ctrl-section">
+    <div class="section-label">Delay Engine</div>
+    <div class="ctrl-grid">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Delay Time</span>
+        <input type="range" class="ctrl-slider" id="delaySlider" min="10" max="2000" value="375" step="1">
+        <span class="ctrl-value" id="delayVal">375 ms</span>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Feedback</span>
+        <input type="range" class="ctrl-slider" id="fbSlider" min="0" max="0.95" value="0.55" step="0.01">
+        <span class="ctrl-value" id="fbVal">55%</span>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Mix (Dry/Wet)</span>
+        <input type="range" class="ctrl-slider" id="mixSlider" min="0" max="1" value="0.5" step="0.01">
+        <span class="ctrl-value" id="mixVal">50%</span>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Drive</span>
+        <input type="range" class="ctrl-slider" id="driveSlider" min="1" max="20" value="1" step="0.1">
+        <span class="ctrl-value" id="driveVal">1.0×</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter -->
+  <div class="filter-viz">
+    <div class="section-label">Echo Filter — sculpt the delayed signal</div>
+    <canvas id="freqCanvas" class="freq-canvas"></canvas>
+    <div class="ctrl-grid" style="margin-top:0.75rem">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Low Cut</span>
+        <input type="range" class="ctrl-slider teal" id="lpSlider" min="200" max="18000" value="18000" step="1">
+        <span class="ctrl-value" id="lpVal">18 kHz</span>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">High Cut</span>
+        <input type="range" class="ctrl-slider teal" id="hpSlider" min="20" max="8000" value="80" step="1">
+        <span class="ctrl-value" id="hpVal">80 Hz</span>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Filter Mix</span>
+        <input type="range" class="ctrl-slider teal" id="fMixSlider" min="0" max="1" value="0.3" step="0.01">
+        <span class="ctrl-value" id="fMixVal">30%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modulation -->
+  <div class="mod-section">
+    <div class="section-label">Modulation — movement in the repeats</div>
+    <div class="ctrl-grid">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Mod Rate</span>
+        <input type="range" class="ctrl-slider" id="modSlider" min="0" max="2" value="0" step="0.01">
+        <span class="ctrl-value" id="modVal">0 Hz</span>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Mod Depth</span>
+        <input type="range" class="ctrl-slider" id="modDepthSlider" min="0" max="200" value="0" step="1">
+        <span class="ctrl-value" id="modDepthVal">0 ms</span>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Sync to BPM</span>
+        <input type="range" class="ctrl-slider" id="syncSlider" min="0" max="1" value="0" step="1">
+        <span class="ctrl-value" id="syncVal">OFF</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transport -->
+  <div class="transport">
+    <button class="t-btn" id="playBtn">▶ PLAY</button>
+    <button class="t-btn" id="bypassBtn">BYPASS</button>
+    <button class="t-btn" id="tapBtn">TAP</button>
+    <button class="t-btn" id="reverseBtn">◀ REVERSE</button>
+    <button class="t-btn" id="freezeBtn">⏸ FREEZE</button>
+    <label style="font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--text-dim);margin-left:auto">BPM</label>
+    <input type="number" style="width:52px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--amber);font-family:'Space Mono',monospace;font-size:0.65rem;padding:0.25rem 0.4rem;text-align:center" id="bpmInput" value="120">
+    <span style="font-family:'Space Mono',monospace;font-size:0.55rem;color:var(--text-dim)" id="bpmInfo">÷4 = 125ms</span>
+  </div>
+
+  <div class="status" id="status">Drop audio to begin</div>
+</div>
+
+<script>
+// ============================================================
+// Tape Echo Delay — Web Audio API
+// ============================================================
+let audioCtx = null;
+let audioBuffer = null;
+let isPlaying = false;
+let sourceNode = null;
+let currentTime = 0;
+let dryGain, wetGain, delayNode, feedbackGain, filterNode, hpFilter, driveGain;
+let analyser, analyserData;
+let echoCanvas, ectx;
+let freqCanvas, fctx;
+let rafId = null;
+
+// State
+let delayTime = 0.375;
+let feedback = 0.55;
+let mix = 0.5;
+let drive = 1;
+let lpFreq = 18000;
+let hpFreq = 80;
+let fMix = 0.3;
+let modRate = 0;
+let modDepth = 0;
+let synced = false;
+let frozen = false;
+let bpm = 120;
+let tapTimes = [];
+let bypassed = false;
+
+// LFO
+let lfoNode = null, lfoGainNode = null;
+
+// ============================================================
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  buildGraph();
+  startVis();
+}
+
+function buildGraph() {
+  // Source → dry → destination
+  dryGain = audioCtx.createGain();
+  dryGain.gain.value = 1 - mix;
+
+  wetGain = audioCtx.createGain();
+  wetGain.gain.value = mix;
+
+  // Delay
+  delayNode = audioCtx.createDelay(5);
+  delayNode.delayTime.value = delayTime;
+
+  // Feedback gain
+  feedbackGain = audioCtx.createGain();
+  feedbackGain.gain.value = feedback;
+
+  // Filters
+  filterNode = audioCtx.createBiquadFilter();
+  filterNode.type = 'lowpass';
+  filterNode.frequency.value = lpFreq;
+  filterNode.Q.value = 1;
+
+  hpFilter = audioCtx.createBiquadFilter();
+  hpFilter.type = 'highpass';
+  hpFilter.frequency.value = hpFreq;
+  hpFilter.Q.value = 0.5;
+
+  // Filter mix
+  const fDry = audioCtx.createGain();
+  fDry.gain.value = 1 - fMix;
+  const fWet = audioCtx.createGain();
+  fWet.gain.value = fMix;
+
+  // Drive / saturation
+  driveGain = audioCtx.createGain();
+  driveGain.gain.value = drive;
+
+  // Analyser
+  analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  analyserData = new Uint8Array(analyser.frequencyBinCount);
+
+  // Connect delay chain: source → dryGain → dest
+  // source → delayNode → filterNode → hpFilter → wetGain → dest
+  // delay output ↔ feedback → delay input
+  dryGain.connect(audioCtx.destination);
+
+  // Filter mix: filter in series with some dry
+  filterNode.connect(hpFilter);
+  hpFilter.connect(wetGain);
+  wetGain.connect(audioCtx.destination);
+
+  // Feedback loop
+  filterNode.connect(feedbackGain);
+  feedbackGain.connect(delayNode);
+  delayNode.connect(filterNode);
+
+  // Analyser on wet
+  wetGain.connect(analyser);
+}
+
+function connectSource() {
+  if (!audioBuffer || !audioCtx) return;
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} sourceNode.disconnect(); }
+  sourceNode = audioCtx.createBufferSource();
+  sourceNode.buffer = audioBuffer;
+  sourceNode.loop = !frozen;
+  sourceNode.playbackRate.value = frozen ? 0 : 1;
+  sourceNode.connect(dryGain);
+  sourceNode.connect(delayNode);
+  sourceNode.start(0, currentTime);
+  sourceNode.onended = () => {
+    if (isPlaying) {
+      isPlaying = false;
+      currentTime = 0;
+    }
+  };
+}
+
+function rebuildGraph() {
+  if (!audioCtx) return;
+  // Update values without rebuilding full graph
+  dryGain.gain.setTargetAtTime(1 - mix, audioCtx.currentTime, 0.02);
+  wetGain.gain.setTargetAtTime(mix, audioCtx.currentTime, 0.02);
+  delayNode.delayTime.setTargetAtTime(delayTime, audioCtx.currentTime, 0.02);
+  feedbackGain.gain.setTargetAtTime(feedback, audioCtx.currentTime, 0.02);
+  filterNode.frequency.setTargetAtTime(lpFreq, audioCtx.currentTime, 0.02);
+  hpFilter.frequency.setTargetAtTime(hpFreq, audioCtx.currentTime, 0.02);
+  driveGain.gain.setTargetAtTime(drive, audioCtx.currentTime, 0.02);
+
+  // Modulation
+  if (lfoNode) { lfoNode.frequency.setTargetAtTime(modRate, audioCtx.currentTime, 0.02); }
+  if (lfoGainNode) { lfoGainNode.gain.setTargetAtTime(modDepth / 1000, audioCtx.currentTime, 0.02); }
+}
+
+// ============================================================
+// Visualization
+// ============================================================
+function startVis() {
+  echoCanvas = document.getElementById('echoCanvas');
+  ectx = echoCanvas.getContext('2d');
+  freqCanvas = document.getElementById('freqCanvas');
+  fctx = freqCanvas.getContext('2d');
+  resizeEcho();
+  window.addEventListener('resize', resizeEcho);
+  setTimeout(resizeEcho, 100);
+  requestAnimationFrame(visLoop);
+}
+
+function resizeEcho() {
+  if (!echoCanvas) return;
+  const w = echoCanvas.parentElement.offsetWidth;
+  echoCanvas.width = w * (window.devicePixelRatio || 1);
+  echoCanvas.height = 180 * (window.devicePixelRatio || 1);
+  echoCanvas.style.width = w + 'px';
+  echoCanvas.style.height = '180px';
+  ectx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+  if (!freqCanvas) return;
+  const fw = freqCanvas.parentElement.offsetWidth;
+  freqCanvas.width = fw * (window.devicePixelRatio || 1);
+  freqCanvas.height = 100 * (window.devicePixelRatio || 1);
+  freqCanvas.style.width = fw + 'px';
+  freqCanvas.style.height = '100px';
+  fctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+}
+
+let echoHistory = [];
+const HISTORY_LEN = 120;
+
+function visLoop() {
+  rafId = requestAnimationFrame(visLoop);
+  drawEcho();
+  drawFreq();
+}
+
+function drawEcho() {
+  if (!ectx) return;
+  const w = echoCanvas.width / (window.devicePixelRatio || 1);
+  const h = 180;
+
+  ectx.fillStyle = '#07070d';
+  ectx.fillRect(0, 0, w, h);
+
+  if (!audioBuffer) return;
+
+  // Get current waveform for display
+  const data = audioBuffer.getChannelData(0);
+  const step = Math.ceil(data.length / w);
+
+  // Shift history
+  const currentAmp = Math.abs(data[Math.floor((currentTime / audioBuffer.duration) * data.length)] || 0);
+  echoHistory.push(currentAmp);
+  if (echoHistory.length > HISTORY_LEN) echoHistory.shift();
+
+  // Draw waveform
+  ectx.strokeStyle = 'rgba(249,115,22,0.4)';
+  ectx.lineWidth = 1;
+  ectx.beginPath();
+  for (let x = 0; x < w; x++) {
+    const histIdx = Math.floor(x / w * echoHistory.length);
+    const amp = echoHistory[histIdx] || 0;
+    const y = h - amp * h * 0.8 - 4;
+    if (x === 0) ectx.moveTo(x, y);
+    else ectx.lineTo(x, y);
+  }
+  ectx.stroke();
+
+  // Echo repeat indicators
+  if (isPlaying && audioBuffer) {
+    const echoMs = delayTime * 1000;
+    const maxEcho = 6;
+    for (let e = 1; e <= maxEcho; e++) {
+      const echoTime = currentTime + delayTime * e;
+      if (echoTime >= audioBuffer.duration) break;
+      const pct = echoTime / audioBuffer.duration;
+      const x = pct * w;
+      const alpha = Math.max(0, 1 - e / maxEcho) * 0.6;
+      ectx.strokeStyle = `rgba(249,115,22,${alpha})`;
+      ectx.lineWidth = 1;
+      ectx.beginPath();
+      for (let xi = 0; xi < w; xi++) {
+        const idx = Math.floor(((pct * w + xi - w/2) / w * data.length + data.length) % data.length;
+        const v = data[Math.max(0, Math.min(idx, data.length-1))] || 0;
+        const y1 = h/2 + v * h * 0.35;
+        const y2 = h/2 - v * h * 0.35;
+        if (xi === 0) ectx.moveTo(xi, y1);
+        else ectx.lineTo(xi, y1);
+      }
+      ectx.stroke();
+    }
+
+    // Playhead
+    const px = (currentTime / audioBuffer.duration) * w;
+    ectx.strokeStyle = '#fbbf24';
+    ectx.lineWidth = 1.5;
+    ectx.beginPath();
+    ectx.moveTo(px, 0);
+    ectx.lineTo(px, h);
+    ectx.stroke();
+  }
+
+  // Echo count display
+  const echoCount = Math.floor(Math.log(0.01) / Math.log(feedback)) || 0;
+  document.getElementById('echoCount').textContent = `~${Math.min(echoCount, 20)} echoes`;
+  document.getElementById('echoMs').textContent = (delayTime * 1000).toFixed(1) + ' ms';
+}
+
+function drawFreq() {
+  if (!fctx || !analyser) return;
+  const w = freqCanvas.width / (window.devicePixelRatio || 1);
+  const h = 100;
+  fctx.clearRect(0, 0, w, h);
+  fctx.fillStyle = '#07070d';
+  fctx.fillRect(0, 0, w, h);
+
+  if (!analyser) return;
+  analyser.getByteFrequencyData(analyserData);
+  const barW = w / analyserData.length * 2;
+  for (let i = 0; i < analyserData.length; i++) {
+    const amp = analyserData[i] / 255;
+    const x = i * barW;
+    const barH = amp * h * 0.9;
+    const alpha = 0.3 + amp * 0.7;
+    fctx.fillStyle = `rgba(20,184,166,${alpha})`;
+    fctx.fillRect(x, h - barH, barW - 1, barH);
+  }
+
+  // LP and HP markers
+  if (lpFreq < 18000) {
+    const lpx = Math.log10(lpFreq / 20) / Math.log10(20000) * w;
+    fctx.strokeStyle = 'rgba(20,184,166,0.6)';
+    fctx.lineWidth = 1;
+    fctx.setLineDash([3, 3]);
+    fctx.beginPath();
+    fctx.moveTo(lpx, 0);
+    fctx.lineTo(lpx, h);
+    fctx.stroke();
+    fctx.setLineDash([]);
+  }
+  if (hpFreq > 20) {
+    const hpx = Math.log10(hpFreq / 20) / Math.log10(20000) * w;
+    fctx.strokeStyle = 'rgba(20,184,166,0.6)';
+    fctx.lineWidth = 1;
+    fctx.setLineDash([3, 3]);
+    fctx.beginPath();
+    fctx.moveTo(hpx, 0);
+    fctx.lineTo(hpx, h);
+    fctx.stroke();
+    fctx.setLineDash([]);
+  }
+}
+
+// ============================================================
+// File loading
+// ============================================================
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', e => { if (e.target.files[0]) loadFile(e.target.files[0]); });
+
+function loadFile(file) {
+  initAudio();
+  document.getElementById('status').textContent = 'Decoding…';
+  const reader = new FileReader();
+  reader.onload = e => {
+    audioCtx.decodeAudioData(e.target.result, buf => {
+      audioBuffer = buf;
+      dropZone.querySelector('span').textContent = '✓ ' + file.name;
+      connectSource();
+      isPlaying = true;
+      document.getElementById('playBtn').textContent = '⏸ PAUSE';
+      document.getElementById('playBtn').classList.add('active');
+      document.getElementById('status').textContent = `Playing · ${(buf.duration).toFixed(1)}s · delay: ${(delayTime*1000).toFixed(0)}ms`;
+      // start time update
+      startTimeUpdate();
+    }, err => { document.getElementById('status').textContent = 'Error: ' + err; });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+let timeRaf = null;
+function startTimeUpdate() {
+  function upd() {
+    if (isPlaying && sourceNode && audioBuffer) {
+      const start = audioCtx.currentTime - sourceNode.loopStart;
+      // track position
+      timeRaf = requestAnimationFrame(upd);
+    }
+  }
+  timeRaf = requestAnimationFrame(upd);
+}
+
+// ============================================================
+// Sliders
+// ============================================================
+const delaySlider = document.getElementById('delaySlider');
+const fbSlider = document.getElementById('fbSlider');
+const mixSlider = document.getElementById('mixSlider');
+const driveSlider = document.getElementById('driveSlider');
+const lpSlider = document.getElementById('lpSlider');
+const hpSlider = document.getElementById('hpSlider');
+const fMixSlider = document.getElementById('fMixSlider');
+const modSlider = document.getElementById('modSlider');
+const modDepthSlider = document.getElementById('modDepthSlider');
+const syncSlider = document.getElementById('syncSlider');
+
+delaySlider.addEventListener('input', () => {
+  delayTime = parseInt(delaySlider.value) / 1000;
+  document.getElementById('delayVal').textContent = delaySlider.value + ' ms';
+  document.getElementById('bpmInfo').textContent = synced ? `÷4 = ${Math.round(60000/bpm/4)}ms` : '';
+  if (audioCtx) rebuildGraph();
+});
+fbSlider.addEventListener('input', () => {
+  feedback = parseFloat(fbSlider.value);
+  document.getElementById('fbVal').textContent = Math.round(feedback * 100) + '%';
+  if (audioCtx) rebuildGraph();
+});
+mixSlider.addEventListener('input', () => {
+  mix = parseFloat(mixSlider.value);
+  document.getElementById('mixVal').textContent = Math.round(mix * 100) + '%';
+  if (audioCtx) rebuildGraph();
+});
+driveSlider.addEventListener('input', () => {
+  drive = parseFloat(driveSlider.value);
+  document.getElementById('driveVal').textContent = drive.toFixed(1) + '×';
+  if (audioCtx) rebuildGraph();
+});
+lpSlider.addEventListener('input', () => {
+  lpFreq = parseInt(lpSlider.value);
+  document.getElementById('lpVal').textContent = lpFreq >= 1000 ? (lpFreq/1000).toFixed(1) + ' kHz' : lpFreq + ' Hz';
+  if (audioCtx) rebuildGraph();
+});
+hpSlider.addEventListener('input', () => {
+  hpFreq = parseInt(hpSlider.value);
+  document.getElementById('hpVal').textContent = hpFreq + ' Hz';
+  if (audioCtx) rebuildGraph();
+});
+fMixSlider.addEventListener('input', () => {
+  fMix = parseFloat(fMixSlider.value);
+  document.getElementById('fMixVal').textContent = Math.round(fMix * 100) + '%';
+  if (audioCtx) rebuildGraph();
+});
+modSlider.addEventListener('input', () => {
+  modRate = parseFloat(modSlider.value);
+  document.getElementById('modVal').textContent = modRate.toFixed(2) + ' Hz';
+  if (audioCtx) {
+    if (modRate > 0 && !lfoNode) {
+      lfoNode = audioCtx.createOscillator();
+      lfoNode.frequency.value = modRate;
+      lfoGainNode = audioCtx.createGain();
+      lfoGainNode.gain.value = modDepth / 1000;
+      lfoNode.connect(lfoGainNode);
+      lfoGainNode.connect(delayNode.delayTime);
+      lfoNode.start();
+    } else if (modRate === 0 && lfoNode) {
+      lfoNode.stop();
+      lfoNode.disconnect();
+      lfoGainNode.disconnect();
+      lfoNode = null; lfoGainNode = null;
+    }
+    rebuildGraph();
+  }
+});
+modDepthSlider.addEventListener('input', () => {
+  modDepth = parseInt(modDepthSlider.value);
+  document.getElementById('modDepthVal').textContent = modDepth + ' ms';
+  if (audioCtx) rebuildGraph();
+});
+syncSlider.addEventListener('input', () => {
+  synced = parseInt(syncSlider.value) === 1;
+  document.getElementById('syncVal').textContent = synced ? 'ON' : 'OFF';
+  document.getElementById('syncSlider').classList.toggle('teal-active', synced);
+  if (synced) {
+    bpm = parseInt(document.getElementById('bpmInput').value) || 120;
+    delayTime = (60 / bpm) / 4;
+    delaySlider.value = Math.round(delayTime * 1000);
+    document.getElementById('delayVal').textContent = Math.round(delayTime * 1000) + ' ms';
+    document.getElementById('bpmInfo').textContent = `÷4 = ${Math.round(delayTime*1000)}ms`;
+    rebuildGraph();
+  }
+});
+
+// ============================================================
+// Transport
+// ============================================================
+document.getElementById('playBtn').addEventListener('click', () => {
+  initAudio();
+  if (!audioBuffer) return;
+  if (isPlaying) {
+    isPlaying = false;
+    if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+    document.getElementById('playBtn').textContent = '▶ PLAY';
+    document.getElementById('playBtn').classList.remove('active');
+  } else {
+    connectSource();
+    isPlaying = true;
+    document.getElementById('playBtn').textContent = '⏸ PAUSE';
+    document.getElementById('playBtn').classList.add('active');
+    startTimeUpdate();
+  }
+});
+
+document.getElementById('bypassBtn').addEventListener('click', () => {
+  bypassed = !bypassed;
+  document.getElementById('bypassBtn').classList.toggle('active', bypassed);
+  if (bypassed) {
+    dryGain.gain.setTargetAtTime(1, audioCtx.currentTime, 0.02);
+    wetGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.02);
+  } else {
+    dryGain.gain.setTargetAtTime(1 - mix, audioCtx.currentTime, 0.02);
+    wetGain.gain.setTargetAtTime(mix, audioCtx.currentTime, 0.02);
+  }
+});
+
+document.getElementById('tapBtn').addEventListener('click', () => {
+  const now = Date.now();
+  tapTimes.push(now);
+  if (tapTimes.length > 4) tapTimes.shift();
+  if (tapTimes.length >= 2) {
+    const avg = (tapTimes[tapTimes.length-1] - tapTimes[0]) / (tapTimes.length - 1);
+    delayTime = avg / 1000;
+    delaySlider.value = Math.round(delayTime * 1000);
+    document.getElementById('delayVal').textContent = Math.round(delayTime * 1000) + ' ms';
+    rebuildGraph();
+  }
+  document.getElementById('tapBtn').classList.add('active');
+  setTimeout(() => document.getElementById('tapBtn').classList.remove('active'), 100);
+});
+
+document.getElementById('reverseBtn').addEventListener('click', () => {
+  if (!audioBuffer || !audioCtx) return;
+  if (sourceNode) { try { sourceNode.stop(); } catch(e){} }
+  // Reverse playback
+  const revBuffer = audioCtx.createBuffer(audioBuffer.numberOfChannels, audioBuffer.length, audioBuffer.sampleRate);
+  for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
+    const src = audioBuffer.getChannelData(c);
+    const dst = revBuffer.getChannelData(c);
+    for (let i = 0; i < src.length; i++) dst[i] = src[src.length - 1 - i];
+  }
+  audioBuffer = revBuffer;
+  connectSource();
+  isPlaying = true;
+  document.getElementById('playBtn').textContent = '⏸ PAUSE';
+  document.getElementById('playBtn').classList.add('active');
+});
+
+document.getElementById('freezeBtn').addEventListener('click', () => {
+  frozen = !frozen;
+  document.getElementById('freezeBtn').classList.toggle('active', frozen);
+  if (sourceNode) {
+    if (frozen) {
+      sourceNode.loopEnd = audioCtx.currentTime;
+      sourceNode.loop = true;
+    }
+  }
+});
+
+document.getElementById('bpmInput').addEventListener('change', () => {
+  bpm = parseInt(document.getElementById('bpmInput').value) || 120;
+  document.getElementById('bpmInfo').textContent = synced ? `÷4 = ${Math.round(60000/bpm/4)}ms` : '';
+  if (synced) {
+    delayTime = (60 / bpm) / 4;
+    delaySlider.value = Math.round(delayTime * 1000);
+    document.getElementById('delayVal').textContent = Math.round(delayTime * 1000) + ' ms';
+    rebuildGraph();
+  }
+});
+
+initAudio();
+</script>
+</body>
+</html>
